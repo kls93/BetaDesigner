@@ -1,11 +1,12 @@
 
 import os
-import networkx as nx
+import pickle
+import shutil
 import pandas as pd
 from collections import OrderedDict
 
-# Need to clean PDB to remove all non-macromolecule atoms beforehand
-barrel_or_sandwich = input('Barrel or sandwich?  ').lower()
+"""
+barrel_or_sandwich = input('Barrel or sandwich? ').lower()
 if barrel_or_sandwich == 'barrel':
     barrel_or_sandwich = '2.40'
 elif barrel_or_sandwich == 'sandwich':
@@ -14,10 +15,25 @@ pdb_code = input('Specify PDB accession code / structure name: ')
 input_pdb_file = input('Specify absolute file path of PDB coordinates of backbone structure: ')
 datagen_file_path = input('Specify absolute file path of DataGen wrapper script (datagen.py): ')
 output_directory = input('Specify absolute path of output directory: ')
-os.chdir(output_directory)
-os.mkdir('Parent_assemblies')
-os.system('cp {} Parent_assemblies/{}.pdb'.format(input_pdb_file, pdb_code))
+"""
 
+# Defines input parameters, sets up directory framework and writes input file
+# for DataGen
+barrel_or_sandwich = '2.40'
+pdb_code = '6CZG_test'
+input_pdb_file = '/BetaDesigner/Program_input/6czg_test.pdb'
+datagen_file_path = '/DataGen/datagen/datagen.py'
+output_directory = '/BetaDesigner/Program_output'
+
+if os.path.isdir(output_directory):
+    shutil.rmtree(output_directory)
+os.mkdir(output_directory)
+if os.path.isdir('{}/Parent_assemblies'.format(output_directory)):
+    shutil.rmtree('{}/Parent_assemblies'.format(output_directory))
+os.mkdir('{}/Parent_assemblies'.format(output_directory))
+os.system('cp {} {}/Parent_assemblies/{}.pdb'.format(input_pdb_file, output_directory, pdb_code[0:4]))
+
+# Writes input dataframes for DataGen
 rec = []
 atmnum = []
 atmname = []
@@ -77,26 +93,27 @@ pdb_df = pd.DataFrame(OrderedDict({'PDB_FILE_LINES': lines,
                                    'CHARGE': charge,
                                    'RES_ID': chain_num_ins}))
 df_dict = {pdb_code: pdb_df}
+cdhit_df = pd.DataFrame({'PDB_CODE': ['{}'.format(pdb_code)],
+                         'DOMAIN_ID': ['{}'.format(pdb_code)],
+                         'CHAIN_NUM': [list(set(pdb_df['RES_ID'].tolist()))]})
+dataframe_loc = '{}/DataGen_stage_2_input_dataframes.pkl'.format(output_directory)
+with open(dataframe_loc, 'wb') as pickle_file:
+    pickle.dump((df_dict, cdhit_df), pickle_file)
 
-datagen_input_file = '{}/Input.txt'.format(output_directory)
-with open(datagen_input_file) as f:
-    f.write('Stage: 2'
+# Writes input file for DataGen (stage 2 of analysis)
+datagen_input_file = '{}/DataGen_Input.txt'.format(output_directory)
+with open(datagen_input_file, 'w') as f:
+    f.write('Stage: 2\n' +
             'Structure database: CATH\n' +
             'ID: {}\n'.format(barrel_or_sandwich) +
-            'AU or BA: AU\n' +
-            'Working directory: {}\n' +
-            'PDB AU database: .\n' +
-            'PDB BA database: .\n' +
-            'DSSP database: .\n' +
-            'OPM database: .\n' +
-            'RING database: .\n' +
-            'Resolution: 0.0\n' +
-            'Rfactor: 0.0\n'
-            'Radius: 5\n'
-            'Discard non TM: False\n' +
+            'Working directory: {}\n'.format(output_directory) +
             'Beta Designer: True\n' +
-            'DataFrame: {}\n'.format(df_dict))
+            'Dataframes: {}\n'.format(dataframe_loc))
+
+# Runs DataGen (stage 2 of analysis)
 os.system('python {} -i {} --betadesigner'.format(datagen_file_path, datagen_input_file))
+
+
 
 # Then need to run stages 3 and 4, delete extra files (only need to keep
 # Beta_res_dataframe.pkl), create contact map - complete by Friday 28th
