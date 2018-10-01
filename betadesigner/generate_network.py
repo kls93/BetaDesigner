@@ -6,6 +6,9 @@ import networkx as nx
 import pandas as pd
 prompt = '> '
 
+# Currently will return all contacts of domain within parent assembly.
+# Initially, I should exclude contacts outside of the beta-strands of interest.
+
 """
 print('Specify absolute file path of input dataframe:')
 input_df_loc = input(prompt).replace('\\', '/')
@@ -85,9 +88,11 @@ for name, sub_df in dfs.items():
             else:
                 res_2 = res_list[0]
                 if not res_1 in list(G.nodes()):
-                    print('Error: Res1 {} not in graph ({})'.format(res_1, interaction_type))
+                    pass
+                    # print('Error: Res1 {} not in graph ({})'.format(res_1, interaction_type))
                 elif not res_2 in list(G.nodes()):
-                    print('Error: Res2 {} not in graph ({})'.format(res_2, interaction_type))
+                    pass
+                    # print('Error: Res2 {} not in graph ({})'.format(res_2, interaction_type))
                 else:
                     G.add_edge(res_1, res_2, label=label)
     networks[name] = G
