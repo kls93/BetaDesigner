@@ -41,6 +41,7 @@ orig_df = pd.read_pickle(input_df_loc)
 if len(set(orig_df['domain_ids'])) != 1:
     sys.exit('More than one structure listed in input dataframe')
 
+# Creates dataframes of residues on interior and exterior surfaces
 dfs = {}
 if barrel_or_sandwich == '2.40':
     int_surf_df = orig_df[orig_df['int_ext'] == 'interior']
@@ -69,13 +70,27 @@ elif barrel_or_sandwich == '2.60':
     ext_surf_2_df = ext_surf_2_df.reset_index(drop=True)
     dfs['ext_2'] = ext_surf_2_df
 
+# Creates networks of interacting residues
 networks = {}
 for name, sub_df in dfs.items():
     G = nx.MultiGraph()
 
-    nodes = sub_df['res_ids'].tolist()
-    for node in nodes:
-        G.add_node(node, fasta_id='UNK')
+    # Only interactions between residues within the beta-strands are considered
+    if barrel_or_sandwich == '2.40':
+        for num in range(sub_df.shape[0]):
+            node = sub_df['res_id'][num]
+            int_ext = name
+            z = sub_df['z_coords'][num]
+            G.add_node(node, fasta_id='UNK', int_ext=name, z=z_coord)
+
+    elif barrel_or_sandwich == '2.60':
+        for num in range(sub_df.shape[0]):
+            node = sub_df['res_id'][num]
+            int_ext = name
+            z = sub_df['sandwich_z_coords'][num]
+            bsa = sub_df['buried_surface_area'][num]
+            G.add_node(node, fasta_id='UNK', int_ext=name, z=z_coord,
+                       buried_surface_area=bsa)
 
     interactions_dict = {'HB': 'hb_pairs',
                          'NHB': 'nhb_pairs',
@@ -87,8 +102,9 @@ for name, sub_df in dfs.items():
             res_1 = sub_df['res_ids'][num]
 
             res_list = sub_df[interaction_type][num]
-            if type(res_list) == str:
+            if type(res_list) != list:
                 res_list = [res_list]
+
             if len(res_list) > 1:
                 sys.exit('Res list error {} {}'.format(res_1, interaction_type))
             elif len(res_list) == 0:
@@ -96,16 +112,12 @@ for name, sub_df in dfs.items():
             else:
                 res_2 = res_list[0]
                 if not res_1 in list(G.nodes()):
-                    # pass
-                    print('Error: Res1 {} not in graph ({})'.format(res_1, interaction_type))
+                    pass
                 elif not res_2 in list(G.nodes()):
-                    # pass
-                    print('Error: Res2 {} not in graph ({})'.format(res_2, interaction_type))
+                    pass
                 else:
                     G.add_edge(res_1, res_2, label=label)
     networks[name] = G
-    plt.clf()
-    nx.draw_networkx(G, with_labels=True)
-    plt.savefig(
-        '{}/{}_network.png'.format('/'.join(input_df_loc.split('/')[:-1]), name)
-    )
+
+# Adds side chains to networks based upon propensities of individual amino
+# acids for the considered structural features
