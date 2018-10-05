@@ -17,15 +17,23 @@ while not os.path.isfile(input_df_loc):
     input_df_loc = input(prompt).replace('\\', '/')
     if os.path.isfile(input_df_loc):
         break
+
 print('Barrel or sandwich?')
 barrel_or_sandwich = input(prompt).lower()
+while not barrel_or_sandwich in ['barrel', 'sandwich']:
+    print('Please enter "barrel" or "sandwich":')
+    barrel_or_sandwich = input(prompt).lower()
+    if barrel_or_sandwich in ['barrel', 'sandwich']:
+        break
+    else:
+        print('Structure type not recognised')
 if barrel_or_sandwich == 'barrel':
     barrel_or_sandwich = '2.40'
 elif barrel_or_sandwich == 'sandwich':
     barrel_or_sandwich = '2.60'
 """
 
-input_df_loc = '/Users/ks17361/Lab_work_DW/Beta_structure/Bioinformatics/BetaDesigner/Program_output/Beta_res_dataframe.pkl'
+input_df_loc = '/Users/ks17361/Documents/BetaDesigner_results/Program_output/Beta_res_dataframe.pkl'
 barrel_or_sandwich = '2.40'
 
 orig_df = pd.read_pickle(input_df_loc)
@@ -88,11 +96,11 @@ for name, sub_df in dfs.items():
             else:
                 res_2 = res_list[0]
                 if not res_1 in list(G.nodes()):
-                    pass
-                    # print('Error: Res1 {} not in graph ({})'.format(res_1, interaction_type))
+                    # pass
+                    print('Error: Res1 {} not in graph ({})'.format(res_1, interaction_type))
                 elif not res_2 in list(G.nodes()):
-                    pass
-                    # print('Error: Res2 {} not in graph ({})'.format(res_2, interaction_type))
+                    # pass
+                    print('Error: Res2 {} not in graph ({})'.format(res_2, interaction_type))
                 else:
                     G.add_edge(res_1, res_2, label=label)
     networks[name] = G

@@ -20,10 +20,10 @@ output_directory = input('Specify absolute path of output directory: ')
 # Defines input parameters, sets up directory framework and writes input file
 # for DataGen
 barrel_or_sandwich = '2.40'
-pdb_code = '6CZG_test'
-input_pdb_file = '/BetaDesigner/Program_input/6czg_test.pdb'
+pdb_code = '6CZG'
+input_pdb_file = '/BetaDesigner_results/Program_input/6czg_test.pdb'
 datagen_file_path = '/DataGen/datagen/datagen.py'
-output_directory = '/BetaDesigner/Program_output'
+output_directory = '/BetaDesigner_results/Program_output'
 
 if os.path.isdir(output_directory):
     shutil.rmtree(output_directory)
@@ -31,7 +31,7 @@ os.mkdir(output_directory)
 if os.path.isdir('{}/Parent_assemblies'.format(output_directory)):
     shutil.rmtree('{}/Parent_assemblies'.format(output_directory))
 os.mkdir('{}/Parent_assemblies'.format(output_directory))
-os.system('cp {} {}/Parent_assemblies/{}.pdb'.format(input_pdb_file, output_directory, pdb_code[0:4]))
+os.system('cp {} {}/Parent_assemblies/{}.pdb'.format(input_pdb_file, output_directory, pdb_code))
 
 # Writes input dataframes for DataGen
 rec = []
@@ -113,8 +113,6 @@ with open(datagen_input_file, 'w') as f:
 # Runs DataGen (stage 2 of analysis)
 os.system('python {} -i {} --betadesigner'.format(datagen_file_path, datagen_input_file))
 
-
-
-# Then need to run stages 3 and 4, delete extra files (only need to keep
-# Beta_res_dataframe.pkl), create contact map - complete by Friday 28th
-# September (so ready to input into genetic algorithm on Monday 1st October).
+# Then need to run stages 3 and 4 - will need to run NACCESS on local machine
+# to be able to run these programmatically within BetaDesigner, otherwise will
+# have to run within DataGen.
