@@ -1,9 +1,12 @@
 
 import os
+import pickle
 import sys
 import matplotlib.pyplot as plt
 import networkx as nx
+import numpy as np
 import pandas as pd
+from collections import OrderedDict
 prompt = '> '
 
 # Currently will return all contacts of domain within parent assembly.
@@ -42,7 +45,7 @@ if len(set(orig_df['domain_ids'])) != 1:
     sys.exit('More than one structure listed in input dataframe')
 
 # Creates dataframes of residues on interior and exterior surfaces
-dfs = {}
+dfs = OrderedDict()
 if barrel_or_sandwich == '2.40':
     int_surf_df = orig_df[orig_df['int_ext'] == 'interior']
     int_surf_df = int_surf_df.reset_index(drop=True)
@@ -71,7 +74,7 @@ elif barrel_or_sandwich == '2.60':
     dfs['ext_2'] = ext_surf_2_df
 
 # Creates networks of interacting residues
-networks = {}
+networks = OrderedDict()
 for name, sub_df in dfs.items():
     G = nx.MultiGraph()
 
@@ -121,3 +124,104 @@ for name, sub_df in dfs.items():
 
 # Adds side chains to networks based upon propensities of individual amino
 # acids for the considered structural features
+with open('/BetaDesigner_results/Program_input/Propensity_dicts.pkl', 'rb') as pickle_file:
+    propensity_dicts = pickle.load(pickle_file)
+
+# Converts propensities into probabilities
+"""
+probability_dicts = OrderedDict()
+for name, propensity_dict in propensity_dicts.items():
+    aa_names = []
+    propensity_values = []
+    for aa, propensity in propensity_dict.items():
+        aa_names.append(aa)
+        propensity_values.append(propensity)
+
+    propensity_values = np.array(propensity_values)
+    probability_values = np.log(propensity_values)
+    probability_total = np.sum(probability_values)
+
+    probability_dict = OrderedDict()
+    cutoff = 0
+    for index, probability in enumerate(list(probability_values)):
+        new_cutoff = (probability/probability_total) + cutoff
+        probability_dict[aa_names[index]] = np.array([cutoff, new_cutoff])
+
+        cutoff = new_cutoff
+
+    if float(cutoff) != 1.0:
+        sys.exit('Error in calculating probability values')
+"""
+
+#
+"""
+if barrel_or_sandwich == '2.40':
+    int_z_dict = probability_dicts['int_z']
+    ext_z_dict = probability_dicts['ext_z']
+elif barrel_or_sandwich == '2.60':
+    int_z_dict = probability_dicts['int_z']
+    ext_z_dict = probability_dicts['ext_z']
+    int_bsa_dict = probability_dicts['int_bsa']
+    ext_bsa_dict = probability_dicts['ext_bsa']
+"""
+
+for name, network in networks.items():
+    if barrel_or_sandwich == '2.40':
+        propensity_dict_1 = propensity_dicts['{}_z'.format(name[0:3])]
+
+        # Dictionary of z-coordinates
+        node_z_list = nx.get_node_attributes(G, 'z_coords')
+
+        for node, z_coord in node_z_list.items():
+            node_propensity_dict = OrderedDict()
+
+            for aa, propensity_list in propensity_dict_1.items():
+                z_coords = np.array(list(propensity_list.keys()))
+                propensities = np.array(list(propensity_list.values()))
+
+                index_1 = (np.abs(z_coords - z_coord)).argmin()
+                if z_coords[index] < z_coord:
+                    index_2 = index_1 + 1
+                elif z_coords[index] > z_coord:
+                    index_2 = index_1 - 1
+                else:
+                    index_2 = ''
+
+                propensity_1 = propensities[index_1]
+                if index_2 != '':
+                    propensity_2 = propensities[index_2]
+
+                propensities
+
+    elif barrel_or_sandwich == '2.60':
+        propensity_dict_1 = propensity_dicts['{}_z'.format(name[0:3])]
+        propensity_dict_2 = propensity_dicts['{}_bsa'.format(name[0:3])]
+
+        for node in network:
+            node_z = nx.get_node_attributes(G, 'sandwich_z_coords')
+            node_bsa = nx.get_node_attributes(G, 'buried_surface_area')
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+            fgfgfgf
