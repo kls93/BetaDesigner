@@ -12,6 +12,7 @@ if barrel_or_sandwich == 'barrel':
 elif barrel_or_sandwich == 'sandwich':
     barrel_or_sandwich = '2.60'
 pdb_code = input('Specify PDB accession code / structure name: ')
+pdb_code = pdb_code.lower()  # Needs to be lower case to be recognised in the OPM
 input_pdb_file = input('Specify absolute file path of PDB coordinates of backbone structure: ')
 datagen_file_path = input('Specify absolute file path of DataGen wrapper script (datagen.py): ')
 output_directory = input('Specify absolute path of output directory: ')
@@ -20,8 +21,9 @@ output_directory = input('Specify absolute path of output directory: ')
 # Defines input parameters, sets up directory framework and writes input file
 # for DataGen
 barrel_or_sandwich = '2.40'
-pdb_code = '6CZG'
-input_pdb_file = '/BetaDesigner_results/Program_input/6czg_test.pdb'
+pdb_code = '2fgr'  # Needs to be lower case to be recognised in the OPM
+pdb_code = pdb_code.lower()
+input_pdb_file = '/BetaDesigner_results/Program_input/2fgr.pdb'
 datagen_file_path = '/DataGen/datagen/datagen.py'
 output_directory = '/BetaDesigner_results/Program_output'
 
@@ -107,6 +109,7 @@ with open(datagen_input_file, 'w') as f:
             'Structure database: CATH\n' +
             'ID: {}\n'.format(barrel_or_sandwich) +
             'Working directory: {}\n'.format(output_directory) +
+            'OPM database: /Volumes/Seagate_Backup_Plus_Drive/opm/\n' +
             'Beta Designer: True\n' +
             'Dataframes: {}\n'.format(dataframe_loc))
 
