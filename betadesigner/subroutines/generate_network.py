@@ -1,5 +1,4 @@
 
-import copy
 import os
 import pickle
 import random
@@ -13,39 +12,17 @@ prompt = '> '
 
 # Initially, I should exclude contacts outside of the beta-strands of interest.
 
-"""
-print('Specify absolute file path of input dataframe:')
-input_df_loc = input(prompt).replace('\\', '/')
-while not os.path.isfile(input_df_loc):
-    print('Absolute file path of input dataframe not recognised')
-    input_df_loc = input(prompt).replace('\\', '/')
-    if os.path.isfile(input_df_loc):
-        break
-
-print('Barrel or sandwich?')
-barrel_or_sandwich = input(prompt).lower()
-while not barrel_or_sandwich in ['barrel', 'sandwich']:
-    print('Please enter "barrel" or "sandwich":')
-    barrel_or_sandwich = input(prompt).lower()
-    if barrel_or_sandwich in ['barrel', 'sandwich']:
-        break
-    else:
-        print('Structure type not recognised')
-if barrel_or_sandwich == 'barrel':
-    barrel_or_sandwich = '2.40'
-elif barrel_or_sandwich == 'sandwich':
-    barrel_or_sandwich = '2.60'
-"""
-
-input_df_loc = '/Users/ks17361/Documents/BetaDesigner_results/Program_output/Beta_res_dataframe.pkl'
-barrel_or_sandwich = '2.40'
-
-orig_df = pd.read_pickle(input_df_loc)
-
-if len(set(orig_df['domain_ids'])) != 1:
-    sys.exit('More than one structure listed in input dataframe')
 
 # Creates dataframes of residues on interior and exterior surfaces
+class generate_network():
+
+    def __init__(self, input_df, propensity_dicts, barrel_or_sandwich):
+        self.input_df = input_df
+        self.propensity_dicts = propensity_dicts
+        self.barrel_or_sandwich = barrel_or_sandwich
+
+def extract_network():
+    pass
 dfs = OrderedDict()
 if barrel_or_sandwich == '2.40':
     int_surf_df = orig_df[orig_df['int_ext'] == 'interior']
