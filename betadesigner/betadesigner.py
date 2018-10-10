@@ -10,12 +10,12 @@ import pandas as pd
 def main():
     if name == '__main__':
         from subroutines.find_parameters import find_parameters
-        from subroutines.generate_network import generate_network
+        from subroutines.generate_initial_sequences import generate_ga_input
         from subroutines.run_genetic_algorithm import
         from subroutines.write_output_structures import
     else:
         from betadesigner.subroutines.find_parameters import find_parameters
-        from betadesigner.subroutines.generate_network import generate_network
+        from betadesigner.subroutines.generate_initial_sequences import generate_ga_input
         from betadesigner.subroutines.run_genetic_algorithm import
         from betadesigner.subroutines.write_output_structures
 
@@ -48,13 +48,15 @@ def main():
     # residues are represented by nodes (labelled with their identity
     # (initially set to 'UNK'), their z-coordinate, and their buried surface
     # area (sandwiches only)), and the interactions between residues are
-    # represented by edges (separate edges are constructed for hydrogen bonding
-    # interactions, non-hydrogen bonding interactions and +/-2 interactions).
-    # Two networks are constructed for a barrel (interior and exterior
-    # surfaces), and three networks are constructured for a sandwich (interior
-    # and two exterior surfaces).
-    networks = generate_network(input_df, propensity_dicts)
-    networks.create_network()
+    # represented by edges (separate edges are constructed for hydrogen-bonding
+    # backbone interactions and non-hydrogen bonding backbone interactions (see
+    # Hutchinson et al., 1998), and +/-2 interactions). Two networks are
+    # constructed for a barrel (interior and exterior surfaces), and three
+    # networks are constructured for a sandwich (interior and two exterior
+    # surfaces).
+    initial_solutions = generate_ga_input(input_df, propensity_dicts, barrel_or_sandwich)
+    dfs_dict = initial_solutions.filter_input_df()
+    networks_dict = initial_solutions.generate_networks(dfs_dict)
 
     # Adds side-chains onto networks using individual amino acid propensity
     # scales to generate population of starting sequences
