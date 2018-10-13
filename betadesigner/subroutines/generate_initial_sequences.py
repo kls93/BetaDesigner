@@ -81,13 +81,13 @@ class generate_ga_input():
         # edges.
         interactions_dict = {'HB': 'hb_pairs',
                              'NHB': 'nhb_pairs',
-                             'Minus 2': 'plus_minus_2',
-                             'Plus 2': 'plus_minus_2'}
+                             'Plus Minus 2': 'minus_2',
+                             'Plus Minus 2': 'plus_2'}
 
         # Creates networks of interacting residues on each surface
         networks = OrderedDict()
 
-        for label, sub_df in surface_dfs.items():
+        for surface_label, sub_df in surface_dfs.items():
             # Initialises MultiGraph (= undirected graph with self loops and
             # parallel edges)
             G = nx.MultiGraph()
@@ -100,20 +100,20 @@ class generate_ga_input():
                 for num in range(sub_df.shape[0]):
                     node = sub_df['res_ids'][num]
                     z_coord = sub_df['z_coords'][num]
-                    G.add_node(node, aa_id='UNK', int_ext=label, z=z_coord)
+                    G.add_node(node, aa_id='UNK', int_ext=surface_label, z=z_coord)
             elif self.barrel_or_sandwich == '2.60':
                 for num in range(sub_df.shape[0]):
                     node = sub_df['res_ids'][num]
                     z_coord = sub_df['sandwich_z_coords'][num]
                     buried_surface_area = sub_df['buried_surface_area'][num]
                     edge_or_central = sub_df['edge_or_central']
-                    G.add_node(node, aa_id='UNK', int_ext=label, z=z_coord,
+                    G.add_node(node, aa_id='UNK', int_ext=surface_label, z=z_coord,
                                bsa=buried_surface_area, eoc=edge_or_central)
 
             # Adds edges (= residue interactions) to MultiGraph, labelled by
             # interaction type. The interactions considered are defined in
             # interactions_dict.
-            for label, interaction_type in interactions_dict.items():
+            for edge_label, interaction_type in interactions_dict.items():
                 for num in range(sub_df.shape[0]):
                     res_1 = sub_df['res_ids'][num]
 
@@ -121,9 +121,10 @@ class generate_ga_input():
                     if type(res_list) != list:
                         res_list = [res_list]
 
-                    if len(res_list) != 1:
+                    if len(res_list) > 1:
+                        print(res_list)
                         sys.exit('Res list error {} {}'.format(res_1, interaction_type))
-                    else:
+                    elif len(res_list) == 1 and res_list != ['']:
                         res_2 = res_list[0]
                         # Only interactions between residues within sub_df are
                         # considered.
@@ -132,17 +133,16 @@ class generate_ga_input():
                         else:
                             # Ensures interactions are only added to the
                             # network once.
-                            attributes = [val for edge_label, sub_dict in
-                                          G[res_1][res_2].items() for key, val
-                                          in sub_dict.items()]
-                            if (
-                                (G.has_edge(res_1, res_2) is False)
-                                or
-                                (G.has_edge(res_1, res_2) is True and not label in attributes)
-                            ):
-                                G.add_edge(res_1, res_2, label=label)
+                            if G.has_edge(res_1, res_2) is False:
+                                G.add_edge(res_1, res_2, label=edge_label)
+                            elif G.has_edge(res_1, res_2) is True:
+                                attributes = [val for edge_label, sub_dict in
+                                              G[res_1][res_2].items() for key,
+                                              val in sub_dict.items()]
+                                if not edge_label in attributes:
+                                    G.add_edge(res_1, res_2, label=edge_label)
 
-            networks[label] = G
+            networks[surface_label] = G
 
         return networks
 
@@ -169,7 +169,7 @@ class generate_ga_input():
 
                 new_node_aa_ids = OrderedDict()
                 for node in list(H.nodes):
-                    random_aa = aas[random.randint(0, 19)]
+                    random_aa = aas[random.randint(0, (len(aas)-1))]
                     new_node_aa_ids[node] = {'aa_id': random_aa}
                 nx.set_node_attributes(H, new_node_aa_ids)
 
@@ -198,7 +198,7 @@ class generate_ga_input():
                 # Extracts propensity scales for the surface the residues in
                 # the network are on
                 sub_propensity_dicts = OrderedDict({
-                    dict_label, propensity_dict for dict_label, propensity_dict in
+                    dict_label: propensity_dict for dict_label, propensity_dict in
                     self.propensity_dicts.items() if
                     dict_label.split('_')[0] == network_label.split('_')[0][0:3]
                 })
@@ -213,16 +213,21 @@ class generate_ga_input():
                     for aa in list(self.propensity_dicts['int_z'].keys()):
                         node_indv_propensities_dict[aa] = np.zeros((1, len(sub_propensity_dicts)))
 
+                    print(node_indv_propensities_dict)
+
                     count = 0
                     for dict_label, propensity_dict in sub_propensity_dicts.items():
                         node_prop = H.nodes[node][dict_label.split('_')[-1]]
-                        count += 1
+                        print(node)
+                        print(node_prop)
 
                         for aa, aa_propensity_scale in propensity_dict.items():
                             # Calculates interpolated propensity value
-                            index_1 = (np.abs(aa_propensity_scale[0] - node_prop).argmin()
+                            index_1 = (np.abs(aa_propensity_scale[0]-node_prop)).argmin()
                             prop_val_1 = aa_propensity_scale[0][index_1]
+                            print(prop_val_1)
                             propensity_1 = aa_propensity_scale[1][index_1]
+                            print(propensity_1)
 
                             index_2 = ''
                             if prop_val_1 < node_prop:
@@ -232,16 +237,22 @@ class generate_ga_input():
 
                             if index_2 == '':
                                 propensity == aa_propensity_scale[1][index_1]
+                                print(propensity)
                             else:
                                 prop_val_2 = aa_propensity_scale[0][index_2]
                                 propensity_2 = aa_propensity_scale[1][index_2]
+                                print(prop_val_2)
+                                print(propensity_2)
 
                                 weight_1 = abs(prop_val_2 - node_prop)
                                 weight_2 = abs(prop_val_1 - node_prop)
                                 propensity = (((propensity_1*weight_1) + (propensity_2*weight_2))
                                               / abs(prop_val_2 - prop_val_1))
+                                print(propensity)
 
                             node_indv_propensities_dict[aa][0][count] = propensity
+
+                        count += 1
 
                     # Sums propensities across structural features considered
                     for aa in list(node_indv_propensities_dict.keys()):
@@ -249,12 +260,14 @@ class generate_ga_input():
                         propensity_sum = np.sum(np.negative(np.log(propensity_array)))
                         node_indv_propensities_dict[aa] = propensity_sum
 
+
                     # Orders amino acids by their propensity values from least
                     # to most favourable
-                    node_indv_propensities_dict = sorted(
+                    node_indv_propensities_dict = OrderedDict(sorted(
                         node_indv_propensities_dict.items(), key=itemgetter(1),
                         reverse=True
-                    )
+                    ))
+                    print(node_indv_propensities_dict)
 
                     # Generates cumulative probability distribution from
                     # -ln(propensity) (~ free energy) differences
@@ -266,6 +279,7 @@ class generate_ga_input():
                             elif index > 0:
                                 propensity_diff = abs(ref_propensity - propensity)
                                 propensity_diff_sum += propensity_diff
+                        print(propensity_diff_sum)
 
                         node_cumulative_probabilities_dict = OrderedDict()
                         cumulative_probability = 0
@@ -279,6 +293,7 @@ class generate_ga_input():
                                 probability = abs(ref_propensity-propensity) / propensity_diff_sum
                             cumulative_probability += probability
                             node_cumulative_probabilities_dict[aa] = cumulative_probability
+                        print(node_cumulative_probabilities_dict)
 
                     # Generates cumulative probability distribution from ranks
                     # of -ln()propensity (~ free energy) values
@@ -292,11 +307,12 @@ class generate_ga_input():
                             probability = index / rank_sum
                             cumulative_probability += probability
                             node_cumulative_probabilities_dict[aa] = cumulative_probability
+                        print(node_cumulative_probabilities_dict)
 
                     cumulative_probabilities_array = np.array(list(node_cumulative_probabilities_dict.values()))
                     if round(cumulative_probabilities_array[-1], 4) != 1.0:
                         sys.exit('ERROR {} {}_z: Cumulative probability = {}'.format(
-                            node, network_label, cumulative_probabilities[0][-1])
+                            node, network_label, cumulative_probabilities_array[-1])
                         )
 
                     # Selects amino acid weighted by its probability
@@ -311,6 +327,7 @@ class generate_ga_input():
                     nx.set_node_attributes(H, {'{}'.format(node): {'aa_id': '{}'.format(selected_aa)}})
 
                 initial_networks[num] = H
+                print(nx.get_node_attributes(H, 'aa_id'))
 
             sequences[network_label] = initial_networks
 

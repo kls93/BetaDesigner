@@ -82,7 +82,7 @@ def find_parameters(args):
                 and
                 (propensity_scales_dict.endswith('.pkl'))
             ):
-                parameters['propensityscales'] = ProcessLookupError
+                parameters['propensityscales'] = propensity_scales_dict
                 break
             else:
                 print('File path to pickled propensity scales not recognised')
@@ -153,9 +153,9 @@ def find_parameters(args):
     os.chdir(working_directory)
 
     shutil.copy('{}'.format(parameters['inputdataframe']),
-                '{}/Program_input/Input_DataFrame.pkl'.format(working_directory))
+                'Program_input/Input_DataFrame.pkl'.format(working_directory))
     shutil.copy('{}'.format(parameters['propensityscales']),
-                '{}/Program_input/Propensity_scales.pkl'.format(working_directory))
+                'Program_input/Propensity_scales.pkl'.format(working_directory))
 
     # Writes program parameters to a txt file for user records
     with open('Program_input/BetaDesigner_parameters.txt', 'w') as f:
