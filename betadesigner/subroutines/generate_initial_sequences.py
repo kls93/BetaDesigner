@@ -1,24 +1,21 @@
 
 import copy
-import os
-import pickle
 import random
 import sys
-import matplotlib.pyplot as plt
 import networkx as nx
 import numpy as np
 import pandas as pd
 from collections import OrderedDict
 from operator import itemgetter
-prompt = '> '
 
 # Initially, I should exclude contacts outside of the beta-strands of interest.
 
 # PROPENSITY SCALE DICTIONARIES NAMES MUST ALWAYS START WITH "int" OR "ext",
 # AND END WITH "z" OR "bsa" AS MUST NETWORK NAMES
 
-# Creates dataframes of residues on interior and exterior surfaces
+
 class generate_ga_input():
+    # Creates dataframes of residues on interior and exterior surfaces
 
     def __init__(self, input_df, propensity_dicts, barrel_or_sandwich):
         self.input_df = input_df
@@ -48,29 +45,30 @@ class generate_ga_input():
         if self.barrel_or_sandwich == '2.40':
             int_surf_df = self.input_df[self.input_df['int_ext'] == 'interior']
             int_surf_df = int_surf_df.reset_index(drop=True)
-            surface_dfs['int'] = int_surf_df
+            surface_dfs['int'] = int_surf_df  # Label must be "int"
 
             ext_surf_df = self.input_df[self.input_df['int_ext'] == 'exterior']
             ext_surf_df = ext_surf_df.reset_index(drop=True)
-            surface_dfs['ext'] = ext_surf_df
+            surface_dfs['ext'] = ext_surf_df  # Label must be "ext"
 
         elif self.barrel_or_sandwich == '2.60':
             int_surf_df = self.input_df[self.input_df['int_ext'] == 'interior']
             int_surf_df = int_surf_df.reset_index(drop=True)
-            surface_dfs['int'] = int_surf_df
+            surface_dfs['int'] = int_surf_df  # Label must be "int"
 
             sheet_ids = list(set(self.input_df['sheet_number'].tolist()))
             if len(sheet_ids) != 2:
                 sys.exit('Incorrect number of sheets in input beta-sandwich structure')
+
             ext_surf_1_df = self.input_df[(self.input_df['int_ext'] == 'exterior')
                                           & (self.input_df['sheet_number'] == sheet_ids[0])]
             ext_surf_1_df = ext_surf_1_df.reset_index(drop=True)
-            surface_dfs['ext1'] = ext_surf_1_df
+            surface_dfs['ext1'] = ext_surf_1_df  # Label must be "ext1"
 
             ext_surf_2_df = self.input_df[(self.input_df['int_ext'] == 'exterior')
                                           & (self.input_df['sheet_number'] == sheet_ids[-1])]
             ext_surf_2_df = ext_surf_2_df.reset_index(drop=True)
-            surface_dfs['ext2'] = ext_surf_2_df
+            surface_dfs['ext2'] = ext_surf_2_df  # Label must be "ext2"
 
         return surface_dfs
 
@@ -83,8 +81,8 @@ class generate_ga_input():
         # edges.
         interactions_dict = {'HB': 'hb_pairs',
                              'NHB': 'nhb_pairs',
-                             'Minus 2': 'minus_2',
-                             'Plus 2': 'plus_2'}
+                             'Minus 2': 'plus_minus_2',
+                             'Plus 2': 'plus_minus_2'}
 
         # Creates networks of interacting residues on each surface
         networks = OrderedDict()
@@ -128,11 +126,21 @@ class generate_ga_input():
                     else:
                         res_2 = res_list[0]
                         # Only interactions between residues within sub_df are
-                        # considered
+                        # considered.
                         if not res_2 in list(G.nodes()):
                             pass
                         else:
-                            G.add_edge(res_1, res_2, label=label)
+                            # Ensures interactions are only added to the
+                            # network once.
+                            attributes = [val for edge_label, sub_dict in
+                                          G[res_1][res_2].items() for key, val
+                                          in sub_dict.items()]
+                            if (
+                                (G.has_edge(res_1, res_2) is False)
+                                or
+                                (G.has_edge(res_1, res_2) is True and not label in attributes)
+                            ):
+                                G.add_edge(res_1, res_2, label=label)
 
             networks[label] = G
 
@@ -171,7 +179,8 @@ class generate_ga_input():
 
         return sequences
 
-    def add_initial_side_chains_from_propensities(self, networks, pop_size):
+    def add_initial_side_chains_from_propensities(self, networks, pop_size,
+                                                  raw_or_rank):
         # Uses user-specified propensity scales of the amino acids with
         # z-coordinate, buried surface area (sandwiches only) and edge vs.
         # central strands (sandwiches only).
@@ -198,6 +207,8 @@ class generate_ga_input():
                 H = copy.deepcopy(G)
 
                 for node in list(H.nodes):
+                    # Calculates summed propensity for each amino acid across
+                    # all structural features considered in the design process
                     node_indv_propensities_dict = OrderedDict()
                     for aa in list(self.propensity_dicts['int_z'].keys()):
                         node_indv_propensities_dict[aa] = np.zeros((1, len(sub_propensity_dicts)))
@@ -232,52 +243,67 @@ class generate_ga_input():
 
                             node_indv_propensities_dict[aa][0][count] = propensity
 
+                    # Sums propensities across structural features considered
                     for aa in list(node_indv_propensities_dict.keys()):
                         propensity_array = node_indv_propensities_dict[aa]
                         propensity_sum = np.sum(np.negative(np.log(propensity_array)))
                         node_indv_propensities_dict[aa] = propensity_sum
 
-                    node_indv_propensities_dict = sorted(node_indv_propensities_dict.items(), key=itemgetter(1))
+                    # Orders amino acids by their propensity values from least
+                    # to most favourable
+                    node_indv_propensities_dict = sorted(
+                        node_indv_propensities_dict.items(), key=itemgetter(1),
+                        reverse=True
+                    )
 
-                    # Generates cumulative probability distribution from -ln(propensity)
-                    # (~ free energy) differences
-                    propensity_diff_sum = 0
-                    for index, propensity in enumerate(list(node_indv_propensities_dict.values())):
-                        if index == 0:
-                            ref_propensity = propensity
-                        elif index > 0:
-                            propensity_diff = propensity - ref_propensity
-                            propensity_diff_sum += propensity_diff
+                    # Generates cumulative probability distribution from
+                    # -ln(propensity) (~ free energy) differences
+                    if raw_or_rank == 'raw':
+                        propensity_diff_sum = 0
+                        for index, propensity in enumerate(list(node_indv_propensities_dict.values())):
+                            if index == 0:
+                                ref_propensity = propensity
+                            elif index > 0:
+                                propensity_diff = abs(ref_propensity - propensity)
+                                propensity_diff_sum += propensity_diff
 
-                    node_cumulative_probabilities_dict = OrderedDict()
-                    cumulative_probability = 0
-                    for index, propensity in enumerate(list(node_indv_propensities_dict.values())):
-                        if index == 0:
-                            ref_propensity = propensity
-                            probability = 1 / propensity_diff_sum
-                        elif index > 0:
-                            probability = (propensity-ref_propensity) / propensity_diff_sum
-                        cumulative_probability += probability
-                        node_cumulative_probabilities_dict[list(node_indv_propensities_dict.keys())[index]] = cumulative_probability
+                        node_cumulative_probabilities_dict = OrderedDict()
+                        cumulative_probability = 0
+                        for index, propensity in enumerate(list(node_indv_propensities_dict.values())):
+                            aa = list(node_indv_propensities_dict.keys())[index]
+
+                            if index == 0:
+                                ref_propensity = propensity
+                                probability = 1 / propensity_diff_sum
+                            elif index > 0:
+                                probability = abs(ref_propensity-propensity) / propensity_diff_sum
+                            cumulative_probability += probability
+                            node_cumulative_probabilities_dict[aa] = cumulative_probability
 
                     # Generates cumulative probability distribution from ranks
                     # of -ln()propensity (~ free energy) values
-                    rank_sum = len(node_indv_propensities_dict)
+                    elif raw_or_rank == 'rank':
+                        largest_rank = len(node_indv_propensities_dict)
+                        rank_sum = (largest_rank*(largest_rank+1)) / 2
 
-                    node_cumulative_probabilities_dict = OrderedDict()
-                    cumulative_probability = 0
-                    for index, aa in enumerate(list(node_indv_propensities_dict.keys())):
-                        probability = index / rank_sum
-                        cumulative_probability += probability
-                        node_cumulative_probabilities_dict[aa] = cumulative_probability
+                        node_cumulative_probabilities_dict = OrderedDict()
+                        cumulative_probability = 0
+                        for index, aa in enumerate(list(node_indv_propensities_dict.keys())):
+                            probability = index / rank_sum
+                            cumulative_probability += probability
+                            node_cumulative_probabilities_dict[aa] = cumulative_probability
 
-                    if round(list(node_cumulative_probabilities_dict.values())[-1], 4) != 1.0:
-                        sys.exit('ERROR {} {}_z: {}'.format(node, name[0:3], cumulative_probabilities[0][-1]))
+                    cumulative_probabilities_array = np.array(list(node_cumulative_probabilities_dict.values()))
+                    if round(cumulative_probabilities_array[-1], 4) != 1.0:
+                        sys.exit('ERROR {} {}_z: Cumulative probability = {}'.format(
+                            node, network_label, cumulative_probabilities[0][-1])
+                        )
 
+                    # Selects amino acid weighted by its probability
                     random_number = random.uniform(0, 1)
-                    nearest_index = (np.abs(np.array(list(node_cumulative_probabilities_dict.values()))).argmin()
+                    nearest_index = (np.abs(cumulative_probabilities_array)).argmin()
 
-                    if list(node_cumulative_probabilities_dict.values())[nearest_index] >= random_number:
+                    if cumulative_probabilities_array[nearest_index] >= random_number:
                         selected_aa = list(node_cumulative_probabilities_dict.keys())[nearest_index]
                     else:
                         selected_aa = list(node_cumulative_probabilities_dict.keys())[nearest_index+1]

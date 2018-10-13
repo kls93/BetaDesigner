@@ -11,8 +11,8 @@ def main():
     if name == '__main__':
         from subroutines.find_parameters import find_parameters
         from subroutines.generate_initial_sequences import generate_ga_input
-        from subroutines.run_genetic_algorithm import
-        from subroutines.write_output_structures import
+        from subroutines.run_genetic_algorithm import run_ga
+        from subroutines.write_output_structures import gen_output
     else:
         from betadesigner.subroutines.find_parameters import find_parameters
         from betadesigner.subroutines.generate_initial_sequences import generate_ga_input
@@ -60,14 +60,24 @@ def main():
 
     # Adds side-chains onto networks using individual amino acid propensity
     # scales to generate population of starting sequences
+    random_initial_sequences_dict = initial_solutions.add_random_initial_side_chains(networks_dict, 100)
+    print(random_initial_sequences_dict)
+    raw_propensity_initial_sequences_dict = initial_solutions.add_initial_side_chains_from_propensities(networks_dict, 100, 'raw')
+    print(raw_propensity_initial_sequences_dict)
+    rank_propensity_initial_sequences_dict = initial_solutions.add_initial_side_chains_from_propensities(networks_dict, 100, 'rank')
+    print(rank_propensity_initial_sequences_dict)
 
     # Optimises sequences for amino acid propensities (considering both
     # individual and pairwise interactions) and side-chain packing using a
     # genetic algorithm.
     # NOTE: make sure genetic algorithm parameter values can vary!
+    ga_solutions = run_ga()
 
     # Writes PDB files of output sequences
+    """
     os.mkdir('Program_output/Output_structures')
+    output = gen_output()
+    """
 
 
 # Calls main() function if betadesigner.py is run as a script
