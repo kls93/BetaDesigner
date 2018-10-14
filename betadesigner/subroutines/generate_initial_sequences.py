@@ -153,7 +153,7 @@ class generate_ga_input():
         sequences = OrderedDict()
 
         # Generates list of possible amino acid identities
-        aas = list(self.propensity_dicts['int_z'].keys())
+        aas = list(self.propensity_dicts['int_z_indv'].keys())
 
         # For each network, assigns a random amino acid to each node in the
         # network to generate an initial sequence. Repeats pop_size times to
@@ -200,7 +200,8 @@ class generate_ga_input():
                 sub_propensity_dicts = OrderedDict({
                     dict_label: propensity_dict for dict_label, propensity_dict in
                     self.propensity_dicts.items() if
-                    dict_label.split('_')[0] == network_label.split('_')[0][0:3]
+                    (dict_label.split('_')[0] == network_label.split('_')[0][0:3]
+                     and 'indv' == dict_label.split('_')[2])
                 })
 
                 # Creates copy of network
@@ -210,12 +211,12 @@ class generate_ga_input():
                     # Calculates summed propensity for each amino acid across
                     # all structural features considered in the design process
                     node_indv_propensities_dict = OrderedDict()
-                    for aa in list(self.propensity_dicts['int_z'].keys()):
+                    for aa in list(self.propensity_dicts['int_z_indv'].keys()):
                         node_indv_propensities_dict[aa] = np.zeros((1, len(sub_propensity_dicts)))
 
                     count = 0
                     for dict_label, propensity_dict in sub_propensity_dicts.items():
-                        node_prop = H.nodes[node][dict_label.split('_')[-1]]
+                        node_prop = H.nodes[node][dict_label.split('_')[1]]
 
                         for aa, aa_propensity_scale in propensity_dict.items():
                             # Calculates interpolated propensity value

@@ -70,6 +70,9 @@ def main():
     # genetic algorithm.
     # NOTE: make sure genetic algorithm parameter values can vary!
     ga_solutions = run_ga()
+    random_initial_sequences_dict = ga_solutions.run_genetic_algorithm(random_initial_sequences_dict)
+    raw_propensity_initial_sequences_dict = ga_solutions.run_genetic_algorithm(raw_propensity_initial_sequences_dict)
+    rank_propensity_initial_sequences_dict = ga_solutions.run_genetic_algorithm(rank_propensity_initial_sequences_dict)
 
     # Writes PDB files of output sequences
     """
