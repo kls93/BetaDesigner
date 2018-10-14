@@ -213,21 +213,15 @@ class generate_ga_input():
                     for aa in list(self.propensity_dicts['int_z'].keys()):
                         node_indv_propensities_dict[aa] = np.zeros((1, len(sub_propensity_dicts)))
 
-                    print(node_indv_propensities_dict)
-
                     count = 0
                     for dict_label, propensity_dict in sub_propensity_dicts.items():
                         node_prop = H.nodes[node][dict_label.split('_')[-1]]
-                        print(node)
-                        print(node_prop)
 
                         for aa, aa_propensity_scale in propensity_dict.items():
                             # Calculates interpolated propensity value
                             index_1 = (np.abs(aa_propensity_scale[0]-node_prop)).argmin()
                             prop_val_1 = aa_propensity_scale[0][index_1]
-                            print(prop_val_1)
                             propensity_1 = aa_propensity_scale[1][index_1]
-                            print(propensity_1)
 
                             index_2 = ''
                             if prop_val_1 < node_prop:
@@ -237,18 +231,14 @@ class generate_ga_input():
 
                             if index_2 == '':
                                 propensity == aa_propensity_scale[1][index_1]
-                                print(propensity)
                             else:
                                 prop_val_2 = aa_propensity_scale[0][index_2]
                                 propensity_2 = aa_propensity_scale[1][index_2]
-                                print(prop_val_2)
-                                print(propensity_2)
 
                                 weight_1 = abs(prop_val_2 - node_prop)
                                 weight_2 = abs(prop_val_1 - node_prop)
                                 propensity = (((propensity_1*weight_1) + (propensity_2*weight_2))
                                               / abs(prop_val_2 - prop_val_1))
-                                print(propensity)
 
                             node_indv_propensities_dict[aa][0][count] = propensity
 
@@ -267,12 +257,10 @@ class generate_ga_input():
                         node_indv_propensities_dict.items(), key=itemgetter(1),
                         reverse=True
                     ))
-                    print(node_indv_propensities_dict)
 
                     # Generates cumulative probability distribution from
                     # -ln(propensity) (~ free energy) differences
                     if raw_or_rank == 'raw':
-                        # START BUG FIXING HERE! ALSO START TO WRITE GENETIC ALGORITHM TONIGHT!
                         propensity_diff_sum = 1
                         for index, propensity in enumerate(list(node_indv_propensities_dict.values())):
                             if index == 0:
@@ -280,7 +268,6 @@ class generate_ga_input():
                             elif index > 0:
                                 propensity_diff = abs(ref_propensity - propensity)
                                 propensity_diff_sum += (propensity_diff + 1)
-                        print(propensity_diff_sum)
 
                         node_cumulative_probabilities_dict = OrderedDict()
                         cumulative_probability = 0
@@ -294,7 +281,6 @@ class generate_ga_input():
                                 probability = (abs(ref_propensity-propensity)+1) / propensity_diff_sum
                             cumulative_probability += probability
                             node_cumulative_probabilities_dict[aa] = cumulative_probability
-                        print(node_cumulative_probabilities_dict)
 
                     # Generates cumulative probability distribution from ranks
                     # of -ln()propensity (~ free energy) values
@@ -305,10 +291,9 @@ class generate_ga_input():
                         node_cumulative_probabilities_dict = OrderedDict()
                         cumulative_probability = 0
                         for index, aa in enumerate(list(node_indv_propensities_dict.keys())):
-                            probability = index / rank_sum
+                            probability = (index+1) / rank_sum
                             cumulative_probability += probability
                             node_cumulative_probabilities_dict[aa] = cumulative_probability
-                        print(node_cumulative_probabilities_dict)
 
                     cumulative_probabilities_array = np.array(list(node_cumulative_probabilities_dict.values()))
                     if round(cumulative_probabilities_array[-1], 4) != 1.0:
@@ -328,7 +313,6 @@ class generate_ga_input():
                     nx.set_node_attributes(H, {'{}'.format(node): {'aa_id': '{}'.format(selected_aa)}})
 
                 initial_networks[num] = H
-                print(nx.get_node_attributes(H, 'aa_id'))
 
             sequences[network_label] = initial_networks
 
