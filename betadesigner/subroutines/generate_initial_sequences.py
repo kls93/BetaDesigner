@@ -272,13 +272,14 @@ class generate_ga_input():
                     # Generates cumulative probability distribution from
                     # -ln(propensity) (~ free energy) differences
                     if raw_or_rank == 'raw':
-                        propensity_diff_sum = 0
+                        # START BUG FIXING HERE! ALSO START TO WRITE GENETIC ALGORITHM TONIGHT!
+                        propensity_diff_sum = 1
                         for index, propensity in enumerate(list(node_indv_propensities_dict.values())):
                             if index == 0:
                                 ref_propensity = propensity
                             elif index > 0:
                                 propensity_diff = abs(ref_propensity - propensity)
-                                propensity_diff_sum += propensity_diff
+                                propensity_diff_sum += (propensity_diff + 1)
                         print(propensity_diff_sum)
 
                         node_cumulative_probabilities_dict = OrderedDict()
@@ -290,7 +291,7 @@ class generate_ga_input():
                                 ref_propensity = propensity
                                 probability = 1 / propensity_diff_sum
                             elif index > 0:
-                                probability = abs(ref_propensity-propensity) / propensity_diff_sum
+                                probability = (abs(ref_propensity-propensity)+1) / propensity_diff_sum
                             cumulative_probability += probability
                             node_cumulative_probabilities_dict[aa] = cumulative_probability
                         print(node_cumulative_probabilities_dict)
