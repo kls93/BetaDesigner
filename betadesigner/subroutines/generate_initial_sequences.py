@@ -201,7 +201,7 @@ class generate_ga_input():
                     dict_label: propensity_dict for dict_label, propensity_dict in
                     self.propensity_dicts.items() if
                     (dict_label.split('_')[0] == network_label.split('_')[0][0:3]
-                     and 'indv' == dict_label.split('_')[2])
+                     and dict_label.split('_')[2] == 'indv')
                 })
 
                 # Creates copy of network

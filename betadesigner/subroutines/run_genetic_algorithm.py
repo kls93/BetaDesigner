@@ -12,20 +12,29 @@ class run_ga():
         fitness_scores = OrderedDict()
 
         for surface_label, networks_dict in sequences_dict.items():
-            sub_propensity_dicts = OrderedDict({
+            sub_indv_propensity_dicts = OrderedDict({
                 dict_label: propensity_dict for dict_label, propensity_dict in
                 self.propensity_dicts.items() if
-                dict_label.split('_')[0] == surface_label.split('_')[0]
+                ((dict_label.split('_')[0] == surface_label.split('_')[0])
+                 and (dict_label.split('_')[2] == 'indv'))
+            })
+
+            sub_pairwise_propensity_dicts = OrderedDict({
+                dict_label: propensity_dict for dict_label, propensity_dict in
+                self.propensity_dicts.items() if
+                ((dict_label.split('_')[0] == surface_label.split('_')[0])
+                 and (dict_label.split('_')[2] == 'pairwise'))
             })
 
             network_fitnesses = OrderedDict()
             for num, G in networks_dict.items():
                 propensity_count = 0
+                node_propensities_dict = OrderedDict({node: 0 for node in list(G.nodes)})
 
                 for node in list(G.nodes):
                     aa = G.nodes[node]['aa_id']
 
-                    for dict_label, propensity_dict in sub_propensity_dicts.items():
+                    for dict_label, propensity_dict in sub_indv_propensity_dicts.items():
                         node_prop = G.nodes[node][dict_label.split('_')[1]]
                         prop_weight = propensity_dict_weights[dict_label]
                         aa_propensity_scale = propensity_dict[aa]
@@ -52,6 +61,13 @@ class run_ga():
                                           / abs(prop_val_2 - prop_val_1))
 
                         propensity_count += (prop_weight*np.negative(np.log(propensity)))
+
+                        node_propensities_dict[node] += propensity
+
+                    for dict_label, propensity_dict in sub_pairwise_propensity_dicts.items():
+                        for edge in G.edges(node):
+                            
+
 
                 network_fitnesses[num] = propensity_count
 
