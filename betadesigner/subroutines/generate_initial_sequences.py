@@ -20,6 +20,7 @@ class generate_ga_input():
     def __init__(self, input_df, propensity_dicts, barrel_or_sandwich):
         self.input_df = input_df
         self.propensity_dicts = propensity_dicts
+        self.aas = list(self.propensity_dicts['int_z_indv'].keys())
         self.barrel_or_sandwich = barrel_or_sandwich
 
         # OVERWRITE ONCE HAVE COMPLETED GENERATION OF PROPENSITY SCALES FROM
@@ -152,9 +153,6 @@ class generate_ga_input():
         # Initialises dictionary of sequence populations for all networks
         sequences = OrderedDict()
 
-        # Generates list of possible amino acid identities
-        aas = list(self.propensity_dicts['int_z_indv'].keys())
-
         # For each network, assigns a random amino acid to each node in the
         # network to generate an initial sequence. Repeats pop_size times to
         # generate a starting population of sequences to be fed into the
@@ -169,7 +167,7 @@ class generate_ga_input():
 
                 new_node_aa_ids = OrderedDict()
                 for node in list(H.nodes):
-                    random_aa = aas[random.randint(0, (len(aas)-1))]
+                    random_aa = self.aas[random.randint(0, (len(self.aas)-1))]
                     new_node_aa_ids[node] = {'aa_id': random_aa}
                 nx.set_node_attributes(H, new_node_aa_ids)
 
@@ -200,8 +198,8 @@ class generate_ga_input():
                 sub_propensity_dicts = OrderedDict({
                     dict_label: propensity_dict for dict_label, propensity_dict in
                     self.propensity_dicts.items() if
-                    (dict_label.split('_')[0] == network_label.split('_')[0][0:3]
-                     and dict_label.split('_')[2] == 'indv')
+                    (dict_label.split('_')[0] == network_label[0:3]
+                     and dict_label.split('_')[-1] == 'indv')
                 })
 
                 # Creates copy of network
