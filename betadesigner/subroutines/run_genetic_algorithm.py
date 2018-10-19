@@ -14,6 +14,8 @@ class run_ga():
         self.aas = list(self.propensity_dicts['int_z_indv'].keys())
 
     def measure_fitness_propensity(sequences_dict, propensity_dict_weights):
+        # Measures fitness of amino acid sequences from their propensities for
+        # the structural features of the input backbone structure
         fitness_scores = OrderedDict()
 
         for surface_label, networks_dict in sequences_dict.items():
@@ -114,18 +116,45 @@ class run_ga():
 
         return fitness_scores
 
-    def measure_fitness_all_atom_scoring_function(sequences_dict):
+    def measure_fitness_all_atom_scoring_function(
+        sequences_dict, pdb_file_lines, orig_pdb_seq, aa_to_fasta
+    ):
+        # Measures fitness of sequences using an all-atom scoring function
+        # within BUDE
         fitness_scores = OrderedDict()
 
-        # First need to write PDB file of each network
+        # Load backbone structure into ampal
+        pdb = isambard.ampal.load_pdb(pdb_file_lines)
 
-        # Then load into ampal
-        pdb = isambard.ampal.load_pdb(pdb_file_path)
-        # Calculate all-atom scoring function
-        energy = budeff.get_internal_energy(pdb).total_energy
+        for surface_label, networks_dict in sequences_dict.items():
+            network_fitnesses = OrderedDict()
+
+            for num, G in networks_dict.items():
+                # Add loop amino acids into amino acid sequence
+                sequence = ''
+                for res_id, res_name in orig_pdb_seq.items():
+                    if res_id in list(G.nodes):
+                        sequence += aa_to_fasta[G.nodes[node]['aa_id']]
+                    else:
+                        sequence += aa_to_fasta[res_name]
+
+                # Packs side chains with SCWRL4
+                pdb = pack_side_chains_swrl(
+                    pdb, sequence, rigid_rotamer_model=True, hydrogens=False
+                )
+
+                # Calculate all-atom scoring function
+                energy = budeff.get_internal_energy(pdb).total_energy
+
+                network_fitnesses[num] = energy
+
+            fitness_scores[surface_label] = network_fitnesses
+
         return fitness_scores
 
-    def create_mating_population_fittest_indv(sequences_dict, fitness_scores, pop_size, unfit_fraction=0):
+    def create_mating_population_fittest_indv(
+        sequences_dict, fitness_scores, pop_size, unfit_fraction=0
+    ):
         # Creates mating population from fittest individuals
         mating_pop_dict = OrderedDict()
 
@@ -449,8 +478,40 @@ class run_ga():
 
         return merged_gen_dict
 
-    def run_genetic_algorithm(num_generations):
+    def run_genetic_algorithm(num_generations, sequences_dict):
         # Pipeline function to run genetic algorithm
         count = 0
         while count < num_generations:
-            
+            count += 1
+            fitness_scores = measure_fitness_propensity(sequences_dict, propensity_dict_weights)
+            # fitness_scores = measure_fitness_all_atom_scoring_function(sequences_dict)
+
+            mating_pop_dict = create_mating_population_fittest_indv(
+                sequences_dict, fitness_scores, pop_size, unfit_fraction
+            )
+            # mating_pop_dict = create_mating_population_roulette_wheel(
+            #     sequences_dict, fitness_scores, pop_size
+            # )
+            # mating_pop_dict = create_mating_population_rank_roulette_wheel(
+            #     sequences_dict, fitness_scores, pop_size
+            # )
+
+            crossover_output_dict = uniform_crossover(
+                mating_pop_dict, crossover_prob
+            )
+            # crossover_output_dict = segmented_crossover(
+            #    mating_pop_dict, swap_start_prob, swap_stop_prob
+            # )
+
+            mutation_output_dict = swap_mutate(
+                crossover_output_dict, mutation_prob
+            )
+            # mutation_output_dict = scramble_mutate(
+            #     crossover_output_dict, mutation_prob
+            # )
+
+            sequences_dict = add_children_to_parents(
+                sequences_dict, mutation_output_dict
+            )
+
+        return sequences_dict
