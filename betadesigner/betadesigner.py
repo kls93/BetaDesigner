@@ -35,6 +35,13 @@ def main():
     working_directory = parameters['workingdirectory']
     barrel_or_sandwich = parameters['barrelorsandwich']
     job_id = parameters['jobid']
+    pop_size = parameters['populationsize']
+    num_gens = parameters['numberofgenerations']
+    method_initial_side_chains = parameters['initialseqmethod']
+    method_fitness_score = parameters['fitnessscoremethod']
+    method_select_mating_pop = parameters['matingpopmethod']
+    method_crossover = parameters['crossovermethod']
+    method_mutation = parameters['mutationmethod']
 
     # Unpickles dataframe and dictionary of propensity scales
     input_df = pd.read_pickle(input_df_loc)
@@ -47,23 +54,39 @@ def main():
 
     # Generates networks of interacting residues from input dataframe, in which
     # residues are represented by nodes (labelled with their identity
-    # (initially set to 'UNK'), their z-coordinate, and their buried surface
-    # area (sandwiches only)), and the interactions between residues are
-    # represented by edges (separate edges are constructed for hydrogen-bonding
-    # backbone interactions and non-hydrogen bonding backbone interactions (see
+    # (initially set to 'UNK'), their z-coordinate, their buried surface
+    # area (sandwiches only), and whether they are an edge or a central strand
+    # (sandwiches only)), and the interactions between residues are represented
+    # by edges (separate edges are constructed for hydrogen-bonding backbone
+    # interactions and non-hydrogen bonding backbone interactions (see
     # Hutchinson et al., 1998), and +/-2 interactions). Two networks are
     # constructed for a barrel (interior and exterior surfaces), and three
     # networks are constructured for a sandwich (interior and two exterior
     # surfaces).
-    initial_solutions = generate_ga_input(input_df, propensity_dicts, barrel_or_sandwich)
+    initial_solutions = generate_ga_input(
+        input_df, propensity_dicts, barrel_or_sandwich, pop_size
+    )
     dfs_dict = initial_solutions.filter_input_df()
     networks_dict = initial_solutions.generate_networks(dfs_dict)
 
     # Adds side-chains onto networks using individual amino acid propensity
     # scales to generate population of starting sequences
-    random_initial_sequences_dict = initial_solutions.add_random_initial_side_chains(networks_dict, 100)
-    raw_propensity_initial_sequences_dict = initial_solutions.add_initial_side_chains_from_propensities(networks_dict, 100, 'raw')
-    rank_propensity_initial_sequences_dict = initial_solutions.add_initial_side_chains_from_propensities(networks_dict, 100, 'rank')
+    if method_initial_side_chains == 'random':
+        initial_sequences_dict = (
+            initial_solutions.add_random_initial_side_chains(networks_dict)
+        )
+    elif method_initial_side_chains == 'rawpropensity':
+        initial_sequences_dict = (
+            initial_solutions.add_initial_side_chains_from_propensities(
+                networks_dict, 'raw'
+            )
+        )
+    elif method_initial_side_chains == 'rankpropensity':
+        initial_sequences_dict = (
+            initial_solutions.add_initial_side_chains_from_propensities(
+                networks_dict, 'rank'
+            )
+        )
 
     # Optimises sequences for amino acid propensities (considering both
     # individual and pairwise interactions) and side-chain packing using a

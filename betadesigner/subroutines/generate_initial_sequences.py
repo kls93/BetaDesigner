@@ -17,11 +17,12 @@ from operator import itemgetter
 class generate_ga_input():
     # Creates dataframes of residues on interior and exterior surfaces
 
-    def __init__(self, input_df, propensity_dicts, barrel_or_sandwich):
+    def __init__(self, input_df, propensity_dicts, barrel_or_sandwich, pop_size):
         self.input_df = input_df
         self.propensity_dicts = propensity_dicts
         self.aas = list(self.propensity_dicts['int_z_indv'].keys())
         self.barrel_or_sandwich = barrel_or_sandwich
+        self.pop_size = pop_size
 
         # OVERWRITE ONCE HAVE COMPLETED GENERATION OF PROPENSITY SCALES FROM
         # BETASTATS.
@@ -147,7 +148,7 @@ class generate_ga_input():
 
         return networks
 
-    def add_random_initial_side_chains(self, networks, pop_size):
+    def add_random_initial_side_chains(self, networks):
         # Generates initial population of random sequences
 
         # Initialises dictionary of sequence populations for all networks
@@ -162,7 +163,7 @@ class generate_ga_input():
             # Initialises dictionary of starting sequences
             initial_networks = OrderedDict()
 
-            for num in range(pop_size):
+            for num in range(self.pop_size):
                 H = copy.deepcopy(G)
 
                 new_node_aa_ids = OrderedDict()
@@ -177,8 +178,7 @@ class generate_ga_input():
 
         return sequences
 
-    def add_initial_side_chains_from_propensities(self, networks, pop_size,
-                                                  raw_or_rank):
+    def add_initial_side_chains_from_propensities(self, networks, raw_or_rank):
         # Uses user-specified propensity scales of the amino acids with
         # z-coordinate, buried surface area (sandwiches only) and edge vs.
         # central strands (sandwiches only).
@@ -192,7 +192,7 @@ class generate_ga_input():
             # Initialises dictionary of starting sequences
             initial_networks = OrderedDict()
 
-            for num in range(pop_size):
+            for num in range(self.pop_size):
                 # Extracts propensity scales for the surface the residues in
                 # the network are on
                 sub_propensity_dicts = OrderedDict({
