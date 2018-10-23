@@ -5,18 +5,20 @@ import sys
 import pandas as pd
 
 # Pipeline script to run the BetaDesigner program. The program takes as input a
-# PDB file of backbone coordinates, from which it generates a different
+# PDB file of backbone coordinates. The program optimises an initial dataset of
+# possible sequences to fit the structural features of the backbone coordinates
+# using a genetic algorithm.
 
 
 def main():
     if __name__ == '__main__':
         from subroutines.find_parameters import find_parameters
-        from subroutines.generate_initial_sequences import generate_ga_input
+        from subroutines.generate_initial_sequences import gen_ga_input_pipeline
         from subroutines.run_genetic_algorithm import run_ga
         from subroutines.write_output_structures import gen_output
     else:
         from betadesigner.subroutines.find_parameters import find_parameters
-        from betadesigner.subroutines.generate_initial_sequences import generate_ga_input
+        from betadesigner.subroutines.generate_initial_sequences import gen_ga_input_pipeline
         from betadesigner.subroutines.run_genetic_algorithm import run_ga
         from betadesigner.subroutines.write_output_structures import gen_output
 
@@ -63,30 +65,11 @@ def main():
     # constructed for a barrel (interior and exterior surfaces), and three
     # networks are constructured for a sandwich (interior and two exterior
     # surfaces).
-    initial_solutions = generate_ga_input(
-        input_df, propensity_dicts, barrel_or_sandwich, pop_size
+    initial_sequences_object = gen_ga_input_pipeline(
+        input_df, propensity_dicts, barrel_or_sandwich, pop_size,
+        method_initial_side_chains
     )
-    dfs_dict = initial_solutions.filter_input_df()
-    networks_dict = initial_solutions.generate_networks(dfs_dict)
-
-    # Adds side-chains onto networks using individual amino acid propensity
-    # scales to generate population of starting sequences
-    if method_initial_side_chains == 'random':
-        initial_sequences_dict = (
-            initial_solutions.add_random_initial_side_chains(networks_dict)
-        )
-    elif method_initial_side_chains == 'rawpropensity':
-        initial_sequences_dict = (
-            initial_solutions.add_initial_side_chains_from_propensities(
-                networks_dict, 'raw'
-            )
-        )
-    elif method_initial_side_chains == 'rankpropensity':
-        initial_sequences_dict = (
-            initial_solutions.add_initial_side_chains_from_propensities(
-                networks_dict, 'rank'
-            )
-        )
+    initial_sequences_dict = initial_sequences_object.initial_sequences_pipeline()
 
     # Optimises sequences for amino acid propensities (considering both
     # individual and pairwise interactions) and side-chain packing using a
