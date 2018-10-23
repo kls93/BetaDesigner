@@ -1,9 +1,11 @@
 
 import os
+import pickle
 import random
 import shutil
 import string
 import sys
+import pandas as pd
 from collections import OrderedDict
 
 prompt = '> '
@@ -22,7 +24,8 @@ def find_parameters(args):
                     key = line.split(':')[0].replace(' ', '').lower()
                     value = line.split(':')[1].replace('\n', '').strip()
 
-                    if key in ['inputdataframe', 'propensityscales']:
+                    if key in ['inputdataframe', 'propensityscales',
+                               'propensityscaleweights']:
                         value = value.replace('\\', '/')  # For windows file paths
                         value = '/{}'.format(value.strip('/'))
                     elif key in ['workingdirectory']:
@@ -38,7 +41,7 @@ def find_parameters(args):
         except FileNotFoundError:
             print('Path to input file not recognised')
 
-    # Defines absolute file path to input dataframe
+    # Defines absolute file path to input dataframe, then unpickles dataframe
     if 'inputdataframe' in parameters:
         if (
             (not os.path.isfile(parameters['inputdataframe']))
@@ -64,7 +67,12 @@ def find_parameters(args):
             else:
                 print('File path to pickled input dataframe not recognised')
 
-    # Defines absolute file path to pickle file listing propensity scales
+    # Unpickles dataframe
+    input_df = pd.read_pickle(input_df_loc)
+    parameters['inputdataframe'] = input_df
+
+    # Defines absolute file path to pickle file listing propensity scales, then
+    # unpickles propensity scales
     if 'propensityscales' in parameters:
         if (
             (not os.path.isfile(parameters['propensityscales']))
@@ -93,6 +101,59 @@ def find_parameters(args):
                 break
             else:
                 print('File path to pickled propensity scales not recognised')
+
+    # Unpickles dictionary of propensity scales
+    with open(propensity_dicts_loc, 'rb') as pickle_file:
+        propensity_dicts = pickle.load(pickle_file)
+    parameters['propensityscales'] = propensity_dicts
+
+    # Defines propensity scale weights
+    if 'propensityscaleweights' in parameters:
+        if (
+            (not os.path.isfile(parameters['propensityscaleweights']))
+            or
+            (not parameters['propensityscaleweights'].endswith('.pkl'))
+        ):
+            print('File path to pickled propensity scale weights not recognised')
+            parameters.pop('propensityscaleweights')
+
+    if not 'propensityscaleweights' in parameters:
+        for propensity_dict in list(parameters['propensityscales'].keys()):
+            print('Specify weight for {}')
+
+
+
+
+
+
+
+
+
+
+
+        propensity_scales_dict = ''
+        while (
+            (not os.path.isfile(propensity_scales_dict))
+            or
+            (not propensity_scales_dict.endswith('.pkl'))
+        ):
+            print('Specify absolute file path of pickled propensity scales:')
+            propensity_scales_dict = input(prompt)
+
+            if (
+                (os.path.isfile(propensity_scales_dict))
+                and
+                (propensity_scales_dict.endswith('.pkl'))
+            ):
+                parameters['propensityscales'] = propensity_scales_dict
+                break
+            else:
+                print('File path to pickled propensity scales not recognised')
+
+    # Unpickles dictionary of propensity scales
+    with open(propensity_dicts_loc, 'rb') as pickle_file:
+        propensity_dicts = pickle.load(pickle_file)
+    parameters['propensityscales'] = propensity_dicts
 
     # Defines working directory
     if 'workingdirectory' in parameters:
@@ -153,21 +214,23 @@ def find_parameters(args):
         parameters['jobid'] = job_id
 
     # Defines the size of the population of sequences to be optimised by the
-    # genetic algorithm
+    # genetic algorithm. The population size should be an even number, in order
+    # that all parent sequences can be paired off for crossover (mating).
     if 'populationsize' in parameters:
         try new_population_size = int(parameters['populationsize']):
             if (
                     str(new_population_size) == parameters['populationsize']
                 and new_population_size > 0
+                and new_population_size % 2 == 0
             ):
                 parameters['populationsize'] = new_population_size
             else:
                 print('Population size not recognised - please enter a '
-                      'positive integer')
+                      'positive even integer')
                 parameters.pop('populationsize')
         except ValueError:
             print('Population size not recognised - please enter a '
-                  'positive integer')
+                  'positive even integer')
             parameters.pop('populationsize')
 
     if not 'populationsize' in parameters:
@@ -179,16 +242,17 @@ def find_parameters(args):
             try new_population_size = int(population_size):
                 if (    str(new_population_size) == population_size
                     and new_population_size > 0
+                    and new_population_size % 2 == 0
                 ):
                     parameters['populationsize'] = new_population_size
                     break
                 else:
                     print('Population size not recognised - please enter a '
-                          'positive integer')
+                          'positive even integer')
                     population_size = ''
             except ValueError:
                 print('Population size not recognised - please enter a '
-                      'positive integer')
+                      'positive even integer')
                 population_size = ''
 
     # Defines the number of generations for which to run the genetic algorithm

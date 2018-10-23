@@ -1,8 +1,6 @@
 
 import argparse
-import pickle
 import sys
-import pandas as pd
 
 # Pipeline script to run the BetaDesigner program. The program takes as input a
 # PDB file of backbone coordinates. The program optimises an initial dataset of
@@ -32,24 +30,6 @@ def main():
     # Defines program parameters from input file / user input
     parameters = find_parameters(args)
 
-    input_df_loc = parameters['inputdataframe']
-    propensity_dicts_loc = parameters['propensityscales']
-    working_directory = parameters['workingdirectory']
-    barrel_or_sandwich = parameters['barrelorsandwich']
-    job_id = parameters['jobid']
-    pop_size = parameters['populationsize']
-    num_gens = parameters['numberofgenerations']
-    method_initial_side_chains = parameters['initialseqmethod']
-    method_fitness_score = parameters['fitnessscoremethod']
-    method_select_mating_pop = parameters['matingpopmethod']
-    method_crossover = parameters['crossovermethod']
-    method_mutation = parameters['mutationmethod']
-
-    # Unpickles dataframe and dictionary of propensity scales
-    input_df = pd.read_pickle(input_df_loc)
-    with open(propensity_dicts_loc, 'rb') as pickle_file:
-        propensity_dicts = pickle.load(pickle_file)
-
     # Checks that only one structure is listed in the input dataframe
     if len(set(input_df['domain_ids'].tolist())) != 1:
         sys.exit('More than one structure listed in input dataframe')
@@ -65,20 +45,16 @@ def main():
     # constructed for a barrel (interior and exterior surfaces), and three
     # networks are constructured for a sandwich (interior and two exterior
     # surfaces).
-    initial_sequences_object = gen_ga_input_pipeline(
-        input_df, propensity_dicts, barrel_or_sandwich, pop_size,
-        method_initial_side_chains
-    )
-    initial_sequences_dict = initial_sequences_object.initial_sequences_pipeline()
+    gen_initial_sequences = gen_ga_input_pipeline(parameters)
+    initial_sequences_dict = gen_initial_sequences.initial_sequences_pipeline()
 
     # Optimises sequences for amino acid propensities (considering both
     # individual and pairwise interactions) and side-chain packing using a
     # genetic algorithm.
-    # NOTE: make sure genetic algorithm parameter values can vary!
-    ga_solutions = run_ga()
-    random_initial_sequences_dict = ga_solutions.run_genetic_algorithm(random_initial_sequences_dict)
-    raw_propensity_initial_sequences_dict = ga_solutions.run_genetic_algorithm(raw_propensity_initial_sequences_dict)
-    rank_propensity_initial_sequences_dict = ga_solutions.run_genetic_algorithm(rank_propensity_initial_sequences_dict)
+    genetic_algorithm = run_ga_pipeline(parameters)
+    output_sequences_dict = genetic_algorithm.run_genetic_algorithm(
+        initial_sequences_dict
+    )
 
     # Writes PDB files of output sequences
     """

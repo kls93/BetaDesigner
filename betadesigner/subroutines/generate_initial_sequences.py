@@ -14,7 +14,7 @@ from operator import itemgetter
 # the format surface_structuralfeature_individualorcombined (e.g. int_z_indv)
 
 
-def interpolate_propensities(node_prop, aa_propensity_scale):
+def interpolate_propensities(node_prop, aa_propensity_scale, dict_label):
     # Interpolates propensity value for node property value
     index_1 = (np.abs(aa_propensity_scale[0]-node_prop)).argmin()
     prop_val_1 = aa_propensity_scale[0][index_1]
@@ -38,6 +38,10 @@ def interpolate_propensities(node_prop, aa_propensity_scale):
             propensity = (((propensity_1*weight_1) + (propensity_2*weight_2))
                           / abs(prop_val_2 - prop_val_1))
         except IndexError:
+            sys.exit('Parameter values of input backbone coordinate model '
+                     'structural features ({}) are outside of the range of '
+                     'parameter values used to construct propensity '
+                     'scales'.format(dict_label))
 
     return propensity
 
@@ -81,12 +85,8 @@ def propensity_to_probability_distribution(sorted_node_indv_propensities,
 
 class gen_ga_input_calcs(gen_ga_input_pipeline):
 
-    def __init__(self, input_df, propensity_dicts, barrel_or_sandwich,
-                 pop_size, method_initial_side_chains):
-        gen_ga_input_pipeline.__init__(
-            self, input_df, propensity_dicts, barrel_or_sandwich, pop_size,
-            method_initial_side_chains
-        )
+    def __init__(self, parameters):
+        gen_ga_input_pipeline.__init__(self, parameters)
 
     def slice_input_df(self):
         # Slices input dataframe into sub-dataframes of residues on the same
@@ -188,13 +188,13 @@ class gen_ga_input_calcs(gen_ga_input_pipeline):
                             # Ensures interactions are only added to the
                             # network once.
                             if G.has_edge(res_1, res_2) is False:
-                                G.add_edge(res_1, res_2, label=edge_label)
+                                G.add_edge(res_1, res_2, interaction=edge_label)
                             elif G.has_edge(res_1, res_2) is True:
                                 attributes = [val for edge_label, sub_dict in
                                               G[res_1][res_2].items() for key,
                                               val in sub_dict.items()]
                                 if not edge_label in attributes:
-                                    G.add_edge(res_1, res_2, label=edge_label)
+                                    G.add_edge(res_1, res_2, interaction=edge_label)
 
             networks[surface_label] = G
 
@@ -239,7 +239,7 @@ class gen_ga_input_calcs(gen_ga_input_pipeline):
         for num in range(self.pop_size):
             initial_networks[num] = copy.deepcopy(G)
 
-        # Extracts propensity scales for the surface
+        # Extracts individual amino acid propensity scales for the surface
         sub_propensity_dicts = OrderedDict({
             dict_label: propensity_dict for dict_label, propensity_dict in
             self.propensity_dicts.items() if
@@ -258,7 +258,7 @@ class gen_ga_input_calcs(gen_ga_input_pipeline):
 
                 for aa, aa_propensity_scale in propensity_dict.items():
                     propensity = interpolate_propensities(
-                        node_prop, aa_propensity_scale
+                        node_prop, aa_propensity_scale, dict_label
                     )
                     node_indv_propensities[self.aas.index(aa)][count] = propensity
 
@@ -297,14 +297,24 @@ class gen_ga_input_calcs(gen_ga_input_pipeline):
 
 class gen_ga_input_pipeline():
 
-    def __init__(self, input_df, propensity_dicts, barrel_or_sandwich,
-                 pop_size, method_initial_side_chains):
-        self.input_df = input_df
-        self.propensity_dicts = propensity_dicts
+    def __init__(self, parameters):
+        self.parameters = parameters
+
+        self.input_df = parameters['inputdataframe']
+        self.propensity_dicts = parameters['propensityscales']
         self.aas = list(self.propensity_dicts['int_z_indv'].keys())
-        self.barrel_or_sandwich = barrel_or_sandwich
-        self.pop_size = pop_size
-        self.method_initial_side_chains = method_initial_side_chains
+        self.propensity_dict_weights = parameters['propensityscaleweights']
+        self.working_directory = parameters['workingdirectory']
+        self.barrel_or_sandwich = parameters['barrelorsandwich']
+        self.job_id = parameters['jobid']
+        self.pop_size = parameters['populationsize']
+        self.num_gens = parameters['numberofgenerations']
+        self.method_initial_side_chains = parameters['initialseqmethod']
+        self.method_fitness_score = parameters['fitnessscoremethod']
+        self.unfit_fraction = parameters['unfitfraction']
+        self.method_select_mating_pop = parameters['matingpopmethod']
+        self.method_crossover = parameters['crossovermethod']
+        self.method_mutation = parameters['mutationmethod']
 
         # OVERWRITE ONCE HAVE COMPLETED GENERATION OF PROPENSITY SCALES FROM
         # BETASTATS.
@@ -320,13 +330,11 @@ class gen_ga_input_pipeline():
                                                        'VAL': np.array([[-50, -40, -30, -20, -10, 0, 10, 20, 30, 40, 50], [0.8, 0.8, 1.3, 1.5, 1.7, 1.7, 1.7, 1.5, 1.3, 0.8, 0.8]])}
                                            })
 
-    def initial_sequences_pipeline():
+    def initial_sequences_pipeline(self):
         # Pipeline function to generate initial population of side chains for
         # input into genetic algorithm.
 
-        input_calcs = gen_ga_input_calcs(
-            input_df, propensity_dicts, barrel_or_sandwich, pop_size
-        )
+        input_calcs = gen_ga_input_calcs(self.parameters)
 
         # Creates networks of interacting residues from input dataframe
         surface_dfs_dict = input_calcs.slice_input_df()
