@@ -1,5 +1,4 @@
 
-import ampal
 import isambard
 from collections import OrderedDict
 

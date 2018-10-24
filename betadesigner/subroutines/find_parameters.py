@@ -35,8 +35,11 @@ def find_parameters(args):
                         value = value.replace(' ', '')
                     elif key in ['barrelorsandwich', 'populationsize',
                                  'numberofgenerations', 'initialseqmethod',
-                                 'fitnessscoremethod', 'matingpopmethod',
-                                 'crossovermethod', 'mutationmethod']:
+                                 'fitnessscoremethod', 'splitfraction',
+                                 'matingpopmethod', 'unfitfraction'
+                                 'crossovermethod', 'crossoverprob',
+                                 'swapstartprob', 'swapstopprob',
+                                 'mutationmethod']:
                         value = value.replace(' ', '').lower()
         except FileNotFoundError:
             print('Path to input file not recognised')
@@ -135,51 +138,59 @@ def find_parameters(args):
 
     # Defines propensity scale weights
     if 'propensityscaleweights' in parameters:
-        if (
-            (not os.path.isfile(parameters['propensityscaleweights']))
-            or
-            (not parameters['propensityscaleweights'].endswith('.pkl'))
+        if parameters['propensityscaleweights'] == 'equal':
+            weights = {}
+            for dict_name in list(parameters['propensityscales'].keys()):
+                weights[dict_name] = 1
+            parameters['propensityscaleweights'] = weights
+        elif (
+            (os.path.isfile(parameters['propensityscaleweights']))
+            and
+            (parameters['propensityscaleweights'].endswith('.pkl'))
         ):
-            print('File path to pickled propensity scale weights not recognised')
-            parameters.pop('propensityscaleweights')
+            with open(parameters['propensityscaleweights'], 'rb') as pickle_file:
+                weights = pickle.load(pickle_file)
+                if type(weights) == dict:
+                    parameters['propensityscaleweights'] = weights
+                else:
+                    print('Propensity scale weights dictionary not recognised')
+                    parameters['propensityscaleweights'] = {}
+        else:
+            print('Propensity scale weights not provided')
+            parameters['propensityscaleweights'] = {}
+    else:
+        parameters['propensityscaleweights'] = {}
 
-    if not 'propensityscaleweights' in parameters:
-        for propensity_dict in list(parameters['propensityscales'].keys()):
-            print('Specify weight for {}')
+    for dict_name in list(parameters['propensityscales'].keys()):
+        if not dict_name in parameters['propensityscaleweights']:
+            print('Weight for {} surface not provided'.format(dict_name))
 
+            weight = ''
+            while not type(weight) in [int, float]:
+                print('Specify weight for {} surface'.format(dict_name))
+                weight = input(prompt)
 
+                try:
+                    weight = float(weight)
+                    break
+                except ValueError:
+                    print('Weighting for {} surface not recognised'.format(dict_name))
+                    weight = ''
+            parameters['propensityscaleweights'][dict_name] = weight
 
+        else:
+            weight = parameters['propensityscaleweights'][dict_name]
+            while not type(weight) in [int, float]:
+                print('Specify weight for {} surface'.format(dict_name))
+                weight = input(prompt)
 
-
-
-
-
-
-
-
-        propensity_scales_dict = ''
-        while (
-            (not os.path.isfile(propensity_scales_dict))
-            or
-            (not propensity_scales_dict.endswith('.pkl'))
-        ):
-            print('Specify absolute file path of pickled propensity scales:')
-            propensity_scales_dict = input(prompt)
-
-            if (
-                (os.path.isfile(propensity_scales_dict))
-                and
-                (propensity_scales_dict.endswith('.pkl'))
-            ):
-                parameters['propensityscales'] = propensity_scales_dict
-                break
-            else:
-                print('File path to pickled propensity scales not recognised')
-
-    # Unpickles dictionary of propensity scales
-    with open(propensity_dicts_loc, 'rb') as pickle_file:
-        propensity_dicts = pickle.load(pickle_file)
-    parameters['propensityscales'] = propensity_dicts
+                try:
+                    weight = float(weight)
+                    break
+                except ValueError:
+                    print('Weighting for {} surface not recognised'.format(dict_name))
+                    weight = ''
+            parameters['propensityscaleweights'][dict_name] = weight
 
     # Defines working directory
     if 'workingdirectory' in parameters:
@@ -346,7 +357,7 @@ def find_parameters(args):
                 print('Method not recognised - please select one of "random", '
                       '"rawpropensity" or "rankpropensity"')
 
-    # Define method used to measure sequence fitness
+    # Defines method used to measure sequence fitness
     if 'fitnessscoremethod' in parameters:
         if not parameters['fitnessscoremethod'] in ['propensity', 'allatom',
                           'alternate', 'split']:
@@ -369,6 +380,46 @@ def find_parameters(args):
             else:
                 print('Method not recognised - please select one of '
                       '"propensity", "all-atom", "alternate", "split"')
+
+    # Defines fraction of samples to be optimised against propensity in each
+    # generation of the genetic algorithm
+    if parameters['fitnessscoremethod'] == 'split':
+        if 'splitfraction' in parameters:
+            try:
+                split_fraction = float(parameters['splitfraction'])
+                if 0 <= split_fraction <= 1:
+                    pass
+                else:
+                    print('Fraction of samples to be optimised against '
+                          'propensity not recognised - please enter a value '
+                          'between 0 and 1')
+                    parameters.pop('splitfraction')
+            except ValueError:
+                print('Fraction of samples to be optimised against propensity '
+                      'not recognised - please enter a value between 0 and 1')
+                parameters.pop('splitfraction')
+
+        if not 'splitfraction' in parameters:
+            split_fraction = ''
+            while not type(split_fraction) == float:
+                print('Specify fraction of samples to be optimised against '
+                      'propensity:')
+                split_fraction = input(prompt).lower()
+
+                try:
+                    split_fraction = float(split_fraction)
+                    if 0 <= split_fraction <= 1:
+                        parameters['splitfraction'] = split_fraction
+                        break
+                    else:
+                        print('Fraction of samples to be optimised against '
+                              'propensity not recognised - please enter a '
+                              'value between 0 and 1')
+                        split_fraction = ''
+                except ValueError:
+                    print('Fraction of samples to be optimised against propensity '
+                          'not recognised - please enter a value between 0 and 1')
+                    split_fraction = ''
 
     # Defines method used to select a population of individuals for mating
     if 'matingpopmethod' in parameters:
@@ -397,6 +448,49 @@ def find_parameters(args):
                 print('Method not recognised - please select one of "fittest", '
                       '"roulettewheel" or "rankroulettewheel"')
 
+    # Defines fraction of unfit sequences to be included in the mating
+    # population at each generation of the genetic algorithm if
+    # self.method_select_mating_pop == 'fittest'
+    if parameters['matingpopmethod'] == 'fittest':
+        if 'unfitfraction' in parameters:
+            try:
+                unfit_fraction = float(parameters['unfitfraction'])
+                if 0 <= unfit_fraction <= 1:
+                    pass
+                else:
+                    print('Fraction of mating population to be comprised of '
+                          'unfit samples not recognised - please enter a '
+                          'value between 0 and 1')
+                    parameters.pop('unfitfraction')
+            except ValueError:
+                print('Fraction of mating population to be comprised of unfit '
+                      'samples not recognised - please enter a value between '
+                      '0 and 1')
+                parameters.pop('unfitfraction')
+
+        if not 'unfitfraction' in parameters:
+            unfit_fraction = ''
+            while not type(unfit_fraction) == float:
+                print('Specify fraction of mating population to be comprised '
+                      'of unfit samples:')
+                unfit_fraction = input(prompt).lower()
+
+                try:
+                    unfit_fraction = float(unfit_fraction)
+                    if 0 <= unfit_fraction <= 1:
+                        parameters['unfitfraction'] = unfit_fraction
+                        break
+                    else:
+                        print('Fraction of mating population to be comprised '
+                              'of unfit samples not recognised - please enter '
+                              'a value between 0 and 1')
+                        unfit_fraction = ''
+                except ValueError:
+                    print('Fraction of mating population to be comprised of '
+                          'unfit samples not recognised - please enter a '
+                          'value between 0 and 1')
+                    unfit_fraction = ''
+
     # Defines method used to crossover parent sequences to generate children
     if 'crossovermethod' in parameters:
         if not parameters['crossovermethod'] in ['uniform', 'segmented']:
@@ -416,6 +510,117 @@ def find_parameters(args):
             else:
                 print('Crossover method not recognised - please select one of '
                       '"uniform" or "segmented"')
+
+    # Defines probability of exchanging amino acid identities for each node in
+    # the network as part of a uniform crossover
+    if parameters['crossovermethod'] == 'uniform':
+        if 'crossoverprob' in parameters:
+            try:
+                crossover_probability = float(parameters['crossoverprob'])
+                if 0 <= crossover_probability <= 1:
+                    pass
+                else:
+                    print('Probability of uniform crossover not recognised - '
+                          'please enter a value between 0 and 1')
+                    parameters.pop('crossoverprob')
+            except ValueError:
+                print('Probability of uniform crossover not recognised - '
+                      'please enter a value between 0 and 1')
+                parameters.pop('crossoverprob')
+
+        if not 'crossoverprob' in parameters:
+            crossover_probability = ''
+            while not type(crossover_probability) == float:
+                print('Specify probability of uniform crossover:')
+                crossover_probability = input(prompt).lower()
+
+                try:
+                    crossover_probability = float(crossover_probability)
+                    if 0 <= crossover_probability <= 1:
+                        parameters['crossoverprob'] = crossover_probability
+                        break
+                    else:
+                        print('Probability of uniform crossover not recognised '
+                              '- please enter a value between 0 and 1')
+                        crossover_probability = ''
+                except ValueError:
+                    print('Probability of uniform crossover not recognised - '
+                          'please enter a value between 0 and 1')
+                    crossover_probability = ''
+
+    # Defines probability of starting a (segmented) crossover
+    if parameters['crossovermethod'] == 'segmented':
+        if 'swapstartprob' in parameters:
+            try:
+                start_crossover_prob = float(parameters['swapstartprob'])
+                if 0 <= start_crossover_prob <= 1:
+                    pass
+                else:
+                    print('Probability of initiating segmented crossover not '
+                          'recognised - please enter a value between 0 and 1')
+                    parameters.pop('swapstartprob')
+            except ValueError:
+                print('Probability of initiating segmented crossover not '
+                      'recognised - please enter a value between 0 and 1')
+                parameters.pop('swapstartprob')
+
+        if not 'swapstartprob' in parameters:
+            start_crossover_prob = ''
+            while not type(start_crossover_prob) == float:
+                print('Specify probability of initiating crossover:')
+                start_crossover_prob = input(prompt).lower()
+
+                try:
+                    start_crossover_prob = float(start_crossover_prob)
+                    if 0 <= start_crossover_prob <= 1:
+                        parameters['swapstartprob'] = start_crossover_prob
+                        break
+                    else:
+                        print('Probability of initiating segmented crossover '
+                              'not recognised - please enter a value between '
+                              '0 and 1')
+                        start_crossover_prob = ''
+                except ValueError:
+                    print('Probability of initiating segmented crossover not '
+                          'recognised - please enter a value between 0 and 1')
+                    start_crossover_prob = ''
+
+    # Defines probability of stopping a (segmented) crossover
+    if parameters['crossovermethod'] == 'segmented':
+        if 'swapstopprob' in parameters:
+            try:
+                stop_crossover_prob = float(parameters['swapstopprob'])
+                if 0 <= stop_crossover_prob <= 1:
+                    pass
+                else:
+                    print('Probability of ending segmented crossover not '
+                          'recognised - please enter a value between 0 and 1')
+                    parameters.pop('swapstopprob')
+            except ValueError:
+                print('Probability of ending segmented crossover not '
+                      'recognised - please enter a value between 0 and 1')
+                parameters.pop('swapstopprob')
+
+        if not 'swapstopprob' in parameters:
+            stop_crossover_prob = ''
+            while not type(stop_crossover_prob) == float:
+                print('Specify probability of ending crossover:')
+                stop_crossover_prob = input(prompt).lower()
+
+                try:
+                    stop_crossover_prob = float(stop_crossover_prob)
+                    if 0 <= stop_crossover_prob <= 1:
+                        parameters['swapstopprob'] = stop_crossover_prob
+                        break
+                    else:
+                        print('Probability of ending segmented crossover not '
+                              'recognised - please enter a value between 0 '
+                              'and 1')
+                        stop_crossover_prob = ''
+                except ValueError:
+                    print('Probability of ending segmented crossover not '
+                          'recognised - please enter a value between 0 and 1')
+                    stop_crossover_prob = ''
 
     # Defines method used to mutate children sequences (generated in the
     # previous step from parent crossover)
@@ -471,7 +676,7 @@ class initialise_class():
         self.input_pdb = parameters['inputpdb']
         self.propensity_dicts = parameters['propensityscales']
         self.aas = list(self.propensity_dicts['int_z_indv'].keys())
-        # self.propensity_dict_weights = parameters['propensityscaleweights']
+        self.propensity_dict_weights = parameters['propensityscaleweights']
         self.working_directory = parameters['workingdirectory']
         self.barrel_or_sandwich = parameters['barrelorsandwich']
         self.job_id = parameters['jobid']
@@ -479,13 +684,17 @@ class initialise_class():
         self.num_gens = parameters['numberofgenerations']
         self.method_initial_side_chains = parameters['initialseqmethod']
         self.method_fitness_score = parameters['fitnessscoremethod']
-        # self.split_fraction = parameters['splitfraction']
-        # self.unfit_fraction = parameters['unfitfraction']
+        if self.method_fitness_score == 'split':
+            self.split_fraction = parameters['splitfraction']
         self.method_select_mating_pop = parameters['matingpopmethod']
+        if self.method_select_mating_pop == 'fittest':
+            self.unfit_fraction = parameters['unfitfraction']
         self.method_crossover = parameters['crossovermethod']
-        # self.crossover_prob = parameters['crossoverprob']
-        # self.swap_start_prob = parameters['swapstartprob']
-        # self.swap_stop_prob = parameters['swapstopprob']
+        if self.method_crossover == 'uniform':
+            self.crossover_prob = parameters['crossoverprob']
+        elif self.method_crossover == 'segmented':
+            self.swap_start_prob = parameters['swapstartprob']
+            self.swap_stop_prob = parameters['swapstopprob']
         self.method_mutation = parameters['mutationmethod']
 
         # OVERWRITE ONCE HAVE COMPLETED GENERATION OF PROPENSITY SCALES FROM

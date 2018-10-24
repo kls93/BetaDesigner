@@ -2,6 +2,7 @@
 # Do I need to worry about genetic algorithm overfitting?
 import budeff
 import isambard
+import math
 import random
 import networkx as nx
 import numpy as np
@@ -418,18 +419,23 @@ class run_ga_pipeline(initialise_class):
 
                 # Splits networks to optimise via different objectives
                 # (propensity and side-chain packing) if
-                # self.method_fitness_score == 'half'
+                # self.method_fitness_score == 'split'
                 if self.method_fitness_score == 'split':
-                    split_number = self.split_fraction*len(list(networks_dict_all.keys()))
-                    networks_dict_a = OrderedDict(
-                        {key: networks_dict_all[key] for index, key in
-                         enumerate(list(networks_dict_all.keys())) if index < split_number}
+                    split_number = math.ceil(
+                        self.split_fraction*len(list(networks_dict_all.keys()))
                     )
-                    networks_dict_b = OrderedDict(
+                    networks_dict_propensity = OrderedDict(
                         {key: networks_dict_all[key] for index, key in
-                         enumerate(list(networks_dict_all.keys())) if index >= split_number}
+                         enumerate(list(networks_dict_all.keys()))
+                         if index < split_number}
                     )
-                    networks_list_all = [networks_dict_a, networks_dict_b]
+                    networks_dict_all_atom = OrderedDict(
+                        {key: networks_dict_all[key] for index, key in
+                         enumerate(list(networks_dict_all.keys()))
+                         if index >= split_number}
+                    )
+                    networks_list_all = [networks_dict_propensity,
+                                         networks_dict_all_atom]
                 else:
                     split_fraction = ''
                     networks_list_all = [networks_dict_all]
@@ -441,7 +447,7 @@ class run_ga_pipeline(initialise_class):
                         or
                         (self.method_fitness_score == 'alternate' and count % 2 == 1)
                         or
-                        (self.method_fitness_score == 'half' and index == 0)
+                        (self.method_fitness_score == 'split' and index == 0)
                     ):
                         (networks_dict, network_fitness_scores
                         ) = measure_fitness_propensity(
@@ -452,7 +458,7 @@ class run_ga_pipeline(initialise_class):
                         or
                         (self.method_fitness_score == 'alternate' and count % 2 == 0)
                         or
-                        (self.method_fitness_score == 'half' and index == 1)
+                        (self.method_fitness_score == 'split' and index == 1)
                     ):
                         (networks_dict, network_fitness_scores
                         ) = measure_fitness_all_atom_scoring_function(
@@ -495,9 +501,9 @@ class run_ga_pipeline(initialise_class):
                         split_number
                     )
 
-                    if self.method_fitness_score != 'half':
+                    if self.method_fitness_score != 'split':
                         sequences_dict[surface] = merged_networks_dict
-                    elif self.method_fitness_score == 'half':
+                    elif self.method_fitness_score == 'split':
                         if index == 0:
                             sequences_dict[surface] = merged_networks_dict
                         elif index == 1:
