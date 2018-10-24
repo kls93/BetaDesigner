@@ -2,13 +2,17 @@
 import isambard
 from collections import OrderedDict
 
-from find_parameters import initialise_class
-from run_genetic_algorithm import pack_side_chains_scwrl
+if __name__ == 'subroutines.write_output_structures':
+    from subroutines.find_parameters import initialise_class
+    from subroutines.run_genetic_algorithm import pack_side_chains
+else:
+    from betadesigner.subroutines.find_parameters import initialise_class
+    from betadesigner.subroutines.run_genetic_algorithm import pack_side_chains
 
-class gen_output():
+class gen_output(initialise_class):
 
     def __init__(self, parameters):
-        gen_ga_input_pipeline.__init__(self, parameters)
+        initialise_class.__init__(self, parameters)
 
     def write_pdb(self, sequences_dict):
         # Uses SCWRL4 to pack network side chains onto the backbone structure
@@ -33,11 +37,11 @@ class gen_output():
         for surface, networks_dict in sequences_dict.items():
             for num, G in networks_dict.items():
                 # Packs network side chains onto the model with SCWRL4
-                new_pdb, energy = pack_side_chains_scwrl(pdb, G, False)
+                new_pdb, energy = pack_side_chains(pdb, G, False)
 
                 # Writes PDB file of model
                 with open('Program_output/{}_{}.pdb'.format(surface, num), 'w') as f:
                     f.write(new_pdb.make_pdb())
 
-                with open('Program_output/Model_energies', 'a') as f:
+                with open('Program_output/Model_energies.txt', 'a') as f:
                     f.write('{}_{}: {}\n'.format(surface, num, energy))

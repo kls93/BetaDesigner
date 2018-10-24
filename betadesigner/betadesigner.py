@@ -12,12 +12,12 @@ def main():
     if __name__ == '__main__':
         from subroutines.find_parameters import find_parameters
         from subroutines.generate_initial_sequences import gen_ga_input_pipeline
-        from subroutines.run_genetic_algorithm import run_ga
+        from subroutines.run_genetic_algorithm import run_ga_pipeline
         from subroutines.write_output_structures import gen_output
     else:
         from betadesigner.subroutines.find_parameters import find_parameters
         from betadesigner.subroutines.generate_initial_sequences import gen_ga_input_pipeline
-        from betadesigner.subroutines.run_genetic_algorithm import run_ga
+        from betadesigner.subroutines.run_genetic_algorithm import run_ga_pipeline
         from betadesigner.subroutines.write_output_structures import gen_output
 
     # Reads in command line inputs
@@ -31,7 +31,7 @@ def main():
     parameters = find_parameters(args)
 
     # Checks that only one structure is listed in the input dataframe
-    if len(set(input_df['domain_ids'].tolist())) != 1:
+    if len(set(parameters['inputdataframe']['domain_ids'].tolist())) != 1:
         sys.exit('More than one structure listed in input dataframe')
 
     # Generates networks of interacting residues from input dataframe, in which

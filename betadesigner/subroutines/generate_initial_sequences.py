@@ -8,7 +8,10 @@ import pandas as pd
 from collections import OrderedDict
 from operator import itemgetter
 
-from find_parameters import initialise_class
+if __name__ == 'subroutines.generate_initial_sequences':
+    from subroutines.find_parameters import initialise_class
+else:
+    from betadesigner.subroutines.find_parameters import initialise_class
 
 # Initially, I should exclude contacts outside of the beta-strands of interest.
 # PROPENSITY SCALE DICTIONARIES NAMES MUST ALWAYS START WITH "int" OR "ext",
@@ -85,10 +88,10 @@ def propensity_to_probability_distribution(sorted_node_indv_propensities,
     return node_cumulative_probabilities
 
 
-class gen_ga_input_calcs(gen_ga_input_pipeline):
+class gen_ga_input_calcs(initialise_class):
 
     def __init__(self, parameters):
-        gen_ga_input_pipeline.__init__(self, parameters)
+        initialise_class.__init__(self, parameters)
 
     def slice_input_df(self):
         # Slices input dataframe into sub-dataframes of residues on the same
@@ -318,6 +321,8 @@ class gen_ga_input_pipeline(initialise_class):
         # Initialises dictionary of sequence populations for all networks
         initial_sequences_dict = OrderedDict()
         for network_label, G in networks_dict.items():
+            print('Generating initial sequence population for {} surface of '
+                  'backbone model'.format(network_label.split('_')[0]))
             if self.method_initial_side_chains == 'random':
                 initial_sequences_dict = (
                     input_calcs.add_random_initial_side_chains(

@@ -41,10 +41,13 @@ def find_parameters(args):
                                  'swapstartprob', 'swapstopprob',
                                  'mutationmethod']:
                         value = value.replace(' ', '').lower()
+
+                    parameters[key] = value
+
         except FileNotFoundError:
             print('Path to input file not recognised')
 
-    # Defines absolute file path to input dataframe, then unpickles dataframe
+    # Defines absolute file path to input dataframe
     if 'inputdataframe' in parameters:
         if (
             (not os.path.isfile(parameters['inputdataframe']))
@@ -69,10 +72,6 @@ def find_parameters(args):
                 break
             else:
                 print('File path to pickled input dataframe not recognised')
-
-    # Unpickles dataframe
-    input_df = pd.read_pickle(input_df_loc)
-    parameters['inputdataframe'] = input_df
 
     # Defines absolute file path to input PDB file (the file fed into DataGen)
     if 'inputpdb' in parameters:
@@ -100,6 +99,7 @@ def find_parameters(args):
             else:
                 print('File path to input PDB file not recognised')
 
+    """
     # Defines absolute file path to pickle file listing propensity scales, then
     # unpickles propensity scales
     if 'propensityscales' in parameters:
@@ -130,11 +130,6 @@ def find_parameters(args):
                 break
             else:
                 print('File path to pickled propensity scales not recognised')
-
-    # Unpickles dictionary of propensity scales
-    with open(propensity_dicts_loc, 'rb') as pickle_file:
-        propensity_dicts = pickle.load(pickle_file)
-    parameters['propensityscales'] = propensity_dicts
 
     # Defines propensity scale weights
     if 'propensityscaleweights' in parameters:
@@ -191,6 +186,7 @@ def find_parameters(args):
                     print('Weighting for {} surface not recognised'.format(dict_name))
                     weight = ''
             parameters['propensityscaleweights'][dict_name] = weight
+    """
 
     # Defines working directory
     if 'workingdirectory' in parameters:
@@ -254,7 +250,8 @@ def find_parameters(args):
     # genetic algorithm. The population size should be an even number, in order
     # that all parent sequences can be paired off for crossover (mating).
     if 'populationsize' in parameters:
-        try new_population_size = int(parameters['populationsize']):
+        try:
+            new_population_size = int(parameters['populationsize'])
             if (
                     str(new_population_size) == parameters['populationsize']
                 and new_population_size > 0
@@ -276,7 +273,8 @@ def find_parameters(args):
             print('Specify number of sequences in population:')
             population_size = input(prompt).strip()
 
-            try new_population_size = int(population_size):
+            try:
+                new_population_size = int(population_size)
                 if (    str(new_population_size) == population_size
                     and new_population_size > 0
                     and new_population_size % 2 == 0
@@ -294,7 +292,8 @@ def find_parameters(args):
 
     # Defines the number of generations for which to run the genetic algorithm
     if 'numberofgenerations' in parameters:
-        try new_num_gens = int(parameters['numberofgenerations']):
+        try:
+            new_num_gens = int(parameters['numberofgenerations'])
             if (
                     str(new_num_gens) == parameters['numberofgenerations']
                 and new_num_gens > 0
@@ -315,7 +314,8 @@ def find_parameters(args):
             print('Specify number of generations for which to run GA:')
             num_gens = input(prompt).strip()
 
-            try new_num_gens = int(num_gens):
+            try:
+                new_num_gens = int(num_gens)
                 if (    str(new_num_gens) == num_gens
                     and new_num_gens > 0
                 ):
@@ -388,7 +388,7 @@ def find_parameters(args):
             try:
                 split_fraction = float(parameters['splitfraction'])
                 if 0 <= split_fraction <= 1:
-                    pass
+                    parameters['splitfraction'] = split_fraction
                 else:
                     print('Fraction of samples to be optimised against '
                           'propensity not recognised - please enter a value '
@@ -456,7 +456,7 @@ def find_parameters(args):
             try:
                 unfit_fraction = float(parameters['unfitfraction'])
                 if 0 <= unfit_fraction <= 1:
-                    pass
+                    parameters['unfitfraction'] = unfit_fraction
                 else:
                     print('Fraction of mating population to be comprised of '
                           'unfit samples not recognised - please enter a '
@@ -518,7 +518,7 @@ def find_parameters(args):
             try:
                 crossover_probability = float(parameters['crossoverprob'])
                 if 0 <= crossover_probability <= 1:
-                    pass
+                    parameters['crossoverprob'] = crossover_probability
                 else:
                     print('Probability of uniform crossover not recognised - '
                           'please enter a value between 0 and 1')
@@ -554,7 +554,7 @@ def find_parameters(args):
             try:
                 start_crossover_prob = float(parameters['swapstartprob'])
                 if 0 <= start_crossover_prob <= 1:
-                    pass
+                    parameters['swapstartprob'] = start_crossover_prob
                 else:
                     print('Probability of initiating segmented crossover not '
                           'recognised - please enter a value between 0 and 1')
@@ -591,7 +591,7 @@ def find_parameters(args):
             try:
                 stop_crossover_prob = float(parameters['swapstopprob'])
                 if 0 <= stop_crossover_prob <= 1:
-                    pass
+                    parameters['swapstopprob'] = stop_crossover_prob
                 else:
                     print('Probability of ending segmented crossover not '
                           'recognised - please enter a value between 0 and 1')
@@ -643,6 +643,41 @@ def find_parameters(args):
                 print('Mutation method not recognised - please select one of '
                       '"swap" or "scramble"')
 
+    # Defines probability of mutation of each node in the network
+    if 'mutationprob' in parameters:
+        try:
+            mutation_probability = float(parameters['mutationprob'])
+            if 0 <= mutation_probability <= 1:
+                parameters['mutationprob'] = mutation_probability
+            else:
+                print('Probability of mutation not recognised - please enter '
+                      'a value between 0 and 1')
+                parameters.pop('mutationprob')
+        except ValueError:
+            print('Probability of mutation not recognised - please enter a '
+                  'value between 0 and 1')
+            parameters.pop('mutationprob')
+
+    if not 'mutationprob' in parameters:
+        mutation_probability = ''
+        while not type(mutation_probability) == float:
+            print('Specify probability of mutation:')
+            mutation_probability = input(prompt).lower()
+
+            try:
+                mutation_probability = float(mutation_probability)
+                if 0 <= mutation_probability <= 1:
+                    parameters['mutationprob'] = mutation_probability
+                    break
+                else:
+                    print('Probability of mutation not recognised - please '
+                          'enter a value between 0 and 1')
+                    mutation_probability = ''
+            except ValueError:
+                print('Probability of mutation not recognised - please enter '
+                      'a value between 0 and 1')
+                mutation_probability = ''
+
     # Changes directory to user-specified "working directory"
     os.chdir(parameters['workingdirectory'])
     if not os.path.isdir('BetaDesigner_results'):
@@ -657,13 +692,28 @@ def find_parameters(args):
 
     shutil.copy('{}'.format(parameters['inputdataframe']),
                 'Program_input/Input_DataFrame.pkl'.format(working_directory))
+    shutil.copy('{}'.format(parameters['inputpdb']),
+                'Program_input/Input_PDB.pdb'.format(working_directory))
+    """
     shutil.copy('{}'.format(parameters['propensityscales']),
                 'Program_input/Propensity_scales.pkl'.format(working_directory))
+    """
 
     # Writes program parameters to a txt file for user records
     with open('Program_input/BetaDesigner_parameters.txt', 'w') as f:
         for key, parameter in parameters.items():
             f.write('{}: {}\n'.format(key, parameter))
+
+    # Unpickles dataframe
+    input_df = pd.read_pickle(parameters['inputdataframe'])
+    parameters['inputdataframe'] = input_df
+
+    """
+    # Unpickles dictionary of propensity scales
+    with open(parameters['propensityscales'], 'rb') as pickle_file:
+        propensity_dicts = pickle.load(pickle_file)
+    parameters['propensityscales'] = propensity_dicts
+    """
 
     return parameters
 
@@ -674,9 +724,9 @@ class initialise_class():
 
         self.input_df = parameters['inputdataframe']
         self.input_pdb = parameters['inputpdb']
-        self.propensity_dicts = parameters['propensityscales']
-        self.aas = list(self.propensity_dicts['int_z_indv'].keys())
-        self.propensity_dict_weights = parameters['propensityscaleweights']
+        # self.propensity_dicts = parameters['propensityscales']
+        # self.aas = list(self.propensity_dicts['int_z_indv'].keys())
+        # self.propensity_dict_weights = parameters['propensityscaleweights']
         self.working_directory = parameters['workingdirectory']
         self.barrel_or_sandwich = parameters['barrelorsandwich']
         self.job_id = parameters['jobid']
@@ -696,17 +746,16 @@ class initialise_class():
             self.swap_start_prob = parameters['swapstartprob']
             self.swap_stop_prob = parameters['swapstopprob']
         self.method_mutation = parameters['mutationmethod']
+        self.mutation_prob = parameters['mutationprob']
 
         # OVERWRITE ONCE HAVE COMPLETED GENERATION OF PROPENSITY SCALES FROM
         # BETASTATS.
-        self.propensity_dicts = OrderedDict({'int_z': {'ARG': np.array([[-50, -40, -30, -20, -10, 0, 10, 20, 30, 40, 50], [1.3, 1.3, 0.8, 0.4, 0.4, 0.2, 0.4, 0.4, 0.8, 1.3, 1.3]]),
-                                                       'ASP': np.array([[-50, -40, -30, -20, -10, 0, 10, 20, 30, 40, 50], [1.3, 1.3, 0.8, 0.4, 0.4, 0.2, 0.4, 0.4, 0.8, 1.3, 1.3]]),
-                                                       'GLY': np.array([[-50, -40, -30, -20, -10, 0, 10, 20, 30, 40, 50], [1.0, 1.0, 1.2, 1.4, 2.0, 2.5, 2.0, 1.4, 1.2, 1.0, 1.0]]),
-                                                       'PHE': np.array([[-50, -40, -30, -20, -10, 0, 10, 20, 30, 40, 50], [0.7, 0.7, 0.5, 0.5, 0.3, 0.1, 0.3, 0.5, 0.5, 0.7, 0.7]]),
-                                                       'VAL': np.array([[-50, -40, -30, -20, -10, 0, 10, 20, 30, 40, 50], [0.9, 0.9, 0.7, 0.7, 0.6, 0.5, 0.6, 0.7, 0.7, 0.9, 0.9]])},
-                                             'ext_z': {'ARG': np.array([[-50, -40, -30, -20, -10, 0, 10, 20, 30, 40, 50], [1.2, 1.2, 0.6, 0.4, 0.3, 0.2, 0.3, 0.4, 0.6, 1.2, 1.2]]),
-                                                       'ASP': np.array([[-50, -40, -30, -20, -10, 0, 10, 20, 30, 40, 50], [1.2, 1.2, 0.6, 0.4, 0.3, 0.2, 0.3, 0.4, 0.6, 1.2, 1.2]]),
-                                                       'GLY': np.array([[-50, -40, -30, -20, -10, 0, 10, 20, 30, 40, 50], [1.0, 1.0, 1.2, 1.2, 1.4, 1.6, 1.4, 1.2, 1.2, 1.0, 1.0]]),
-                                                       'PHE': np.array([[-50, -40, -30, -20, -10, 0, 10, 20, 30, 40, 50], [0.6, 0.6, 2.5, 2.0, 1.2, 0.8, 1.2, 2.0, 2.5, 0.6, 0.6]]),
-                                                       'VAL': np.array([[-50, -40, -30, -20, -10, 0, 10, 20, 30, 40, 50], [0.8, 0.8, 1.3, 1.5, 1.7, 1.7, 1.7, 1.5, 1.3, 0.8, 0.8]])}
+        import numpy as np
+        self.propensity_dicts = OrderedDict({'int_z_indv': {'ARG': np.array([[-50, -40, -30, -20, -10, 0, 10, 20, 30, 40, 50], [1.3, 1.3, 1.7, 1.8, 1.9, 2.0, 1.9, 1.8, 1.7, 1.3, 1.3]]),
+                                                            'VAL': np.array([[-50, -40, -30, -20, -10, 0, 10, 20, 30, 40, 50], [0.7, 0.7, 0.5, 0.5, 0.3, 0.2, 0.3, 0.5, 0.5, 0.7, 0.7]])},
+                                             'ext_z_indv': {'ARG': np.array([[-50, -40, -30, -20, -10, 0, 10, 20, 30, 40, 50], [1.5, 1.5, 0.6, 0.4, 0.3, 0.2, 0.3, 0.4, 0.6, 1.5, 1.5]]),
+                                                            'VAL': np.array([[-50, -40, -30, -20, -10, 0, 10, 20, 30, 40, 50], [0.8, 0.8, 1.3, 1.5, 1.7, 1.7, 1.7, 1.5, 1.3, 0.8, 0.8]])}
                                            })
+        self.aas = list(self.propensity_dicts['int_z_indv'].keys())
+        self.propensity_dict_weights = OrderedDict({'int_z_indv': 1,
+                                                    'ext_z_indv': 1})
