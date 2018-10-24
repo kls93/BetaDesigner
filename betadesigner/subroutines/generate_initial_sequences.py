@@ -8,6 +8,8 @@ import pandas as pd
 from collections import OrderedDict
 from operator import itemgetter
 
+from find_parameters import initialise_class
+
 # Initially, I should exclude contacts outside of the beta-strands of interest.
 # PROPENSITY SCALE DICTIONARIES NAMES MUST ALWAYS START WITH "int" OR "ext",
 # AND END WITH "z" OR "bsa" AS MUST NETWORK NAMES. All propensity dict names of
@@ -295,40 +297,10 @@ class gen_ga_input_calcs(gen_ga_input_pipeline):
         return initial_sequences_dict
 
 
-class gen_ga_input_pipeline():
+class gen_ga_input_pipeline(initialise_class):
 
     def __init__(self, parameters):
-        self.parameters = parameters
-
-        self.input_df = parameters['inputdataframe']
-        self.propensity_dicts = parameters['propensityscales']
-        self.aas = list(self.propensity_dicts['int_z_indv'].keys())
-        self.propensity_dict_weights = parameters['propensityscaleweights']
-        self.working_directory = parameters['workingdirectory']
-        self.barrel_or_sandwich = parameters['barrelorsandwich']
-        self.job_id = parameters['jobid']
-        self.pop_size = parameters['populationsize']
-        self.num_gens = parameters['numberofgenerations']
-        self.method_initial_side_chains = parameters['initialseqmethod']
-        self.method_fitness_score = parameters['fitnessscoremethod']
-        self.unfit_fraction = parameters['unfitfraction']
-        self.method_select_mating_pop = parameters['matingpopmethod']
-        self.method_crossover = parameters['crossovermethod']
-        self.method_mutation = parameters['mutationmethod']
-
-        # OVERWRITE ONCE HAVE COMPLETED GENERATION OF PROPENSITY SCALES FROM
-        # BETASTATS.
-        self.propensity_dicts = OrderedDict({'int_z': {'ARG': np.array([[-50, -40, -30, -20, -10, 0, 10, 20, 30, 40, 50], [1.3, 1.3, 0.8, 0.4, 0.4, 0.2, 0.4, 0.4, 0.8, 1.3, 1.3]]),
-                                                       'ASP': np.array([[-50, -40, -30, -20, -10, 0, 10, 20, 30, 40, 50], [1.3, 1.3, 0.8, 0.4, 0.4, 0.2, 0.4, 0.4, 0.8, 1.3, 1.3]]),
-                                                       'GLY': np.array([[-50, -40, -30, -20, -10, 0, 10, 20, 30, 40, 50], [1.0, 1.0, 1.2, 1.4, 2.0, 2.5, 2.0, 1.4, 1.2, 1.0, 1.0]]),
-                                                       'PHE': np.array([[-50, -40, -30, -20, -10, 0, 10, 20, 30, 40, 50], [0.7, 0.7, 0.5, 0.5, 0.3, 0.1, 0.3, 0.5, 0.5, 0.7, 0.7]]),
-                                                       'VAL': np.array([[-50, -40, -30, -20, -10, 0, 10, 20, 30, 40, 50], [0.9, 0.9, 0.7, 0.7, 0.6, 0.5, 0.6, 0.7, 0.7, 0.9, 0.9]])},
-                                             'ext_z': {'ARG': np.array([[-50, -40, -30, -20, -10, 0, 10, 20, 30, 40, 50], [1.2, 1.2, 0.6, 0.4, 0.3, 0.2, 0.3, 0.4, 0.6, 1.2, 1.2]]),
-                                                       'ASP': np.array([[-50, -40, -30, -20, -10, 0, 10, 20, 30, 40, 50], [1.2, 1.2, 0.6, 0.4, 0.3, 0.2, 0.3, 0.4, 0.6, 1.2, 1.2]]),
-                                                       'GLY': np.array([[-50, -40, -30, -20, -10, 0, 10, 20, 30, 40, 50], [1.0, 1.0, 1.2, 1.2, 1.4, 1.6, 1.4, 1.2, 1.2, 1.0, 1.0]]),
-                                                       'PHE': np.array([[-50, -40, -30, -20, -10, 0, 10, 20, 30, 40, 50], [0.6, 0.6, 2.5, 2.0, 1.2, 0.8, 1.2, 2.0, 2.5, 0.6, 0.6]]),
-                                                       'VAL': np.array([[-50, -40, -30, -20, -10, 0, 10, 20, 30, 40, 50], [0.8, 0.8, 1.3, 1.5, 1.7, 1.7, 1.7, 1.5, 1.3, 0.8, 0.8]])}
-                                           })
+        initialise_class.__init__(self, parameters)
 
     def initial_sequences_pipeline(self):
         # Pipeline function to generate initial population of side chains for

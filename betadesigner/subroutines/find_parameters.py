@@ -24,7 +24,7 @@ def find_parameters(args):
                     key = line.split(':')[0].replace(' ', '').lower()
                     value = line.split(':')[1].replace('\n', '').strip()
 
-                    if key in ['inputdataframe', 'propensityscales',
+                    if key in ['inputdataframe', 'inputpdb', 'propensityscales',
                                'propensityscaleweights']:
                         value = value.replace('\\', '/')  # For windows file paths
                         value = '/{}'.format(value.strip('/'))
@@ -70,6 +70,32 @@ def find_parameters(args):
     # Unpickles dataframe
     input_df = pd.read_pickle(input_df_loc)
     parameters['inputdataframe'] = input_df
+
+    # Defines absolute file path to input PDB file (the file fed into DataGen)
+    if 'inputpdb' in parameters:
+        if (
+            (not os.path.isfile(parameters['inputpdb']))
+            or
+            (not parameters['inputpdb'].endswith('.pdb'))
+        ):
+            print('File path to input PDB file not recognised')
+            parameters.pop('inputpdb')
+
+    if not 'inputpdb' in parameters:
+        input_pdb = ''
+        while (
+            (not os.path.isfile(input_pdb))
+            or
+            (not input_pdb.endswith('.pdb'))
+        ):
+            print('Specify absolute file path of input PDB file:')
+            input_pdb = input(prompt)
+
+            if os.path.isfile(input_pdb) and input_pdb.endswith('.pdb'):
+                parameters['inputpdb'] = input_pdb
+                break
+            else:
+                print('File path to input PDB file not recognised')
 
     # Defines absolute file path to pickle file listing propensity scales, then
     # unpickles propensity scales
@@ -321,25 +347,28 @@ def find_parameters(args):
                       '"rawpropensity" or "rankpropensity"')
 
     # Define method used to measure sequence fitness
-    # NOTE at the moment is only configured for single objective optimisation
     if 'fitnessscoremethod' in parameters:
-        if not parameters['fitnessscoremethod'] in ['propensity', 'allatom']:
+        if not parameters['fitnessscoremethod'] in ['propensity', 'allatom',
+                          'alternate', 'split']:
             print('Method for measuring sequence fitness not recognised - '
-                  'please select one of "propensity" or "all-atom"')
+                  'please select one of "propensity", "all-atom", "alternate" '
+                  'or "split"')
             parameters.pop('fitnessscoremethod')
 
     if not 'fitnessscoremethod' in parameters:
         method_fitness_score = ''
-        while not method_fitness_score in ['propensity', 'allatom']:
+        while not method_fitness_score in ['propensity', 'allatom',
+                                           'alternate', 'split']:
             print('Specify method for measuring sequence fitnesses:')
             method_fitness_score = input(prompt).lower()
 
-            if method_fitness_score in ['propensity', 'allatom']:
+            if method_fitness_score in ['propensity', 'allatom', 'alternate',
+                                        'split']:
                 parameters['fitnessscoremethod'] = method_fitness_score
                 break
             else:
                 print('Method not recognised - please select one of '
-                      '"propensity" or "all-atom"')
+                      '"propensity", "all-atom", "alternate", "split"')
 
     # Defines method used to select a population of individuals for mating
     if 'matingpopmethod' in parameters:
@@ -432,3 +461,43 @@ def find_parameters(args):
             f.write('{}: {}\n'.format(key, parameter))
 
     return parameters
+
+class initialise_class():
+
+    def __init__(self, parameters):
+        self.parameters = parameters
+
+        self.input_df = parameters['inputdataframe']
+        self.input_pdb = parameters['inputpdb']
+        self.propensity_dicts = parameters['propensityscales']
+        self.aas = list(self.propensity_dicts['int_z_indv'].keys())
+        # self.propensity_dict_weights = parameters['propensityscaleweights']
+        self.working_directory = parameters['workingdirectory']
+        self.barrel_or_sandwich = parameters['barrelorsandwich']
+        self.job_id = parameters['jobid']
+        self.pop_size = parameters['populationsize']
+        self.num_gens = parameters['numberofgenerations']
+        self.method_initial_side_chains = parameters['initialseqmethod']
+        self.method_fitness_score = parameters['fitnessscoremethod']
+        # self.split_fraction = parameters['splitfraction']
+        # self.unfit_fraction = parameters['unfitfraction']
+        self.method_select_mating_pop = parameters['matingpopmethod']
+        self.method_crossover = parameters['crossovermethod']
+        # self.crossover_prob = parameters['crossoverprob']
+        # self.swap_start_prob = parameters['swapstartprob']
+        # self.swap_stop_prob = parameters['swapstopprob']
+        self.method_mutation = parameters['mutationmethod']
+
+        # OVERWRITE ONCE HAVE COMPLETED GENERATION OF PROPENSITY SCALES FROM
+        # BETASTATS.
+        self.propensity_dicts = OrderedDict({'int_z': {'ARG': np.array([[-50, -40, -30, -20, -10, 0, 10, 20, 30, 40, 50], [1.3, 1.3, 0.8, 0.4, 0.4, 0.2, 0.4, 0.4, 0.8, 1.3, 1.3]]),
+                                                       'ASP': np.array([[-50, -40, -30, -20, -10, 0, 10, 20, 30, 40, 50], [1.3, 1.3, 0.8, 0.4, 0.4, 0.2, 0.4, 0.4, 0.8, 1.3, 1.3]]),
+                                                       'GLY': np.array([[-50, -40, -30, -20, -10, 0, 10, 20, 30, 40, 50], [1.0, 1.0, 1.2, 1.4, 2.0, 2.5, 2.0, 1.4, 1.2, 1.0, 1.0]]),
+                                                       'PHE': np.array([[-50, -40, -30, -20, -10, 0, 10, 20, 30, 40, 50], [0.7, 0.7, 0.5, 0.5, 0.3, 0.1, 0.3, 0.5, 0.5, 0.7, 0.7]]),
+                                                       'VAL': np.array([[-50, -40, -30, -20, -10, 0, 10, 20, 30, 40, 50], [0.9, 0.9, 0.7, 0.7, 0.6, 0.5, 0.6, 0.7, 0.7, 0.9, 0.9]])},
+                                             'ext_z': {'ARG': np.array([[-50, -40, -30, -20, -10, 0, 10, 20, 30, 40, 50], [1.2, 1.2, 0.6, 0.4, 0.3, 0.2, 0.3, 0.4, 0.6, 1.2, 1.2]]),
+                                                       'ASP': np.array([[-50, -40, -30, -20, -10, 0, 10, 20, 30, 40, 50], [1.2, 1.2, 0.6, 0.4, 0.3, 0.2, 0.3, 0.4, 0.6, 1.2, 1.2]]),
+                                                       'GLY': np.array([[-50, -40, -30, -20, -10, 0, 10, 20, 30, 40, 50], [1.0, 1.0, 1.2, 1.2, 1.4, 1.6, 1.4, 1.2, 1.2, 1.0, 1.0]]),
+                                                       'PHE': np.array([[-50, -40, -30, -20, -10, 0, 10, 20, 30, 40, 50], [0.6, 0.6, 2.5, 2.0, 1.2, 0.8, 1.2, 2.0, 2.5, 0.6, 0.6]]),
+                                                       'VAL': np.array([[-50, -40, -30, -20, -10, 0, 10, 20, 30, 40, 50], [0.8, 0.8, 1.3, 1.5, 1.7, 1.7, 1.7, 1.5, 1.3, 0.8, 0.8]])}
+                                           })

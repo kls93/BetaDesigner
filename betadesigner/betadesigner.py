@@ -56,11 +56,11 @@ def main():
         initial_sequences_dict
     )
 
-    # Writes PDB files of output sequences
-    """
-    os.mkdir('Program_output/Output_structures')
-    output = gen_output()
-    """
+    # Uses SCWRL4 within ISAMBARD to pack the output sequences onto the
+    # backbone model, and writes the resulting model to a PDB file. Also
+    # returns each model's total energy within BUDEFF.
+    output = gen_output(parameters)
+    output.write_pdb(output_sequences_dict)
 
 
 # Calls main() function if betadesigner.py is run as a script
