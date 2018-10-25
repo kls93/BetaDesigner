@@ -35,6 +35,8 @@ class gen_output(initialise_class):
             res_id_dict[res_id] = fasta
 
         for surface, networks_dict in sequences_dict.items():
+            print('Packing side chains for {} surface'.format(surface))
+
             for num, G in networks_dict.items():
                 # Packs network side chains onto the model with SCWRL4
                 new_pdb, energy = pack_side_chains(pdb, G, False)
