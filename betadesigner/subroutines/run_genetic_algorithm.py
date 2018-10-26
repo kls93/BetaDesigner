@@ -143,13 +143,10 @@ class run_ga_calcs(initialise_class):
         # to remove ligands etc. so that only backbone coordinates remain.
         pdb = isambard.ampal.load_pdb(self.input_pdb)
 
-
         for num, G in networks_dict.items():
             # Packs network side chains onto the model with SCWRL4 and measures
             # the total model energy within BUDE
-            new_pdb, energy = pack_side_chains_swrl(
-                pdb, sequence, G, True
-            )
+            new_pdb, energy = pack_side_chains(pdb, G, True)
             network_fitness_scores[num] = energy
 
         return network_fitness_scores
@@ -169,7 +166,6 @@ class run_ga_calcs(initialise_class):
         elif unfit_fraction > 1:
             unfit_pop_size = unfit_fraction
             pop_size = self.pop_size - unfit_pop_size
-        print(pop_size)
 
         # Initialises dictionary of fittest networks
         mating_pop_dict = OrderedDict()
@@ -220,7 +216,6 @@ class run_ga_calcs(initialise_class):
         sorted_network_fitness_scores = OrderedDict(sorted(
             network_fitness_scores.items(), key=itemgetter(1), reverse=True)
         )
-        print(network_fitness_scores)
 
         sorted_network_num = (
             np.array(list(sorted_network_fitness_scores.keys()))
@@ -415,8 +410,8 @@ class run_ga_calcs(initialise_class):
         mutated_pop_dict = OrderedDict()
 
         # Scrambles the amino acid identities of randomly selected nodes
-        for network_num in list(mutated_pop_dict.keys()):
-            G = copy.deepcopy(mutated_pop_dict[network_num])
+        for network_num in list(crossover_pop_dict.keys()):
+            G = copy.deepcopy(crossover_pop_dict[network_num])
 
             scrambled_nodes = []
             aa_ids = []
@@ -427,10 +422,6 @@ class run_ga_calcs(initialise_class):
                     aa_ids.append(G.nodes[node]['aa_id'])
 
             random.shuffle(aa_ids)
-            attributes = OrderedDict({
-                node: {'aa_id': aa_id} for node, aa_id in
-                zip(scrambled_nodes, aa_ids)
-            })
             nx.set_node_attributes(G, values=attributes)
 
             mutated_pop_dict[network_num] = G
@@ -549,7 +540,7 @@ class run_ga_pipeline(initialise_class):
                             surface, mating_pop_dict
                         )
                     elif self.method_crossover == 'segmented':
-                        crossover_pop_dict = ga_calcs.egmented_crossover(
+                        crossover_pop_dict = ga_calcs.segmented_crossover(
                             surface, mating_pop_dict
                         )
 

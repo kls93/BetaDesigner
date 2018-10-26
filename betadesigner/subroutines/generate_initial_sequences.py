@@ -57,7 +57,9 @@ def propensity_to_probability_distribution(sorted_network_num,
     # Generates cumulative probability distribution from -ln(propensity)
     # (~ free energy) differences
     if raw_or_rank == 'rank':
-        sorted_node_indv_propensities = np.array(range(0, sorted_node_indv_propensities.shape[0]))
+        sorted_node_indv_propensities = np.array(
+            range(1, (sorted_node_indv_propensities.shape[0]+1))
+        )
 
     # Converts fitness scores into probabilities
     total = 0
