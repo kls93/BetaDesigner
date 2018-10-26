@@ -51,13 +51,15 @@ def interpolate_propensities(node_prop, aa_propensity_scale, dict_label):
     return propensity
 
 
-def propensity_to_probability_distribution(sorted_node_indv_propensities,
+def propensity_to_probability_distribution(sorted_network_num,
+                                           sorted_node_indv_propensities,
                                            raw_or_rank):
     # Generates cumulative probability distribution from -ln(propensity)
     # (~ free energy) differences
     if raw_or_rank == 'rank':
         sorted_node_indv_propensities = np.array(range(0, sorted_node_indv_propensities.shape[0]))
 
+    # Converts fitness scores into probabilities
     total = 0
     for index, propensity in np.ndenumerate(sorted_node_indv_propensities):
         if index[0] == 0:
@@ -67,25 +69,44 @@ def propensity_to_probability_distribution(sorted_node_indv_propensities,
             propensity_diff = abs(ref_propensity-propensity)
             total += (propensity_diff+1)
 
-    node_cumulative_probabilities = np.array([])
-    cumulative_probability = 0
+    node_probabilities = np.array([])
     for index, propensity in np.ndenumerate(sorted_node_indv_propensities):
         if index[0] == 0:
             ref_propensity = propensity
             probability = 1 / total
         elif index[0] > 0:
             probability = (abs(ref_propensity-propensity)+1) / total
+        node_probabilities = np.append(
+            node_probabilities, probability
+        )
+
+    # Randomly shuffles probability array before creating cumulative
+    # probability distribution
+    probability_array = np.transpose(np.array([sorted_network_num,
+                                               sorted_node_indv_propensities,
+                                               node_probabilities]))
+    np.random.shuffle(probability_array)
+    probability_array = np.transpose(probability_array)
+    sorted_network_num = probability_array[0]
+    sorted_node_indv_propensities = probability_array[1]
+    node_probabilities = probability_array[2]
+
+    node_cumulative_probabilities = np.array([])
+    cumulative_probability = 0
+    for index, probability in np.ndenumerate(node_probabilities):
         cumulative_probability += probability
         node_cumulative_probabilities = np.append(
             node_cumulative_probabilities, cumulative_probability
         )
+
 
     if round(node_cumulative_probabilities[-1], 4) != 1.0:
         sys.exit('ERROR {} {}: Cumulative probability = {}'.format(
             node, network_label, cumulative_probabilities_array[-1])
         )
 
-    return node_cumulative_probabilities
+    return (sorted_network_num, sorted_node_indv_propensities,
+            node_cumulative_probabilities)
 
 
 class gen_ga_input_calcs(initialise_class):
@@ -285,7 +306,7 @@ class gen_ga_input_calcs(initialise_class):
             # Selects amino acid weighted by its probability
             for num in range(self.pop_size):
                 random_number = random.uniform(0, 1)
-                nearest_index = (np.abs(node_cumulative_probabilities)).argmin()
+                nearest_index = (np.abs(node_cumulative_probabilities-random_number)).argmin()
 
                 if node_cumulative_probabilities[nearest_index] >= random_number:
                     selected_aa = sorted_node_aa_ids[nearest_index]

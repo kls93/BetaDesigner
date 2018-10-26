@@ -217,40 +217,53 @@ class run_ga_calcs(initialise_class):
 
         # Sorts networks by their fitness values, from least (+ve) to most
         # (-ve) fit
+        sorted_network_fitness_scores = OrderedDict(sorted(
+            network_fitness_scores.items(), key=itemgetter(1), reverse=True)
+        )
+        print(network_fitness_scores)
+
         sorted_network_num = (
-            np.argsort(np.array(list(network_fitness_scores.keys())))[::-1]
+            np.array(list(sorted_network_fitness_scores.keys()))
         )
         sorted_network_fitness_scores = (
-            np.sort(np.array(list(network_fitness_scores.values())))[::-1]
+            np.array(list(sorted_network_fitness_scores.values()))
         )
 
-        network_cumulative_probabilities = propensity_to_probability_distribution(
-            sorted_network_fitness_scores, raw_or_rank
+        (sorted_network_num, sorted_network_fitness_scores,
+         network_cumulative_probabilities
+        ) = propensity_to_probability_distribution(
+            sorted_network_num, sorted_network_fitness_scores, raw_or_rank
         )
 
         # Adds individuals (their likelihood of selection weighted by their raw
         # fitness scores) to mating population
-        # TODO Currently takes ages to add new networks once most likely
-        # networks have been selected - need to fix the code to update the
-        # probabilities of the remaining networks after a network has been
-        # selected
         count = 0
         while count < self.pop_size:
             random_number = random.uniform(0, 1)
-            nearest_index = (np.abs(network_cumulative_probabilities)).argmin()
+            nearest_index = (np.abs(network_cumulative_probabilities-random_number)).argmin()
 
-            if network_cumulative_probabilities[nearest_index] >= random_number:
-                selected_network = sorted_network_num[nearest_index]
-            else:
-                selected_network = sorted_network_num[nearest_index+1]
+            if network_cumulative_probabilities[nearest_index] < random_number:
+                nearest_index += 1
 
-            if not selected_network in list(mating_pop_dict.keys()):
-                # Ensures a network is only added to the mating population once
-                # NOTE that the networks dictionaries are not updated after a
-                # network is selected, in order to avoid the need to update
-                # the corresponding probability values
-                mating_pop_dict[selected_network] = networks_dict[selected_network]
-                count += 1
+            selected_network = sorted_network_num[nearest_index]
+            mating_pop_dict[selected_network] = networks_dict[selected_network]
+
+            # Updates arrays of network numbers, fitness scores and their
+            # corresponding probability distribution to remove the selected
+            # network (this prevents the loop from taking a very long time once
+            # the highest probability networks have been selected)
+            if count != (self.pop_size - 1):
+                sorted_network_num = np.delete(sorted_network_num, nearest_index)
+                sorted_network_fitness_scores = np.delete(
+                    sorted_network_fitness_scores, nearest_index
+                )
+                (sorted_network_num, sorted_network_fitness_scores,
+                 network_cumulative_probabilities
+                ) = propensity_to_probability_distribution(
+                    sorted_network_num, sorted_network_fitness_scores, raw_or_rank
+                )
+
+            count += 1
 
         return mating_pop_dict
 
