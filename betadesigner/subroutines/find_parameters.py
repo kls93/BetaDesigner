@@ -4,7 +4,6 @@ import pickle
 import random
 import shutil
 import string
-import sys
 import pandas as pd
 from collections import OrderedDict
 
@@ -33,14 +32,14 @@ def find_parameters(args):
                         value = '/{}/'.format(value.strip('/'))
                     elif key in ['jobid']:
                         value = value.replace(' ', '')
-                    elif key in ['barrelorsandwich', 'populationsize',
-                                 'numberofgenerations', 'initialseqmethod',
+                    elif key in ['barrelorsandwich', 'initialseqmethod',
                                  'fitnessscoremethod', 'splitfraction',
                                  'matingpopmethod', 'unfitfraction'
                                  'crossovermethod', 'crossoverprob',
                                  'swapstartprob', 'swapstopprob',
-                                 'mutationmethod']:
-                        value = value.replace(' ', '').lower()
+                                 'mutationmethod', 'populationsize',
+                                 'numberofgenerations',]:
+                        value = value.lower().replace(' ', '')
 
                     parameters[key] = value
 
@@ -100,8 +99,7 @@ def find_parameters(args):
                 print('File path to input PDB file not recognised')
 
     """
-    # Defines absolute file path to pickle file listing propensity scales, then
-    # unpickles propensity scales
+    # Defines absolute file path to pickle file listing propensity scales
     if 'propensityscales' in parameters:
         if (
             (not os.path.isfile(parameters['propensityscales']))
@@ -159,33 +157,21 @@ def find_parameters(args):
     for dict_name in list(parameters['propensityscales'].keys()):
         if not dict_name in parameters['propensityscaleweights']:
             print('Weight for {} surface not provided'.format(dict_name))
-
             weight = ''
-            while not type(weight) in [int, float]:
-                print('Specify weight for {} surface'.format(dict_name))
-                weight = input(prompt)
-
-                try:
-                    weight = float(weight)
-                    break
-                except ValueError:
-                    print('Weighting for {} surface not recognised'.format(dict_name))
-                    weight = ''
-            parameters['propensityscaleweights'][dict_name] = weight
-
         else:
             weight = parameters['propensityscaleweights'][dict_name]
-            while not type(weight) in [int, float]:
-                print('Specify weight for {} surface'.format(dict_name))
-                weight = input(prompt)
 
-                try:
-                    weight = float(weight)
-                    break
-                except ValueError:
-                    print('Weighting for {} surface not recognised'.format(dict_name))
-                    weight = ''
-            parameters['propensityscaleweights'][dict_name] = weight
+        while not type(weight) in [int, float]:
+            print('Specify weight for {} surface'.format(dict_name))
+            weight = input(prompt)
+
+            try:
+                weight = float(weight)
+                parameters['propensityscaleweights'][dict_name] = weight
+                break
+            except ValueError:
+                print('Weighting for {} surface not recognised'.format(dict_name))
+                weight = ''
     """
 
     # Defines working directory
@@ -222,7 +208,7 @@ def find_parameters(args):
         barrel_or_sandwich = ''
         while not barrel_or_sandwich in ['barrel', '2.40', 'sandwich', '2.60']:
             print('Specify structure type - please enter "barrel" or "sandwich":')
-            barrel_or_sandwich = input(prompt)
+            barrel_or_sandwich = input(prompt).lower().replace(' ', '')
 
             if barrel_or_sandwich in ['2.40', '2.60']:
                 parameters['barrelorsandwich'] = barrel_or_sandwich
@@ -262,7 +248,7 @@ def find_parameters(args):
             'random', 'rawpropensity', 'rankpropensity'
         ]:
             print('Specify method for determining initial side chain assignments:')
-            method_initial_side_chains = input(prompt).lower()
+            method_initial_side_chains = input(prompt).lower().replace(' ', '')
 
             if method_initial_side_chains in [
                 'random', 'rawpropensity', 'rankpropensity'
@@ -275,8 +261,9 @@ def find_parameters(args):
 
     # Defines method used to measure sequence fitness
     if 'fitnessscoremethod' in parameters:
-        if not parameters['fitnessscoremethod'] in ['propensity', 'allatom',
-                          'alternate', 'split']:
+        if not parameters['fitnessscoremethod'] in [
+            'propensity', 'allatom', 'alternate', 'split'
+        ]:
             print('Method for measuring sequence fitness not recognised - '
                   'please select one of "propensity", "all-atom", "alternate" '
                   'or "split"')
@@ -284,13 +271,15 @@ def find_parameters(args):
 
     if not 'fitnessscoremethod' in parameters:
         method_fitness_score = ''
-        while not method_fitness_score in ['propensity', 'allatom',
-                                           'alternate', 'split']:
+        while not method_fitness_score in [
+            'propensity', 'allatom', 'alternate', 'split'
+        ]:
             print('Specify method for measuring sequence fitnesses:')
-            method_fitness_score = input(prompt).lower()
+            method_fitness_score = input(prompt).lower().replace(' ', '')
 
-            if method_fitness_score in ['propensity', 'allatom', 'alternate',
-                                        'split']:
+            if method_fitness_score in [
+                'propensity', 'allatom', 'alternate', 'split'
+            ]:
                 parameters['fitnessscoremethod'] = method_fitness_score
                 break
             else:
@@ -320,7 +309,7 @@ def find_parameters(args):
             while not type(split_fraction) == float:
                 print('Specify fraction of samples to be optimised against '
                       'propensity:')
-                split_fraction = input(prompt).lower()
+                split_fraction = input(prompt)
 
                 try:
                     split_fraction = float(split_fraction)
@@ -353,7 +342,7 @@ def find_parameters(args):
             'fittest', 'roulettewheel', 'rankroulettewheel'
         ]:
             print('Specify method for generating mating population:')
-            method_select_mating_pop = input(prompt).lower()
+            method_select_mating_pop = input(prompt).lower().replace(' ', '')
 
             if method_select_mating_pop in [
                 'fittest', 'roulettewheel', 'rankroulettewheel'
@@ -389,7 +378,7 @@ def find_parameters(args):
             while not type(unfit_fraction) == float:
                 print('Specify fraction of mating population to be comprised '
                       'of unfit samples:')
-                unfit_fraction = input(prompt).lower()
+                unfit_fraction = input(prompt)
 
                 try:
                     unfit_fraction = float(unfit_fraction)
@@ -418,7 +407,7 @@ def find_parameters(args):
         method_crossover = ''
         while not method_crossover in ['uniform', 'segmented']:
             print('Specify crossover method:')
-            method_crossover = input(prompt).lower()
+            method_crossover = input(prompt).lower().replace(' ', '')
 
             if method_crossover in ['uniform', 'segmented']:
                 parameters['crossovermethod'] = method_crossover
@@ -448,7 +437,7 @@ def find_parameters(args):
             crossover_probability = ''
             while not type(crossover_probability) == float:
                 print('Specify probability of uniform crossover:')
-                crossover_probability = input(prompt).lower()
+                crossover_probability = input(prompt)
 
                 try:
                     crossover_probability = float(crossover_probability)
@@ -484,7 +473,7 @@ def find_parameters(args):
             start_crossover_prob = ''
             while not type(start_crossover_prob) == float:
                 print('Specify probability of initiating crossover:')
-                start_crossover_prob = input(prompt).lower()
+                start_crossover_prob = input(prompt)
 
                 try:
                     start_crossover_prob = float(start_crossover_prob)
@@ -521,7 +510,7 @@ def find_parameters(args):
             stop_crossover_prob = ''
             while not type(stop_crossover_prob) == float:
                 print('Specify probability of ending crossover:')
-                stop_crossover_prob = input(prompt).lower()
+                stop_crossover_prob = input(prompt)
 
                 try:
                     stop_crossover_prob = float(stop_crossover_prob)
@@ -550,7 +539,7 @@ def find_parameters(args):
         method_mutation = ''
         while not method_mutation in ['swap', 'scramble']:
             print('Specify mutation method:')
-            method_mutation = input(prompt).lower()
+            method_mutation = input(prompt).lower().replace(' ', '')
 
             if method_mutation in ['swap', 'scramble']:
                 parameters['mutationmethod'] = method_mutation
@@ -578,7 +567,7 @@ def find_parameters(args):
         mutation_probability = ''
         while not type(mutation_probability) == float:
             print('Specify probability of mutation:')
-            mutation_probability = input(prompt).lower()
+            mutation_probability = input(prompt)
 
             try:
                 mutation_probability = float(mutation_probability)
@@ -640,15 +629,29 @@ def find_parameters(args):
 
             try:
                 new_population_size = int(population_size)
-                if (    str(new_population_size) == population_size
+                if (
+                        parameters['fitnessscoremethod'] != 'split'
+                    and str(new_population_size) == population_size
                     and new_population_size > 0
                     and new_population_size % 2 == 0
                 ):
                     parameters['populationsize'] = new_population_size
                     break
+                elif (
+                        parameters['fitnessscoremethod'] == 'split'
+                    and str(new_population_size) == population_size
+                    and new_population_size > 0
+                    and new_population_size % 4 == 0
+                ):
+                    parameters['populationsize'] = new_population_size
+                    break
                 else:
-                    print('Population size not recognised - please enter a '
-                          'positive even integer')
+                    if parameters['fitnessscoremethod'] != 'split':
+                        print('Population size not recognised - please enter '
+                              'a positive even integer')
+                    elif parameters['fitnessscoremethod'] == 'split':
+                        print('Population size not recognised - please enter '
+                              'a positive integer divisible by 4')
                     population_size = ''
             except ValueError:
                 if parameters['fitnessscoremethod'] != 'split':
@@ -685,7 +688,8 @@ def find_parameters(args):
 
             try:
                 new_num_gens = int(num_gens)
-                if (    str(new_num_gens) == num_gens
+                if (
+                        str(new_num_gens) == num_gens
                     and new_num_gens > 0
                 ):
                     parameters['numberofgenerations'] = new_num_gens
@@ -712,12 +716,12 @@ def find_parameters(args):
     os.chdir(working_directory)
 
     shutil.copy('{}'.format(parameters['inputdataframe']),
-                'Program_input/Input_DataFrame.pkl'.format(working_directory))
+                'Program_input/Input_DataFrame.pkl')
     shutil.copy('{}'.format(parameters['inputpdb']),
-                'Program_input/Input_PDB.pdb'.format(working_directory))
+                'Program_input/Input_PDB.pdb')
     """
     shutil.copy('{}'.format(parameters['propensityscales']),
-                'Program_input/Propensity_scales.pkl'.format(working_directory))
+                'Program_input/Propensity_scales.pkl')
     """
 
     # Writes program parameters to a txt file for user records
