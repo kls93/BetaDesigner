@@ -246,90 +246,6 @@ def find_parameters(args):
                               for i in range(6)])
         parameters['jobid'] = job_id
 
-    # Defines the size of the population of sequences to be optimised by the
-    # genetic algorithm. The population size should be an even number, in order
-    # that all parent sequences can be paired off for crossover (mating).
-    if 'populationsize' in parameters:
-        try:
-            new_population_size = int(parameters['populationsize'])
-            if (
-                    str(new_population_size) == parameters['populationsize']
-                and new_population_size > 0
-                and new_population_size % 2 == 0
-            ):
-                parameters['populationsize'] = new_population_size
-            else:
-                print('Population size not recognised - please enter a '
-                      'positive even integer')
-                parameters.pop('populationsize')
-        except ValueError:
-            print('Population size not recognised - please enter a '
-                  'positive even integer')
-            parameters.pop('populationsize')
-
-    if not 'populationsize' in parameters:
-        population_size = ''
-        while type(population_size) != int:
-            print('Specify number of sequences in population:')
-            population_size = input(prompt).strip()
-
-            try:
-                new_population_size = int(population_size)
-                if (    str(new_population_size) == population_size
-                    and new_population_size > 0
-                    and new_population_size % 2 == 0
-                ):
-                    parameters['populationsize'] = new_population_size
-                    break
-                else:
-                    print('Population size not recognised - please enter a '
-                          'positive even integer')
-                    population_size = ''
-            except ValueError:
-                print('Population size not recognised - please enter a '
-                      'positive even integer')
-                population_size = ''
-
-    # Defines the number of generations for which to run the genetic algorithm
-    if 'numberofgenerations' in parameters:
-        try:
-            new_num_gens = int(parameters['numberofgenerations'])
-            if (
-                    str(new_num_gens) == parameters['numberofgenerations']
-                and new_num_gens > 0
-            ):
-                parameters['numberofgenerations'] = new_num_gens
-            else:
-                print('Number of generations not recognised - please enter a '
-                      'positive integer')
-                parameters.pop('numberofgenerations')
-        except ValueError:
-            print('Number of generations not recognised - please enter a '
-                  'positive integer')
-            parameters.pop('numberofgenerations')
-
-    if not 'numberofgenerations' in parameters:
-        num_gens = ''
-        while type(num_gens) != int:
-            print('Specify number of generations for which to run GA:')
-            num_gens = input(prompt).strip()
-
-            try:
-                new_num_gens = int(num_gens)
-                if (    str(new_num_gens) == num_gens
-                    and new_num_gens > 0
-                ):
-                    parameters['numberofgenerations'] = new_num_gens
-                    break
-                else:
-                    print('Number of generations not recognised - please '
-                          'enter a positive integer')
-                    num_gens = ''
-            except ValueError:
-                print('Number of generations not recognised - please enter a '
-                      'positive integer')
-                num_gens = ''
-
     # Defines method used to generate initial sequences for backbone structure
     if 'initialseqmethod' in parameters:
         if not parameters['initialseqmethod'] in [
@@ -677,6 +593,111 @@ def find_parameters(args):
                 print('Probability of mutation not recognised - please enter '
                       'a value between 0 and 1')
                 mutation_probability = ''
+
+    # Defines the size of the population of sequences to be optimised by the
+    # genetic algorithm. The population size should be an even number, in order
+    # that all parent sequences can be paired off for crossover (mating).
+    # NOTE must be defined after fitnessscoremethod
+    if 'populationsize' in parameters:
+        try:
+            new_population_size = int(parameters['populationsize'])
+            if (
+                    parameters['fitnessscoremethod'] != 'split'
+                and str(new_population_size) == parameters['populationsize']
+                and new_population_size > 0
+                and new_population_size % 2 == 0
+            ):
+                parameters['populationsize'] = new_population_size
+            elif (
+                    parameters['fitnessscoremethod'] == 'split'
+                and str(new_population_size) == parameters['populationsize']
+                and new_population_size > 0
+                and new_population_size % 4 == 0
+            ):
+                parameters['populationsize'] = new_population_size
+            else:
+                if parameters['fitnessscoremethod'] != 'split':
+                    print('Population size not recognised - please enter a '
+                          'positive even integer')
+                else:
+                    print('Population size not recognised - please enter a '
+                          'positive integer divisible by 4')
+                parameters.pop('populationsize')
+        except ValueError:
+            if parameters['fitnessscoremethod'] != 'split':
+                print('Population size not recognised - please enter a '
+                      'positive even integer')
+            else:
+                print('Population size not recognised - please enter a '
+                      'positive integer divisible by 4')
+            parameters.pop('populationsize')
+
+    if not 'populationsize' in parameters:
+        population_size = ''
+        while type(population_size) != int:
+            print('Specify number of sequences in population:')
+            population_size = input(prompt).strip()
+
+            try:
+                new_population_size = int(population_size)
+                if (    str(new_population_size) == population_size
+                    and new_population_size > 0
+                    and new_population_size % 2 == 0
+                ):
+                    parameters['populationsize'] = new_population_size
+                    break
+                else:
+                    print('Population size not recognised - please enter a '
+                          'positive even integer')
+                    population_size = ''
+            except ValueError:
+                if parameters['fitnessscoremethod'] != 'split':
+                    print('Population size not recognised - please enter a '
+                          'positive even integer')
+                else:
+                    print('Population size not recognised - please enter a '
+                          'positive integer divisible by 4')
+                population_size = ''
+
+    # Defines the number of generations for which to run the genetic algorithm
+    if 'numberofgenerations' in parameters:
+        try:
+            new_num_gens = int(parameters['numberofgenerations'])
+            if (
+                    str(new_num_gens) == parameters['numberofgenerations']
+                and new_num_gens > 0
+            ):
+                parameters['numberofgenerations'] = new_num_gens
+            else:
+                print('Number of generations not recognised - please enter a '
+                      'positive integer')
+                parameters.pop('numberofgenerations')
+        except ValueError:
+            print('Number of generations not recognised - please enter a '
+                  'positive integer')
+            parameters.pop('numberofgenerations')
+
+    if not 'numberofgenerations' in parameters:
+        num_gens = ''
+        while type(num_gens) != int:
+            print('Specify number of generations for which to run GA:')
+            num_gens = input(prompt).strip()
+
+            try:
+                new_num_gens = int(num_gens)
+                if (    str(new_num_gens) == num_gens
+                    and new_num_gens > 0
+                ):
+                    parameters['numberofgenerations'] = new_num_gens
+                    break
+                else:
+                    print('Number of generations not recognised - please '
+                          'enter a positive integer')
+                    num_gens = ''
+            except ValueError:
+                print('Number of generations not recognised - please enter a '
+                      'positive integer')
+                num_gens = ''
 
     # Changes directory to user-specified "working directory"
     os.chdir(parameters['workingdirectory'])

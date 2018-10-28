@@ -47,7 +47,10 @@ def pack_side_chains(ampal_object, G, rigid_rotamers):
         hydrogens=False
     )
 
-    # Calculate total energy
+    # Calculates total energy of the AMPAL object (note that this does not
+    # include the interaction of the object with its surrounding environment,
+    # hence hydrophobic side chains will not be penalised on the surface of a
+    # globular protein and vicer versa for membrane proteins)
     energy = budeff.get_internal_energy(new_ampal_object).total_energy
 
     return new_ampal_object, energy
@@ -152,7 +155,7 @@ class run_ga_calcs(initialise_class):
         return network_fitness_scores
 
     def create_mating_population_fittest_indv(self, surface, networks_dict,
-                                              network_fitness_scores,
+                                              network_fitness_scores, pop_size,
                                               unfit_fraction):
         # Creates mating population from the fittest sequences plus a subset of
         # less fit sequences (so as to maintain diversty in the mating
@@ -161,11 +164,11 @@ class run_ga_calcs(initialise_class):
 
         # Determines numbers of fittest and random sequences to be added in
         if 0 <= unfit_fraction <= 1:
-            unfit_pop_size = round((self.pop_size*unfit_fraction), 0)
-            pop_size = self.pop_size - unfit_pop_size
+            unfit_pop_size = round((pop_size*unfit_fraction), 0)
+            pop_size = pop_size - unfit_pop_size
         elif unfit_fraction > 1:
             unfit_pop_size = unfit_fraction
-            pop_size = self.pop_size - unfit_pop_size
+            pop_size = pop_size - unfit_pop_size
 
         # Initialises dictionary of fittest networks
         mating_pop_dict = OrderedDict()
@@ -203,7 +206,7 @@ class run_ga_calcs(initialise_class):
 
     def create_mating_population_roulette_wheel(self, surface, networks_dict,
                                                 network_fitness_scores,
-                                                raw_or_rank):
+                                                pop_size, raw_or_rank):
         # Creates mating population from individuals, with the likelihood of
         # selection of each sequence being weighted by its raw fitness score
         print('Creating mating population for {}'.format(surface))
@@ -233,7 +236,7 @@ class run_ga_calcs(initialise_class):
         # Adds individuals (their likelihood of selection weighted by their raw
         # fitness scores) to mating population
         count = 0
-        while count < self.pop_size:
+        while count < pop_size:
             random_number = random.uniform(0, 1)
             nearest_index = (np.abs(network_cumulative_probabilities-random_number)).argmin()
 
@@ -247,7 +250,7 @@ class run_ga_calcs(initialise_class):
             # corresponding probability distribution to remove the selected
             # network (this prevents the loop from taking a very long time once
             # the highest probability networks have been selected)
-            if count != (self.pop_size - 1):
+            if count != (pop_size - 1):
                 sorted_network_num = np.delete(sorted_network_num, nearest_index)
                 sorted_network_fitness_scores = np.delete(
                     sorted_network_fitness_scores, nearest_index
@@ -422,6 +425,10 @@ class run_ga_calcs(initialise_class):
                     aa_ids.append(G.nodes[node]['aa_id'])
 
             random.shuffle(aa_ids)
+            attributes = OrderedDict({
+                node: {'aa_id': aa_id} for node, aa_id in
+                zip(scrambled_nodes, aa_ids)
+            })
             nx.set_node_attributes(G, values=attributes)
 
             mutated_pop_dict[network_num] = G
@@ -446,6 +453,18 @@ class run_ga_calcs(initialise_class):
         for num, G in mating_pop_dict.items():
             merged_networks_dict[count] = G
             count += 1
+
+        # Shuffles metworks dictionary so that in the case of a split
+        # optimisation a mixture of parent and child networks are combined into
+        # the sub-classes whose fitnesses are measured by different methods in
+        # the following round of optimisation
+        merged_networks_num = list(merged_networks_dict.keys())
+        merged_networks = list(merged_networks_dict.values())
+        random.shuffle(merged_networks)
+        merged_networks_dict = OrderedDict(
+            {merged_networks_num[i]: merged_networks[i]
+            for i in range(len(merged_networks_num))}
+        )
 
         return merged_networks_dict
 
@@ -489,9 +508,15 @@ class run_ga_pipeline(initialise_class):
                     )
                     networks_list_all = [networks_dict_propensity,
                                          networks_dict_all_atom]
+                    if count == 1:
+                        split_number *= 2  # Must be below dictionary definitions!
+                    pop_size = self.pop_size / 2  # There is a check in
+                    # find_parameters to make sure that self.pop_size is
+                    # divisible by 4
                 else:
                     split_number = ''
                     networks_list_all = [networks_dict_all]
+                    pop_size = self.pop_size
 
                 for index, networks_dict in enumerate(networks_list_all):
                     # Measures fitness of sequences in starting population
@@ -522,15 +547,17 @@ class run_ga_pipeline(initialise_class):
                     if self.method_select_mating_pop == 'fittest':
                         mating_pop_dict = ga_calcs.create_mating_population_fittest_indv(
                             surface, networks_dict, network_fitness_scores,
-                            self.unfit_fraction
+                            pop_size, self.unfit_fraction
                         )
                     elif self.method_select_mating_pop == 'roulettewheel':
                         mating_pop_dict = ga_calcs.create_mating_population_roulette_wheel(
-                            surface, networks_dict, network_fitness_scores, 'raw'
+                            surface, networks_dict, network_fitness_scores,
+                            pop_size, 'raw'
                         )
                     elif self.method_select_mating_pop == 'rankroulettewheel':
                         mating_pop_dict = ga_calcs.create_mating_population_roulette_wheel(
-                            surface, networks_dict, network_fitness_scores, 'rank'
+                            surface, networks_dict, network_fitness_scores,
+                            pop_size, 'rank'
                         )
 
                     # Performs crossover of parent sequences to generate child
@@ -585,7 +612,8 @@ class run_ga_pipeline(initialise_class):
                 )
 
             mating_pop_dict = ga_calcs.create_mating_population_fittest_indv(
-                surface, networks_dict, network_fitness_scores, unfit_fraction=0
+                surface, networks_dict, network_fitness_scores,
+                self.pop_size, unfit_fraction=0
             )
             sequences_dict[surface] = mating_pop_dict
 
