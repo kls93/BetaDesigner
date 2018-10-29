@@ -4,9 +4,8 @@ import random
 import sys
 import networkx as nx
 import numpy as np
-import pandas as pd
+import pandas as pd  # Required to slice input dataframe
 from collections import OrderedDict
-from operator import itemgetter
 
 if __name__ == 'subroutines.generate_initial_sequences':
     from subroutines.find_parameters import initialise_class
@@ -14,9 +13,10 @@ else:
     from betadesigner.subroutines.find_parameters import initialise_class
 
 # Initially, I should exclude contacts outside of the beta-strands of interest.
-# PROPENSITY SCALE DICTIONARIES NAMES MUST ALWAYS START WITH "int" OR "ext",
-# AND END WITH "z" OR "bsa" AS MUST NETWORK NAMES. All propensity dict names of
-# the format surface_structuralfeature_individualorcombined (e.g. int_z_indv)
+# All propensity dict names should be of the format
+# barrels: surface_structuralfeature_individualorcombined (e.g. int_z_indv)
+# sandwiches: surface_structuralfeature_edgeorcentralstrand_individualorcombined
+# (e.g.int_z_edge_indv)
 
 
 def interpolate_propensities(node_prop, aa_propensity_scale, dict_label):
@@ -56,7 +56,7 @@ def propensity_to_probability_distribution(sorted_network_num,
                                            raw_or_rank):
     # Generates cumulative probability distribution from -ln(propensity)
     # (~ free energy) differences
-    if raw_or_rank == 'rank':
+    if 'rank' in raw_or_rank:
         sorted_node_indv_propensities = np.array(
             range(1, (sorted_node_indv_propensities.shape[0]+1))
         )
@@ -64,7 +64,7 @@ def propensity_to_probability_distribution(sorted_network_num,
     # Converts fitness scores into probabilities
     total = 0
     for index, propensity in np.ndenumerate(sorted_node_indv_propensities):
-        if index[0] == 0:
+        if index[0] == 0:  # Numpy array indices are tuples
             ref_propensity = propensity
             total += 1
         elif index[0] > 0:
@@ -73,7 +73,7 @@ def propensity_to_probability_distribution(sorted_network_num,
 
     node_probabilities = np.array([])
     for index, propensity in np.ndenumerate(sorted_node_indv_propensities):
-        if index[0] == 0:
+        if index[0] == 0:  # Numpy array indices are tuples
             ref_propensity = propensity
             probability = 1 / total
         elif index[0] > 0:
@@ -83,7 +83,8 @@ def propensity_to_probability_distribution(sorted_network_num,
         )
 
     # Randomly shuffles probability array before creating cumulative
-    # probability distribution
+    # probability distribution, in order to avoid smallest probabilities being
+    # grouped together at the beginning of the range
     probability_array = np.transpose(np.array([sorted_network_num,
                                                sorted_node_indv_propensities,
                                                node_probabilities]))
@@ -103,8 +104,8 @@ def propensity_to_probability_distribution(sorted_network_num,
 
 
     if round(node_cumulative_probabilities[-1], 4) != 1.0:
-        sys.exit('ERROR {} {}: Cumulative probability = {}'.format(
-            node, network_label, cumulative_probabilities_array[-1])
+        sys.exit('ERROR {}: Cumulative probability = {}'.format(
+            network_label, cumulative_probabilities_array[-1])
         )
 
     return (sorted_network_num, sorted_node_indv_propensities,
@@ -157,11 +158,12 @@ class gen_ga_input_calcs(initialise_class):
         # interacting residues.
 
         # Defines dictionary of residue interaction types to include as network
-        # edges.
+        # edges. NOTE might want to provide these interactions as a program
+        # input?
         interactions_dict = {'HB': 'hb_pairs',
                              'NHB': 'nhb_pairs',
-                             'Plus Minus 2': 'minus_2',
-                             'Plus Minus 2': 'plus_2'}
+                             'PlusMinus2': 'minus_2',
+                             'PlusMinus2': 'plus_2'}
 
         # Creates networks of interacting residues on each surface
         networks = OrderedDict()
@@ -186,7 +188,7 @@ class gen_ga_input_calcs(initialise_class):
                     node = sub_df['res_ids'][num]
                     z_coord = sub_df['sandwich_z_coords'][num]
                     buried_surface_area = sub_df['buried_surface_area'][num]
-                    edge_or_central = sub_df['edge_or_central']
+                    edge_or_central = sub_df['edge_or_central'][num]
                     G.add_node(node, aa_id='UNK', int_ext=surface_label,
                                z=z_coord, bsa=buried_surface_area,
                                eoc=edge_or_central)
@@ -218,7 +220,7 @@ class gen_ga_input_calcs(initialise_class):
                             if G.has_edge(res_1, res_2) is False:
                                 G.add_edge(res_1, res_2, interaction=edge_label)
                             elif G.has_edge(res_1, res_2) is True:
-                                attributes = [val for edge_label, sub_dict in
+                                attributes = [val for label, sub_dict in
                                               G[res_1][res_2].items() for key,
                                               val in sub_dict.items()]
                                 if not edge_label in attributes:
@@ -276,6 +278,16 @@ class gen_ga_input_calcs(initialise_class):
         })
 
         for node in list(G.nodes):
+            if self.barrel_or_sandwich == '2.60':
+                # Filters propensity scales depending upon whether the node is
+                # in an edge or a central strand
+                eoc = G.nodes[node]['eoc']
+                sub_propensity_dicts = OrderedDict(
+                    {dict_label: propensity_dict for dict_label,
+                     propensity_dict in sub_propensity_dicts.items() if
+                     dict_label.split('_')[2] == eoc}
+                )
+
             # Calculates summed propensity for each amino acid across all
             # structural features considered in the design process
             node_indv_propensities = np.zeros((len(self.aas), len(sub_propensity_dicts)))
@@ -295,14 +307,15 @@ class gen_ga_input_calcs(initialise_class):
             # Sums propensities across structural features considered
             node_indv_propensities = np.sum(np.negative(np.log(node_indv_propensities)), axis=1)
 
-            # Orders amino acids by their propensity values from least
-            # to most favourable
+            # Orders amino acids by their propensity values from least (+ve)
+            # to most (-ve) favourable
             sorted_node_aa_ids = np.argsort(node_indv_propensities)[::-1]
             sorted_node_indv_propensities = np.sort(node_indv_propensities)[::-1]
 
             # Converts propensity values into probability distribution
-            node_cumulative_probabilities = propensity_to_probability_distribution(
-                sorted_node_indv_propensities, raw_or_rank
+            (sorted_node_aa_ids, sorted_node_indv_propensities,
+             node_cumulative_probabilities) = propensity_to_probability_distribution(
+                sorted_node_aa_ids, sorted_node_indv_propensities, raw_or_rank
             )
 
             # Selects amino acid weighted by its probability
@@ -317,7 +330,7 @@ class gen_ga_input_calcs(initialise_class):
 
                 nx.set_node_attributes(
                     initial_networks[num],
-                    {'{}'.format(node): {'aa_id': '{}'.format(selected_aa)}}
+                    values={'{}'.format(node): {'aa_id': '{}'.format(selected_aa)}}
                 )
 
         return initial_sequences_dict
@@ -340,8 +353,6 @@ class gen_ga_input_pipeline(initialise_class):
 
         # Adds side-chains onto networks using individual amino acid propensity
         # scales, in order to generate a population of starting sequences
-
-        # Initialises dictionary of sequence populations for all networks
         initial_sequences_dict = OrderedDict()
         for network_label, G in networks_dict.items():
             print('Generating initial sequence population for {} surface of '
@@ -353,10 +364,10 @@ class gen_ga_input_pipeline(initialise_class):
                     )
                 )
             elif self.method_initial_side_chains in ['rawpropensity', 'rankpropensity']:
+                raw_or_rank = self.method_initial_side_chains.replace('propensity', '')
                 initial_sequences_dict = (
                     input_calcs.add_initial_side_chains_from_propensities(
-                        initial_sequences_dict, network_label, G,
-                        self.method_initial_side_chains
+                        initial_sequences_dict, network_label, G, raw_or_rank
                     )
                 )
 
