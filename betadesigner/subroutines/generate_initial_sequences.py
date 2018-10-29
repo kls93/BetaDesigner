@@ -160,10 +160,10 @@ class gen_ga_input_calcs(initialise_class):
         # Defines dictionary of residue interaction types to include as network
         # edges. NOTE might want to provide these interactions as a program
         # input?
-        interactions_dict = {'HB': 'hb_pairs',
-                             'NHB': 'nhb_pairs',
-                             'PlusMinus2': 'minus_2',
-                             'PlusMinus2': 'plus_2'}
+        interactions_dict = {'hb': 'hb_pairs',
+                             'nhb': 'nhb_pairs',
+                             '2': 'minus_2',
+                             '2': 'plus_2'}
 
         # Creates networks of interacting residues on each surface
         networks = OrderedDict()
@@ -233,14 +233,14 @@ class gen_ga_input_calcs(initialise_class):
     def add_random_initial_side_chains(self, initial_sequences_dict,
                                        network_label, G):
         # For each network, assigns a random amino acid to each node in the
-        # network to generate an initial sequence. Repeats pop_size times to
+        # network to generate an initial sequence. Repeats 2*pop_size times to
         # generate a starting population of sequences to be fed into the
         # genetic algorithm.
 
         # Initialises dictionary of starting sequences
         initial_networks = OrderedDict()
 
-        for num in range(self.pop_size):
+        for num in range(2*self.pop_size):
             H = copy.deepcopy(G)
 
             new_node_aa_ids = OrderedDict()
@@ -261,12 +261,12 @@ class gen_ga_input_calcs(initialise_class):
         # network to generate an initial sequence. The likelihood of selection
         # of an amino acid for a particular node is weighted by the raw / rank
         # propensity of the amino acid for the structural features of that
-        # node. Repeats pop_size times to generate a starting population of
+        # node. Repeats 2*pop_size times to generate a starting population of
         # sequences to be fed into the genetic algorithm.
 
         # Initialises dictionary of starting sequences
         initial_networks = OrderedDict()
-        for num in range(self.pop_size):
+        for num in range(2*self.pop_size):
             initial_networks[num] = copy.deepcopy(G)
 
         # Extracts individual amino acid propensity scales for the surface
@@ -304,8 +304,12 @@ class gen_ga_input_calcs(initialise_class):
 
                 count += 1
 
-            # Sums propensities across structural features considered
-            node_indv_propensities = np.sum(np.negative(np.log(node_indv_propensities)), axis=1)
+            # Sums weighted propensities across structural features considered
+            node_indv_propensities = np.negative(np.log(node_indv_propensities))
+            for index, dict_label in enumerate(list(sub_propensity_dicts.keys())):
+                propensity_dict_weight = self.propensity_dict_weights[dict_label]
+                node_indv_propensities[:,index] *= propensity_dict_weight
+            node_indv_propensities = np.sum(node_indv_propensities, axis=1)
 
             # Orders amino acids by their propensity values from least (+ve)
             # to most (-ve) favourable
@@ -319,7 +323,7 @@ class gen_ga_input_calcs(initialise_class):
             )
 
             # Selects amino acid weighted by its probability
-            for num in range(self.pop_size):
+            for num in range(2*self.pop_size):
                 random_number = random.uniform(0, 1)
                 nearest_index = (np.abs(node_cumulative_probabilities-random_number)).argmin()
 
@@ -332,6 +336,8 @@ class gen_ga_input_calcs(initialise_class):
                     initial_networks[num],
                     values={'{}'.format(node): {'aa_id': '{}'.format(selected_aa)}}
                 )
+
+        initial_sequences_dict[network_label] = initial_networks
 
         return initial_sequences_dict
 

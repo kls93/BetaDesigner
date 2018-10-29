@@ -3,9 +3,9 @@
 import budeff
 import copy
 import isambard
-import isambard.modelling as modelling
-import math
 import random
+import sys
+import isambard.modelling as modelling
 import networkx as nx
 import numpy as np
 from collections import OrderedDict
@@ -31,7 +31,9 @@ def pack_side_chains(ampal_object, G, rigid_rotamers):
 
     aa_dict = gen_amino_acids_dict()
 
-    # Makes FASTA sequence to feed into SCWRL4
+    # Makes FASTA sequence to feed into SCWRL4. BEWARE: if FASTA sequence is
+    # shorter than AMPAL object, SCWRL4 will add random amino acids to the end
+    # of the sequence until it is the same length.
     fasta_seq = ''
     for res in ampal_object.get_monomers():
         res_id = '{}{}{}'.format(res.parent.id, res.id, res.insertion_code)
@@ -39,6 +41,9 @@ def pack_side_chains(ampal_object, G, rigid_rotamers):
             fasta_seq += aa_dict[G.nodes[res_id]['aa_id']]
         else:
             fasta_seq += res.mol_letter
+    if len(fasta_seq) != len(ampal_object.get_monomers()):
+        sys.exit('FASTA sequence and AMPAL object contain different numbers '
+                 'of amino acids')
 
     # Packs side chains with SCWRL4. NOTE that fasta sequence must be provided
     # as a list
@@ -50,7 +55,7 @@ def pack_side_chains(ampal_object, G, rigid_rotamers):
     # Calculates total energy of the AMPAL object (note that this does not
     # include the interaction of the object with its surrounding environment,
     # hence hydrophobic side chains will not be penalised on the surface of a
-    # globular protein and vicer versa for membrane proteins)
+    # globular protein and vice versa for membrane proteins)
     energy = budeff.get_internal_energy(new_ampal_object).total_energy
 
     return new_ampal_object, energy
@@ -87,18 +92,29 @@ class run_ga_calcs(initialise_class):
                 # Calculates interpolated propensity of each node for all
                 # individual structural features considered
                 aa_1 = G.nodes[node_1]['aa_id']
+                if self.barrel_or_sandwich == '2.60':
+                    eoc_1 = G.nodes[node]['eoc']
+
+                    # Filters propensity scales depending upon whether the node
+                    # is in an edge or a central strand
+                    sub_indv_propensity_dicts = OrderedDict(
+                        {dict_label: propensity_dict for dict_label,
+                         propensity_dict in sub_indv_propensity_dicts.items()
+                         if dict_label.split('_')[-2] == eoc_1}
+                    )
 
                 for dict_label, propensity_dict in sub_indv_propensity_dicts.items():
                     node_prop = G.nodes[node_1][dict_label.split('_')[1]]
-                    prop_weight = self.propensity_dict_weights[dict_label]
+                    propensity_weight = self.propensity_dict_weights[dict_label]
                     aa_propensity_scale = propensity_dict[aa_1]
 
                     propensity = interpolate_propensities(
                         node_prop, aa_propensity_scale, dict_label
                     )
-                    propensity = prop_weight*np.negative(np.log(propensity))
+                    propensity = propensity_weight*np.negative(np.log(propensity))
                     propensity_count += propensity
 
+                """
                 # Loops through each node pair to sum pairwise propensity values
                 for node_pair in G.edges(node_1):
                     if node_pair[0] == node_1:
@@ -113,22 +129,29 @@ class run_ga_calcs(initialise_class):
 
                         # Loops through each property of node_1
                         for prop, node_prop in G.node[node_1].items():
-                            if not prop in ['aa_id', 'int_ext']:
-                                dict_label = '{}_{}_{}_pairwise'.format(
-                                    surface, prop, edge_label
-                                )
-                                try:
-                                    propensity_dict = self.propensity_dicts[dict_label]
-                                    prop_weight = self.propensity_dict_weights[dict_label]
-                                    propensity_scale = propensity_dict['{}_{}'.format(aa_1, aa_2)]
-
-                                    propensity = interpolate_propensities(
-                                        node_prop, propensity_scale, dict_label
+                            dict_label = ''
+                            if self.barrel_or_sandwich == '2.40':
+                                if not prop in ['aa_id', 'int_ext']:
+                                    dict_label = '{}_{}_{}_pairwise'.format(
+                                        surface, prop, edge_label
                                     )
-                                    propensity = prop_weight*np.negative(np.log(propensity))
-                                    propensity_count += propensity
-                                except KeyError:
-                                    pass
+                            elif self.barrel_or_sandwich == '2.60':
+                                if not prop in ['aa_id', 'int_ext', 'eoc']:
+                                    dict_label = '{}_{}_{}_{}_pairwise'.format(
+                                        surface, prop, edge_label, eoc_1
+                                    )
+
+                            if dict_label != '':
+                                propensity_dict = self.propensity_dicts[dict_label]
+                                propensity_weight = self.propensity_dict_weights[dict_label]
+                                propensity_scale = propensity_dict['{}_{}'.format(aa_1, aa_2)]
+
+                                propensity = interpolate_propensities(
+                                    node_prop, propensity_scale, dict_label
+                                )
+                                propensity = propensity_weight*np.negative(np.log(propensity))
+                                propensity_count += propensity
+                """
 
             network_fitness_scores[num] = propensity_count
 
@@ -158,17 +181,13 @@ class run_ga_calcs(initialise_class):
                                               network_fitness_scores, pop_size,
                                               unfit_fraction):
         # Creates mating population from the fittest sequences plus a subset of
-        # less fit sequences (so as to maintain diversty in the mating
+        # less fit sequences (so as to maintain diversity in the mating
         # population in order to prevent convergence on a non-global minimum)
         print('Creating mating population for {}'.format(surface))
 
         # Determines numbers of fittest and random sequences to be added in
-        if 0 <= unfit_fraction <= 1:
-            unfit_pop_size = round((pop_size*unfit_fraction), 0)
-            pop_size = pop_size - unfit_pop_size
-        elif unfit_fraction > 1:
-            unfit_pop_size = unfit_fraction
-            pop_size = pop_size - unfit_pop_size
+        unfit_pop_size = round((pop_size*unfit_fraction), 0)
+        pop_size = pop_size - unfit_pop_size
 
         # Initialises dictionary of fittest networks
         mating_pop_dict = OrderedDict()
@@ -176,13 +195,13 @@ class run_ga_calcs(initialise_class):
         # Sorts networks by their fitness values, from most (-ve) to least
         # (+ve) fit
         network_fitness_scores = OrderedDict(sorted(
-            network_fitness_scores.items(), key=itemgetter(1), reverse=False)
-        )
+            network_fitness_scores.items(), key=itemgetter(1), reverse=False
+            ))
 
         # Adds fittest individuals to mating population
         for index, num in enumerate(list(network_fitness_scores.keys())):
             if index < pop_size:
-                mating_pop_dict[num] = networks_dict[num]
+                mating_pop_dict[num] = copy.deepcopy(networks_dict[num])
                 network_fitness_scores[num] = ''
             else:
                 break
@@ -197,7 +216,7 @@ class run_ga_calcs(initialise_class):
         while count < unfit_pop_size:
             random_index = random.randint(0, (len(unfit_network_indices)-1))
             network_num = unfit_network_indices[random_index]
-            mating_pop_dict[network_num] = networks_dict[network_num]
+            mating_pop_dict[network_num] = copy.deepcopy(networks_dict[network_num])
             unfit_network_indices = [num for num in unfit_network_indices
                                      if num != network_num]
             count += 1
@@ -214,51 +233,48 @@ class run_ga_calcs(initialise_class):
         # Initialises dictionary of fittest networks
         mating_pop_dict = OrderedDict()
 
-        # Sorts networks by their fitness values, from least (+ve) to most
-        # (-ve) fit
-        sorted_network_fitness_scores = OrderedDict(sorted(
-            network_fitness_scores.items(), key=itemgetter(1), reverse=True)
-        )
-
-        sorted_network_num = (
-            np.array(list(sorted_network_fitness_scores.keys()))
-        )
-        sorted_network_fitness_scores = (
-            np.array(list(sorted_network_fitness_scores.values()))
-        )
-
-        (sorted_network_num, sorted_network_fitness_scores,
-         network_cumulative_probabilities
-        ) = propensity_to_probability_distribution(
-            sorted_network_num, sorted_network_fitness_scores, raw_or_rank
-        )
-
         # Adds individuals (their likelihood of selection weighted by their raw
-        # fitness scores) to mating population
+        # fitness scores) to mating population. Arrays of network numbers,
+        # fitness scores and their corresponding probability distribution are
+        # updated every cycle to remove the selected network (this prevents the
+        # loop from taking a very long time once the highest probability
+        # networks have been selected)
         count = 0
         while count < pop_size:
+            # Sorts networks by their fitness values, from least (+ve) to most
+            # (-ve) fit
+            sorted_network_fitness_dict = OrderedDict(sorted(
+                network_fitness_scores.items(), key=itemgetter(1), reverse=True
+            ))
+
+            sorted_network_num = (
+                np.array(list(sorted_network_fitness_dict.keys()))
+            )
+            sorted_network_fitness_scores = (
+                np.array(list(sorted_network_fitness_dict.values()))
+            )
+
+            (sorted_network_num, sorted_network_fitness_scores,
+             network_cumulative_probabilities
+            ) = propensity_to_probability_distribution(
+                sorted_network_num, sorted_network_fitness_scores, raw_or_rank
+            )
+
             random_number = random.uniform(0, 1)
             nearest_index = (np.abs(network_cumulative_probabilities-random_number)).argmin()
 
             if network_cumulative_probabilities[nearest_index] < random_number:
                 nearest_index += 1
 
-            selected_network = sorted_network_num[nearest_index]
-            mating_pop_dict[selected_network] = networks_dict[selected_network]
+            selected_network_num = sorted_network_num[nearest_index]
+            mating_pop_dict[selected_network_num] = copy.deepcopy(
+                networks_dict[selected_network_num]
+            )
 
-            # Updates arrays of network numbers, fitness scores and their
-            # corresponding probability distribution to remove the selected
-            # network (this prevents the loop from taking a very long time once
-            # the highest probability networks have been selected)
             if count != (pop_size - 1):
-                sorted_network_num = np.delete(sorted_network_num, nearest_index)
-                sorted_network_fitness_scores = np.delete(
-                    sorted_network_fitness_scores, nearest_index
-                )
-                (sorted_network_num, sorted_network_fitness_scores,
-                 network_cumulative_probabilities
-                ) = propensity_to_probability_distribution(
-                    sorted_network_num, sorted_network_fitness_scores, raw_or_rank
+                network_fitness_scores = OrderedDict(
+                    zip(np.delete(sorted_network_num, nearest_index),
+                        np.delete(sorted_network_fitness_scores, nearest_index))
                 )
 
             count += 1
@@ -336,10 +352,8 @@ class run_ga_calcs(initialise_class):
             mate_1 = copy.deepcopy(mating_pop_dict[network_num_1])
             mate_2 = copy.deepcopy(mating_pop_dict[network_num_2])
 
-            count = 0
             swap = False
             for node in list(mate_1.nodes):
-                count += 1
                 random_number = random.uniform(0, 1)
 
                 if swap is False:
@@ -436,7 +450,7 @@ class run_ga_calcs(initialise_class):
         return mutated_pop_dict
 
     def add_children_to_parents(self, surface, mutated_pop_dict,
-                                mating_pop_dict, index, split_number):
+                                mating_pop_dict, index):
         # Combines parent and child generations
         print('Combining parent and child generations for {}'.format(surface))
 
@@ -444,27 +458,16 @@ class run_ga_calcs(initialise_class):
         if index == 0:
             count = 0
         elif index == 1:
-            count = split_number
+            count = 2*self.propensity_pop_size  # The number of networks
+            # already added to sequences_dict following propensity scoring
         merged_networks_dict = OrderedDict()
 
         for num, G in mutated_pop_dict.items():
-            merged_networks_dict[count] = G
+            merged_networks_dict[count] = copy.deepcopy(G)
             count += 1
         for num, G in mating_pop_dict.items():
-            merged_networks_dict[count] = G
+            merged_networks_dict[count] = copy.deepcopy(G)
             count += 1
-
-        # Shuffles metworks dictionary so that in the case of a split
-        # optimisation a mixture of parent and child networks are combined into
-        # the sub-classes whose fitnesses are measured by different methods in
-        # the following round of optimisation
-        merged_networks_num = list(merged_networks_dict.keys())
-        merged_networks = list(merged_networks_dict.values())
-        random.shuffle(merged_networks)
-        merged_networks_dict = OrderedDict(
-            {merged_networks_num[i]: merged_networks[i]
-            for i in range(len(merged_networks_num))}
-        )
 
         return merged_networks_dict
 
@@ -493,30 +496,24 @@ class run_ga_pipeline(initialise_class):
                 # (propensity and side-chain packing) if
                 # self.method_fitness_score == 'split'
                 if self.method_fitness_score == 'split':
-                    split_number = math.ceil(
-                        self.split_fraction*len(list(networks_dict_all.keys()))
-                    )
                     networks_dict_propensity = OrderedDict(
                         {key: networks_dict_all[key] for index, key in
                          enumerate(list(networks_dict_all.keys()))
-                         if index < split_number}
+                         if index < 2*self.propensity_pop_size}
                     )
                     networks_dict_all_atom = OrderedDict(
                         {key: networks_dict_all[key] for index, key in
                          enumerate(list(networks_dict_all.keys()))
-                         if index >= split_number}
+                         if index >= 2*self.propensity_pop_size}
                     )
                     networks_list_all = [networks_dict_propensity,
                                          networks_dict_all_atom]
-                    if count == 1:
-                        split_number *= 2  # Must be below dictionary definitions!
-                    pop_size = self.pop_size / 2  # There is a check in
-                    # find_parameters to make sure that self.pop_size is
-                    # divisible by 4
+                    pop_sizes = [self.propensity_pop_size,
+                                 (self.pop_size-self.propensity_pop_size)]
+
                 else:
-                    split_number = ''
                     networks_list_all = [networks_dict_all]
-                    pop_size = self.pop_size
+                    pop_sizes = [self.pop_size]
 
                 for index, networks_dict in enumerate(networks_list_all):
                     # Measures fitness of sequences in starting population
@@ -547,17 +544,17 @@ class run_ga_pipeline(initialise_class):
                     if self.method_select_mating_pop == 'fittest':
                         mating_pop_dict = ga_calcs.create_mating_population_fittest_indv(
                             surface, networks_dict, network_fitness_scores,
-                            pop_size, self.unfit_fraction
+                            pop_sizes[index], self.unfit_fraction
                         )
                     elif self.method_select_mating_pop == 'roulettewheel':
                         mating_pop_dict = ga_calcs.create_mating_population_roulette_wheel(
                             surface, networks_dict, network_fitness_scores,
-                            pop_size, 'raw'
+                            pop_sizes[nearest_index], 'raw'
                         )
                     elif self.method_select_mating_pop == 'rankroulettewheel':
                         mating_pop_dict = ga_calcs.create_mating_population_roulette_wheel(
                             surface, networks_dict, network_fitness_scores,
-                            pop_size, 'rank'
+                            pop_sizes[index], 'rank'
                         )
 
                     # Performs crossover of parent sequences to generate child
@@ -584,18 +581,27 @@ class run_ga_pipeline(initialise_class):
                     # Combines parent and child sequences into single
                     # generation
                     merged_networks_dict = ga_calcs.add_children_to_parents(
-                        surface, mutated_pop_dict, mating_pop_dict, index,
-                        split_number
+                        surface, mutated_pop_dict, mating_pop_dict, index
                     )
 
-                    if self.method_fitness_score != 'split':
-                        sequences_dict[surface] = merged_networks_dict
-                    elif self.method_fitness_score == 'split':
-                        if index == 0:
-                            sequences_dict[surface] = merged_networks_dict
-                        elif index == 1:
-                            sequences_dict[surface] = {**sequences_dict[surface],
-                                                       **merged_networks_dict}
+                    # Shuffles metworks dictionary so that in the case of a
+                    # split optimisation a mixture of parent and child networks
+                    # are combined into the sub-classes whose fitnesses are
+                    # measured by different methods in the following round of
+                    # optimisation
+                    if self.method_fitness_score == 'split' and index == 1:
+                        merged_networks_dict = OrderedDict(
+                            {**sequences_dict[surface], **merged_networks_dict}
+                        )
+
+                    merged_networks_num = list(merged_networks_dict.keys())
+                    merged_networks = list(merged_networks_dict.values())
+                    random.shuffle(merged_networks)
+                    shuffled_merged_networks_dict = OrderedDict(
+                        {merged_networks_num[i]: merged_networks[i]
+                         for i in range(len(merged_networks_num))}
+                    )
+                    sequences_dict[surface] = shuffled_merged_networks_dict
 
         # Calculates fitness of output sequences and filters population based
         # upon fitness

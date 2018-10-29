@@ -26,14 +26,6 @@ class gen_output(initialise_class):
         # to remove ligands etc. so that only backbone coordinates remain.
         pdb = isambard.ampal.load_pdb(self.input_pdb)
 
-        # Creates dictionary of residue ids and amino acid codes from AMPAL
-        # object
-        res_id_dict = OrderedDict()
-        for res in pdb.get_monomers():
-            fasta = res.mol_letter
-            res_id = '{}{}{}'.format(res.parent.id, res.id, res.insertion_code)
-            res_id_dict[res_id] = fasta
-
         for surface, networks_dict in sequences_dict.items():
             print('Packing side chains for {} surface'.format(surface))
 

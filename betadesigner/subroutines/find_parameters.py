@@ -590,6 +590,13 @@ def find_parameters(args):
     if 'populationsize' in parameters:
         try:
             new_population_size = int(parameters['populationsize'])
+            if parameters['fitnessscoremethod'] == 'split':
+                population_fraction = (
+                    new_population_size * 0.5 * parameters['splitfraction']
+                )
+            else:
+                population_fraction = ''
+
             if (
                     parameters['fitnessscoremethod'] != 'split'
                 and str(new_population_size) == parameters['populationsize']
@@ -601,7 +608,7 @@ def find_parameters(args):
                     parameters['fitnessscoremethod'] == 'split'
                 and str(new_population_size) == parameters['populationsize']
                 and new_population_size > 0
-                and new_population_size % 4 == 0
+                and float(population_fraction).is_integer()
             ):
                 parameters['populationsize'] = new_population_size
             else:
@@ -629,6 +636,13 @@ def find_parameters(args):
 
             try:
                 new_population_size = int(population_size)
+                if parameters['fitnessscoremethod'] == 'split':
+                    population_fraction = (
+                        new_population_size * 0.5 * parameters['splitfraction']
+                    )
+                else:
+                    population_fraction = ''
+
                 if (
                         parameters['fitnessscoremethod'] != 'split'
                     and str(new_population_size) == population_size
@@ -641,7 +655,7 @@ def find_parameters(args):
                         parameters['fitnessscoremethod'] == 'split'
                     and str(new_population_size) == population_size
                     and new_population_size > 0
-                    and new_population_size % 4 == 0
+                    and float(population_fraction).is_integer()
                 ):
                     parameters['populationsize'] = new_population_size
                     break
@@ -749,14 +763,12 @@ class initialise_class():
 
         self.input_df = parameters['inputdataframe']
         self.input_pdb = parameters['inputpdb']
-        # self.propensity_dicts = parameters['propensityscales']
-        # self.aas = list(self.propensity_dicts['int_z_indv'].keys())
-        # self.propensity_dict_weights = parameters['propensityscaleweights']
+        self.propensity_dicts = parameters['propensityscales']
+        self.aas = list(self.propensity_dicts['int_z_indv'].keys())
+        self.propensity_dict_weights = parameters['propensityscaleweights']
         self.working_directory = parameters['workingdirectory']
         self.barrel_or_sandwich = parameters['barrelorsandwich']
         self.job_id = parameters['jobid']
-        self.pop_size = parameters['populationsize']
-        self.num_gens = parameters['numberofgenerations']
         self.method_initial_side_chains = parameters['initialseqmethod']
         self.method_fitness_score = parameters['fitnessscoremethod']
         if self.method_fitness_score == 'split':
@@ -772,17 +784,7 @@ class initialise_class():
             self.swap_stop_prob = parameters['swapstopprob']
         self.method_mutation = parameters['mutationmethod']
         self.mutation_prob = parameters['mutationprob']
-
-        # OVERWRITE ONCE HAVE COMPLETED GENERATION OF PROPENSITY SCALES FROM
-        # BETASTATS.
-        import numpy as np
-        self.propensity_dicts = OrderedDict({'int_z_indv': {'ARG': np.array([[-50, -40, -30, -20, -10, 0, 10, 20, 30, 40, 50], [1.3, 1.3, 1.7, 1.8, 1.9, 2.0, 1.9, 1.8, 1.7, 1.3, 1.3]]),
-                                                            'TRP': np.array([[-50, -40, -30, -20, -10, 0, 10, 20, 30, 40, 50], [3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0]]),
-                                                            'VAL': np.array([[-50, -40, -30, -20, -10, 0, 10, 20, 30, 40, 50], [0.7, 0.7, 0.5, 0.5, 0.3, 0.2, 0.3, 0.5, 0.5, 0.7, 0.7]])},
-                                             'ext_z_indv': {'ARG': np.array([[-50, -40, -30, -20, -10, 0, 10, 20, 30, 40, 50], [1.5, 1.5, 0.6, 0.4, 0.3, 0.2, 0.3, 0.4, 0.6, 1.5, 1.5]]),
-                                                            'TRP': np.array([[-50, -40, -30, -20, -10, 0, 10, 20, 30, 40, 50], [3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0]]),
-                                                            'VAL': np.array([[-50, -40, -30, -20, -10, 0, 10, 20, 30, 40, 50], [0.8, 0.8, 1.3, 1.5, 1.7, 1.7, 1.7, 1.5, 1.3, 0.8, 0.8]])}
-                                           })
-        self.aas = list(self.propensity_dicts['int_z_indv'].keys())
-        self.propensity_dict_weights = OrderedDict({'int_z_indv': 1,
-                                                    'ext_z_indv': 1})
+        self.pop_size = parameters['populationsize']
+        if self.method_fitness_score == 'split':
+            self.propensity_pop_size = self.pop_size*self.split_fraction
+        self.num_gens = parameters['numberofgenerations']
