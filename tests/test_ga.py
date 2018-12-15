@@ -1,12 +1,17 @@
 
 import unittest
+import numpy as np
+from betadesigner.subroutines.find_parameters import find_parameters
+from betadesigner.subroutines.generate_initial_sequences import
+from betadesigner.subroutines.run_genetic_algorithm import
+from betadesigner.subroutines.write_output_structures import
 
 class TestGeneticAlgorithm(unittest.TestCase):
 
     def setUp(self):
         # OVERWRITE ONCE HAVE COMPLETED GENERATION OF PROPENSITY SCALES FROM
         # BETASTATS.
-        import numpy as np
+
         self.propensity_dicts = OrderedDict({'int_z_indv': {'ARG': np.array([[-50, -40, -30, -20, -10, 0, 10, 20, 30, 40, 50], [1.3, 1.3, 1.7, 1.8, 1.9, 2.0, 1.9, 1.8, 1.7, 1.3, 1.3]]),
                                                             'TRP': np.array([[-50, -40, -30, -20, -10, 0, 10, 20, 30, 40, 50], [3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0]]),
                                                             'VAL': np.array([[-50, -40, -30, -20, -10, 0, 10, 20, 30, 40, 50], [0.7, 0.7, 0.5, 0.5, 0.3, 0.2, 0.3, 0.5, 0.5, 0.7, 0.7]])},

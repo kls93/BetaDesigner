@@ -4,10 +4,35 @@ import pickle
 import random
 import shutil
 import string
+import numpy as np
 import pandas as pd
 from collections import OrderedDict
 
+if __name__ == 'subroutines.find_parameters':
+    from subroutines.variables import gen_amino_acids_dict
+else:
+    from betadesigner.subroutines.variables import gen_amino_acids_dict
+
 prompt = '> '
+
+
+def calc_parent_voronoi_cluster(input_df, cluster_coords):
+    # Calculates to which discrete bins in Ramachandran (phi psi) space the
+    # residues in the input structure belong
+    phi_psi_list = ['']*input_df.shape[0]
+
+    if cluster_coords != '':
+        for row in range(input_df.shape[0]):
+            phi_psi = np.array([input_df['phi'][row], input_df['psi'][row]])
+            distances = np.sqrt(np.sum(np.square(cluster_coords-phi_psi), axis=1))
+            voronoi_index = np.abs(distances).argmin()
+            phi_psi_list[row] = voronoi_index
+
+    phi_psi_class_df = pd.DataFrame({'phi_psi_class': phi_psi_list})
+    input_df = pd.concat([input_df, phi_psi_class_df], axis=1)
+
+    return input_df
+
 
 def find_parameters(args):
     # Defines program parameter values. If an input file is provided, the code
@@ -24,7 +49,8 @@ def find_parameters(args):
                     value = line.split(':')[1].replace('\n', '').strip()
 
                     if key in ['inputdataframe', 'inputpdb', 'propensityscales',
-                               'propensityscaleweights']:
+                               'frequencyscales', 'scaleweights',
+                               'phipsiclustercoords']:
                         value = value.replace('\\', '/')  # For windows file paths
                         value = '/{}'.format(value.strip('/'))
                     elif key in ['workingdirectory']:
@@ -32,13 +58,13 @@ def find_parameters(args):
                         value = '/{}/'.format(value.strip('/'))
                     elif key in ['jobid']:
                         value = value.replace(' ', '')
-                    elif key in ['barrelorsandwich', 'initialseqmethod',
-                                 'fitnessscoremethod', 'splitfraction',
-                                 'matingpopmethod', 'unfitfraction'
-                                 'crossovermethod', 'crossoverprob',
-                                 'swapstartprob', 'swapstopprob',
-                                 'mutationmethod', 'populationsize',
-                                 'numberofgenerations',]:
+                    elif key in ['propvsfreqweight', 'barrelorsandwich',
+                                 'initialseqmethod', 'fitnessscoremethod',
+                                 'splitfraction', 'matingpopmethod',
+                                 'unfitfraction' 'crossovermethod',
+                                 'crossoverprob', 'swapstartprob',
+                                 'swapstopprob', 'mutationmethod',
+                                 'populationsize', 'numberofgenerations']:
                         value = value.lower().replace(' ', '')
 
                     parameters[key] = value
@@ -98,7 +124,6 @@ def find_parameters(args):
             else:
                 print('File path to input PDB file not recognised')
 
-    """
     # Defines absolute file path to pickle file listing propensity scales
     if 'propensityscales' in parameters:
         if (
@@ -108,71 +133,219 @@ def find_parameters(args):
         ):
             print('File path to pickled propensity scales not recognised')
             parameters.pop('propensityscales')
+        else:
+            with open(parameters['propensityscales'], 'rb') as pickle_file:
+                propensity_scales_dict = pickle.load(pickle_file)
+            parameters['propensityscales'] = propensity_scales_dict
 
     if not 'propensityscales' in parameters:
-        propensity_scales_dict = ''
+        propensity_scales_file = ''
         while (
-            (not os.path.isfile(propensity_scales_dict))
+            (not os.path.isfile(propensity_scales_file))
             or
-            (not propensity_scales_dict.endswith('.pkl'))
+            (not propensity_scales_file.endswith('.pkl'))
         ):
             print('Specify absolute file path of pickled propensity scales:')
-            propensity_scales_dict = input(prompt)
+            propensity_scales_file = input(prompt)
 
             if (
-                (os.path.isfile(propensity_scales_dict))
+                (os.path.isfile(propensity_scales_file))
                 and
-                (propensity_scales_dict.endswith('.pkl'))
+                (propensity_scales_file.endswith('.pkl'))
             ):
+                with open(propensity_scales_file, 'rb') as pickle_file:
+                    propensity_scales_dict = pickle.load(pickle_file)
                 parameters['propensityscales'] = propensity_scales_dict
                 break
             else:
                 print('File path to pickled propensity scales not recognised')
 
-    # Defines propensity scale weights
-    if 'propensityscaleweights' in parameters:
-        if parameters['propensityscaleweights'] == 'equal':
-            weights = {}
-            for dict_name in list(parameters['propensityscales'].keys()):
-                weights[dict_name] = 1
-            parameters['propensityscaleweights'] = weights
-        elif (
-            (os.path.isfile(parameters['propensityscaleweights']))
-            and
-            (parameters['propensityscaleweights'].endswith('.pkl'))
+    # Defines absolute file path to pickle file listing frequency scales
+    if 'frequencyscales' in parameters:
+        if (
+            (not os.path.isfile(parameters['frequencyscales']))
+            or
+            (not parameters['frequencyscales'].endswith('.pkl'))
         ):
-            with open(parameters['propensityscaleweights'], 'rb') as pickle_file:
-                weights = pickle.load(pickle_file)
-                if type(weights) == dict:
-                    parameters['propensityscaleweights'] = weights
+            print('File path to pickled frequency scales not recognised')
+            parameters.pop('frequencyscales')
+        else:
+            with open(parameters['frequencyscales'], 'rb') as pickle_file:
+                frequency_scales_dict = pickle.load(pickle_file)
+            parameters['frequencyscales'] = frequency_scales_dict
+
+    if not 'frequencyscales' in parameters:
+        print('Include frequency scales?')
+        frequency_input = input(prompt)
+
+        while not frequency_input in ['yes', 'no', 'y', 'n']:
+            print('User input not recognised - please specify ("yes" or "no") '
+                  'whether you would like to include frequency scales:')
+            frequency_input = input(prompt)
+
+        if frequency_input in ['yes', 'y']:
+            frequency_scales_file = ''
+
+            while (
+                (not os.path.isfile(frequency_scales_file))
+                or
+                (not frequency_scales_file.endswith('.pkl'))
+            ):
+                print('Specify absolute file path of pickled frequency scales:')
+                frequency_scales_file = input(prompt)
+
+                if (
+                    (os.path.isfile(frequency_scales_file))
+                    and
+                    (frequency_scales_file.endswith('.pkl'))
+                ):
+                    with open(frequency_scales_file, 'rb') as pickle_file:
+                        frequency_scales_dict = pickle.load(pickle_file)
+                    parameters['frequencyscales'] = frequency_scales_dict
+                    break
+                else:
+                    print('File path to pickled frequency scales not recognised')
+        else:
+            parameters['frequencyscales'] = {}
+
+    # Defines propensity scale weights
+    scales = (  list(parameters['propensityscales'].keys())
+              + list(parameters['frequencyscales'].keys()))
+    if 'scaleweights' in parameters:
+        if parameters['scaleweights'] == 'equal':
+            scale_weights = {}
+            for dict_name in scales:
+                if dict_name.split('_')[5] == 'indv':
+                    scale_weights[dict_name] = 1
+                elif dict_name.split('_')[5] == 'pair':
+                    scale_weights[dict_name] = 0.5
+            parameters['scaleweights'] = scale_weights
+        elif (
+            (os.path.isfile(parameters['scaleweights']))
+            and
+            (parameters['scaleweights'].endswith('.pkl'))
+        ):
+            with open(parameters['scaleweights'], 'rb') as pickle_file:
+                scale_weights = pickle.load(pickle_file)
+                if type(scale_weights) == dict:
+                    parameters['scaleweights'] = scale_weights
                 else:
                     print('Propensity scale weights dictionary not recognised')
-                    parameters['propensityscaleweights'] = {}
+                    parameters['scaleweights'] = {}
         else:
             print('Propensity scale weights not provided')
-            parameters['propensityscaleweights'] = {}
+            parameters['scaleweights'] = {}
     else:
-        parameters['propensityscaleweights'] = {}
+        parameters['scaleweights'] = {}
 
-    for dict_name in list(parameters['propensityscales'].keys()):
-        if not dict_name in parameters['propensityscaleweights']:
-            print('Weight for {} surface not provided'.format(dict_name))
-            weight = ''
+    for dict_name in scales:
+        if not dict_name in parameters['scaleweights']:
+            print('Weight for {} not provided'.format(dict_name))
+            scale_weight = ''
         else:
-            weight = parameters['propensityscaleweights'][dict_name]
+            scale_weight = parameters['scaleweights'][dict_name]
 
-        while not type(weight) in [int, float]:
-            print('Specify weight for {} surface'.format(dict_name))
-            weight = input(prompt)
+        while not type(scale_weight) in [int, float]:
+            print('Weighting for {} not recognised.\n'
+                  'Specify weight for {}'.format(dict_name, dict_name))
+            scale_weight = input(prompt)
 
             try:
-                weight = float(weight)
-                parameters['propensityscaleweights'][dict_name] = weight
+                scale_weight = float(scale_weight)
+                parameters['scaleweights'][dict_name] = scale_weight
                 break
             except ValueError:
-                print('Weighting for {} surface not recognised'.format(dict_name))
-                weight = ''
-    """
+                scale_weight = ''
+
+    # Defines weighting between propensity and frequency scales
+    if 'propvsfreqweight' in parameters:
+        try:
+            prop_freq_weight = float(parameters['propvsfreqweight'])
+            if 0 <= prop_freq_weight <= 1:
+                parameters['propvsfreqweight'] = {'propensity': prop_freq_weight,
+                                                  'frequency': 1-prop_freq_weight}
+            else:
+                print('Weighting for propensity scales not recognised - please '
+                      'enter a value between 0 and 1')
+                parameters.pop('propvsfreqweight')
+        except ValueError:
+            print('Weighting for propensity scales not recognised - please '
+                  'enter a value between 0 and 1')
+            parameters.pop('propvsfreqweight')
+
+    if not 'propvsfreqweight' in parameters:
+        if parameters['frequencyscales'] == {}:
+            parameters['propvsfreqweight'] = 1
+        else:
+            prop_freq_weight = ''
+            while not type(prop_freq_weight) == float:
+                print('Specify weight for propensity scales:')
+                prop_freq_weight = input(prompt)
+
+                try:
+                    prop_freq_weight = float(prop_freq_weight)
+                    if 0 <= prop_freq_weight <= 1:
+                        parameters['propvsfreqweight'] = {
+                            'propensity': prop_freq_weight,
+                            'frequency': 1-prop_freq_weight
+                        }
+                        break
+                    else:
+                        print('Weighting for propensity scales not recognised '
+                              '- please enter a value between 0 and 1')
+                        prop_freq_weight = ''
+                except ValueError:
+                    print('Weighting for propensity scales not recognised - '
+                          'please enter a value between 0 and 1')
+                    prop_freq_weight = ''
+
+    # Calculates phi and psi classes if discrete phi / psi dict is input
+    for dict_label in scales:
+        dict_label = dict_label.split('_')
+
+        if all(x in dict_label for x in ['phi', 'psi', 'disc']):
+            if parameters['phipsiclustercoords']:
+                if (
+                    (not os.path.isfile(parameters['phipsiclustercoords']))
+                    or
+                    (not parameters['phipsiclustercoords'].endswith('.pkl'))
+                ):
+                    print('File path to pickled phi / psi voronoi point '
+                          'coordinates not recognised')
+                    parameters.pop('phipsiclustercoords')
+                else:
+                    with open(parameters['phipsiclustercoords'], 'rb') as pickle_file:
+                        cluster_coords = pickle.load(pickle_file)
+                    parameters['phipsiclustercoords'] = cluster_coords
+
+            if not 'phipsiclustercoords' in parameters:
+                cluster_coords_file = ''
+                while (
+                    (not os.path.isfile(cluster_coords_file))
+                    or
+                    (not cluster_coords_file.endswith('.pkl'))
+                ):
+                    print('Specify absolute file path of pickled phi / psi '
+                          'voronoi point coordinates:')
+                    cluster_coords_file = input(prompt)
+
+                    if (
+                        (os.path.isfile(cluster_coords_file))
+                        and
+                        (cluster_coords_file.endswith('.pkl'))
+                    ):
+                        with open(cluster_coords_file, 'rb') as pickle_file:
+                            cluster_coords = pickle.load(pickle_file)
+                        parameters['phipsiclustercoords'] = cluster_coords
+                        break
+                    else:
+                        print('File path to pickled phi / psi voronoi point '
+                              'coordinates not recognised')
+            break
+
+    # Checks whether for loop has been broken
+    else:
+        parameters['phipsiclustercoords'] = ''
 
     # Defines working directory
     if 'workingdirectory' in parameters:
@@ -733,10 +906,14 @@ def find_parameters(args):
                 'Program_input/Input_DataFrame.pkl')
     shutil.copy('{}'.format(parameters['inputpdb']),
                 'Program_input/Input_PDB.pdb')
-    """
-    shutil.copy('{}'.format(parameters['propensityscales']),
-                'Program_input/Propensity_scales.pkl')
-    """
+    with open('Program_input/Propensity_scales.pkl', 'wb') as pickle_file:
+        pickle.dump(parameters['propensityscales']), pickle_file)
+    if parameters['frequencyscales']:
+        with open('Program_input/Frequency_scales.pkl', 'wb') as pickle_file:
+            pickle.dump(parameters['frequencyscales']), pickle_file)
+    if parameters['phipsiclustercoords']:
+        with open('Program_input/Ramachandran_voronoi_cluster_coords.pkl', 'wb') as pickle_file:
+            pickle.dump(parameters['phipsiclustercoords']), pickle_file)
 
     # Writes program parameters to a txt file for user records
     with open('Program_input/BetaDesigner_parameters.txt', 'w') as f:
@@ -745,14 +922,9 @@ def find_parameters(args):
 
     # Unpickles dataframe
     input_df = pd.read_pickle(parameters['inputdataframe'])
-    parameters['inputdataframe'] = input_df
-
-    """
-    # Unpickles dictionary of propensity scales
-    with open(parameters['propensityscales'], 'rb') as pickle_file:
-        propensity_dicts = pickle.load(pickle_file)
-    parameters['propensityscales'] = propensity_dicts
-    """
+    parameters['inputdataframe'] = calc_parent_voronoi_cluster(
+        input_df, parameters['phipsiclustercoords']
+    )
 
     return parameters
 
@@ -764,8 +936,10 @@ class initialise_class():
         self.input_df = parameters['inputdataframe']
         self.input_pdb = parameters['inputpdb']
         self.propensity_dicts = parameters['propensityscales']
-        self.aas = list(self.propensity_dicts['int_z_indv'].keys())
-        self.propensity_dict_weights = parameters['propensityscaleweights']
+        self.frequency_dicts = parameters['frequencyscales']
+        self.aa_list = list(gen_amino_acids_dict.values())
+        self.dict_weights = parameters['scaleweights']
+        self.propensity_weight = parameters['propvsfreqweight']
         self.working_directory = parameters['workingdirectory']
         self.barrel_or_sandwich = parameters['barrelorsandwich']
         self.job_id = parameters['jobid']
@@ -786,5 +960,5 @@ class initialise_class():
         self.mutation_prob = parameters['mutationprob']
         self.pop_size = parameters['populationsize']
         if self.method_fitness_score == 'split':
-            self.propensity_pop_size = self.pop_size*self.split_fraction
+            self.propensity_pop_size = round(self.pop_size*self.split_fraction, 0)
         self.num_gens = parameters['numberofgenerations']

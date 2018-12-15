@@ -14,13 +14,15 @@ from operator import itemgetter
 if __name__ == 'subroutines.run_genetic_algorithm':
     from subroutines.find_parameters import initialise_class
     from subroutines.generate_initial_sequences import (
-        interpolate_propensities, propensity_to_probability_distribution
+        linear_interpolation, propensity_to_probability_distribution,
+        frequency_to_probability_distribution, gen_cumulative_probabilities
     )
     from subroutines.variables import gen_amino_acids_dict
 else:
     from betadesigner.subroutines.find_parameters import initialise_class
     from betadesigner.subroutines.generate_initial_sequences import (
-        interpolate_propensities, propensity_to_probability_distribution
+        linear_interpolation, propensity_to_probability_distribution,
+        frequency_to_probability_distribution, gen_cumulative_probabilities
     )
     from betadesigner.subroutines.variables import gen_amino_acids_dict
 
@@ -71,89 +73,245 @@ class run_ga_calcs(initialise_class):
         # the structural features of the input backbone structure.
         print('Measuring {} network fitness'.format(surface))
 
-        # Initialises dictionary of fitness scores
-        network_fitness_scores = OrderedDict()
+        # Initialises dictionaries of network propensity and frequency scores
+        network_propensity_scores = OrderedDict()
+        network_frequency_scores = OrderedDict()
 
-        # Extracts propensity scales for the surface (both individual and
-        # pairwise)
-        sub_indv_propensity_dicts = OrderedDict({
-            dict_label: propensity_dict for dict_label, propensity_dict in
-            self.propensity_dicts.items() if
-            ((dict_label.split('_')[0] == surface[0:3])
-             and (dict_label.split('_')[-1] == 'indv'))
+        # Extracts propensity and frequency scales for the surface (both
+        # individual and pairwise)
+        sub_indv_dicts = OrderedDict({
+            dict_label: aa_dict for dict_label, aa_dict in
+            {**self.propensity_dicts, **self.frequency_dicts}.items() if
+             (    (dict_label.split('_')[0] in [surface[0:3], '-'])
+              and (dict_label.split('_')[5] == 'indv'))
+        })
+        sub_pair_dicts = OrderedDict({
+            dict_label: aa_dict for dict_label, aa_dict in
+            {**self.propensity_dicts, **self.frequency_dicts}.items() if
+             (    (dict_label.split('_')[0] in [surface[0:3], '-'])
+              and (dict_label.split('_')[5] == 'pair'))
         })
 
         for num in list(networks_dict.keys()):
             G = networks_dict[num]
             # Total propensity count (across all nodes in network)
             propensity_count = 0
+            frequency_count = 0
 
             for node_1 in list(G.nodes):
-                # Calculates interpolated propensity of each node for all
-                # individual structural features considered
-                aa_1 = G.nodes[node_1]['aa_id']
+                # Filters propensity and / or frequency scales depending upon
+                # whether the node is in an edge or a central strand
                 if self.barrel_or_sandwich == '2.60':
                     eoc_1 = G.nodes[node]['eoc']
 
-                    # Filters propensity scales depending upon whether the node
-                    # is in an edge or a central strand
-                    sub_indv_propensity_dicts = OrderedDict(
-                        {dict_label: propensity_dict for dict_label,
-                         propensity_dict in sub_indv_propensity_dicts.items()
-                         if dict_label.split('_')[-2] == eoc_1}
-                    )
+                    sub_indv_dicts = OrderedDict({
+                        dict_label: aa_dict for dict_label, aa_dict
+                        in sub_indv_dicts.items()
+                        if dict_label.split('_')[1] in [eoc_1, '-']
+                    })
+                    sub_pair_dicts = OrderedDict({
+                        dict_label: aa_dict for dict_label, aa_dict
+                        in sub_pair_dicts.items()
+                        if dict_label.split('_')[1] in [eoc_1, '-']
+                    })
 
-                for dict_label, propensity_dict in sub_indv_propensity_dicts.items():
-                    node_prop = G.nodes[node_1][dict_label.split('_')[1]]
-                    propensity_weight = self.propensity_dict_weights[dict_label]
-                    aa_propensity_scale = propensity_dict[aa_1]
+                # Calculates interpolated propensity of each node for all
+                # individual structural features considered
+                aa_1 = G.nodes[node_1]['aa_id']
+                for dict_label, scale_dict in sub_indv_dicts.items():
+                    weight = self.dict_weights[dict_label]
 
-                    propensity = interpolate_propensities(
-                        node_prop, aa_propensity_scale, dict_label
-                    )
-                    propensity = propensity_weight*np.negative(np.log(propensity))
-                    propensity_count += propensity
+                    node_prop_1 = dict_label.split('_')[2]
+                    node_prop_2 = dict_label.split('_')[3]
+                    node_val_1 = np.nan
+                    node_val_2 = np.nan
 
-                """
+                    if node_prop_1 != '-':
+                        node_val_1 = G.nodes[node_1][node_prop_1]
+                    if node_prop_2 != '-':
+                        node_val_2 = G.nodes[node_1][node_prop_2]
+                    if (
+                             node_prop_1 == 'phi'
+                         and node_prop_2 == 'psi'
+                         and dict_label[6] == 'disc'
+                    ):
+                        node_val_1 = G.nodes[node]['phipsiclass']
+                        node_val_2 = np.nan
+
+                    # Converts non-float values into np.nan
+                    if node_val_1 in ['', 'nan', 'NaN', np.nan]:
+                        node_val_1 = np.nan
+                    if node_val_2 in ['', 'nan', 'NaN', np.nan]:
+                        node_val_2 = np.nan
+
+                    value = np.nan
+                    if dict_label.split('_')[6] == 'cont' and not np.isnan(node_val_1):
+                        # Interpolate dictionary
+                        if (   (node_prop_2 == '-')
+                            or (node_prop_2 != '-' and not np.isnan(node_val_2))
+                        ):
+                            value = linear_interpolation(
+                                node_val_1, scale_dict[aa_1], dict_label,
+                                node_val_2
+                            )
+
+                    elif dict_label.split('_')[6] == 'disc':
+                        # Filter dataframe
+                        scale_dict_copy = scale_dict.set_index('FASTA', drop=True)
+                        if node_prop_1 == '-' and node_prop_2 == '-':
+                            try:
+                                value = scale_dict_copy[:,0][aa_1]
+                            except KeyError:
+                                pass
+                        elif node_prop_1 == 'phi' and node_prop_2 == 'psi':
+                            if not np.isnan(node_val_1):
+                                try:
+                                    value = scale_dict_copy[node_val_1][aa_1]
+                                except KeyError:
+                                    pass
+
+                    if not np.isnan(value):
+                        if dict_label.split('_')[7] == 'propensity':
+                            # NOTE: Must take -ve logarithm of each
+                            # individual propensity score before summing
+                            # (rather than taking the -ve logarithm of the
+                            # summed propensities)
+                            value = weight*np.negative(np.log(value))
+                            propensity_count += value
+                        elif dict_label.split('_')[7] == 'frequency':
+                            value *= weight
+                            frequency_count += value
+
                 # Loops through each node pair to sum pairwise propensity values
                 for node_pair in G.edges(node_1):
-                    if node_pair[0] == node_1:
-                        node_2 = node_pair[1]
-                    elif node_pair[1] == node_1:
-                        node_2 == node_pair[0]
-                    aa_2 = G.nodes[node_2]['aa_id']
+                    boolean = random.randint(0, 1)
+                    if boolean == 0:
+                        node_a = node_pair[0]
+                        node_b = node_pair[1]
+                    elif boolean == 1:
+                        node_a = node_pair[1]
+                        node_b = node_pair[0]
+
+                    aa_1 = G.nodes[node_a]['aa_id']
+                    aa_2 = G.nodes[node_b]['aa_id']
+                    aa_pair = '{}_{}'.format(aa_1, aa_2)
 
                     # Loops through each interaction between a pair of nodes
-                    for edge in G[node_1][node_2]:
-                        edge_label = G[node_1][node_2][edge]['interaction']
+                    for edge in G[node_a][node_b]:
+                        edge_label = G[node_a][node_b][edge]['interaction']
 
-                        # Loops through each property of node_1
-                        for prop, node_prop in G.node[node_1].items():
-                            dict_label = ''
-                            if self.barrel_or_sandwich == '2.40':
-                                if not prop in ['aa_id', 'int_ext']:
-                                    dict_label = '{}_{}_{}_pairwise'.format(
-                                        surface, prop, edge_label
-                                    )
-                            elif self.barrel_or_sandwich == '2.60':
-                                if not prop in ['aa_id', 'int_ext', 'eoc']:
-                                    dict_label = '{}_{}_{}_{}_pairwise'.format(
-                                        surface, prop, edge_label, eoc_1
-                                    )
+                        for dict_label, scale_dict in sub_pair_dicts.items():
+                            if dict_label.split('_')[4] == edge_label:
+                                weight = self.dict_weights[dict_label]
 
-                            if dict_label != '':
-                                propensity_dict = self.propensity_dicts[dict_label]
-                                propensity_weight = self.propensity_dict_weights[dict_label]
-                                propensity_scale = propensity_dict['{}_{}'.format(aa_1, aa_2)]
+                                node_prop_1 = dict_label.split('_')[2]
+                                node_prop_2 = dict_label.split('_')[3]
+                                node_val_1 = np.nan
+                                node_val_2 = np.nan
 
-                                propensity = interpolate_propensities(
-                                    node_prop, propensity_scale, dict_label
-                                )
-                                propensity = propensity_weight*np.negative(np.log(propensity))
-                                propensity_count += propensity
-                """
+                                if node_prop_1 != '-':
+                                    node_val_1 = G.nodes[node_a][node_prop_1]
+                                if node_prop_2 != '-':
+                                    node_val_2 = G.nodes[node_a][node_prop_2]
 
-            network_fitness_scores[num] = propensity_count
+                                # Converts non-float values into np.nan
+                                if node_val_1 in ['', 'nan', 'NaN', np.nan]:
+                                    node_val_1 = np.nan
+                                if node_val_2 in ['', 'nan', 'NaN', np.nan]:
+                                    node_val_2 = np.nan
+
+                                value = np.nan
+                                if dict_label.split('_')[6] == 'cont' and not np.isnan(node_val_1):
+                                    # Interpolate dictionary
+                                    if (   (node_prop_2 == '-')
+                                        or (node_prop_2 != '-' and not np.isnan(node_val_2))
+                                    ):
+                                        value = linear_interpolation(
+                                            node_val_1, scale_dict[aa_pair],
+                                            dict_label, node_val_2
+                                        )
+
+                                elif dict_label.split('_')[6] == 'disc':
+                                    # Filter dataframe
+                                    scale_dict_copy = scale_dict.set_index('FASTA', drop=True)
+                                    if node_prop_1 == '-' and node_prop_2 == '-':
+                                        try:
+                                            value = scale_dict_copy[aa_1][aa_2]
+                                        except KeyError:
+                                            pass
+
+                                if not np.isnan(value):
+                                    if dict_label.split('_')[7] == 'propensity':
+                                        # NOTE: Must take -ve logarithm of each
+                                        # individual propensity score before
+                                        # summing (rather than taking the -ve
+                                        # logarithm of the summed propensities)
+                                        value = weight*np.negative(np.log(value))
+                                        propensity_count += value
+                                    elif dict_label.split('_')[7] == 'frequency':
+                                        value *= weight
+                                        frequency_count += value
+
+            network_propensity_scores[num] = propensity_count
+            network_frequency_scores[num] = frequency_count
+
+        return network_propensity_scores, network_frequency_scores
+
+    def combine_propensity_and_frequency_scores(self, network_propensity_scores,
+                                                network_frequency_scores,
+                                                raw_or_rank):
+        # Combines propensity and frequency scores
+        network_probabilities = []
+        for index, network_score_dict in enumerate(
+            [network_propensity_scores, network_frequency_scores]
+        ):
+            if index == 0:
+                prop_or_freq = 'propensity'
+                sorted_network_dict = OrderedDict(sorted(
+                    network_score_dict.items(), key=itemgetter(1), reverse=True
+                ))
+            elif index == 1:
+                prop_or_freq = 'frequency'
+                sorted_network_dict = OrderedDict(sorted(
+                    network_score_dict.items(), key=itemgetter(1), reverse=False
+                ))
+
+            sorted_network_num = np.array(list(sorted_network_dict.keys()))
+            sorted_network_scores = np.array(list(sorted_network_dict.values()))
+
+            if index == 0 and raw_or_rank == 'raw':
+                (sorted_network_num, sorted_network_scores,
+                 sorted_network_probabilities
+                ) = propensity_to_probability_distribution(
+                    sorted_network_num, sorted_network_scores
+                )
+            elif (   (index == 0 and raw_or_rank == 'rank')
+                  or (index == 1)
+            ):
+                (sorted_network, sorted_network_scores,
+                 sorted_network_probabilities
+                ) = frequency_to_probability_distribution(
+                    sorted_network_num, sorted_network_scores,
+                    prop_or_freq
+                )
+
+            network_array = np.array([sorted_network_num, sorted_network_probabilities])
+            network_probabilities.append(network_array)
+
+        propensity_array = network_probabilities[0]
+        frequency_array = network_probabilities[1]
+
+        network_fitness_scores = OrderedDict()
+        for index_prop, network_num in np.ndenumerate(propensity_array[0]):
+            index_prop = index_prop[0]
+            index_freq = np.where(frequency_array[0] == network_num)[0][0]
+
+            propensity = propensity_array[1][index_prop]
+            frequency = frequency_array[1][index_freq]
+
+            probability = (  (self.propensity_weight*propensity)
+                           + ((1-self.propensity_weight)*frequency))
+            network_fitness_scores[network_num] = probability
 
         return network_fitness_scores
 
@@ -163,7 +321,7 @@ class run_ga_calcs(initialise_class):
         print('Measuring {} network fitness'.format(surface))
 
         # Initialises dictionary of fitness scores
-        network_fitness_scores = OrderedDict()
+        network_energies = OrderedDict()
 
         # Loads backbone model into ISAMBARD. NOTE must have been pre-processed
         # to remove ligands etc. so that only backbone coordinates remain.
@@ -173,7 +331,24 @@ class run_ga_calcs(initialise_class):
             # Packs network side chains onto the model with SCWRL4 and measures
             # the total model energy within BUDE
             new_pdb, energy = pack_side_chains(pdb, G, True)
-            network_fitness_scores[num] = energy
+            network_energies[num] = energy
+
+        return network_energies
+
+    def convert_energies_to_probabilities(self, network_energies):
+        # Converts energy values output from BUDE into probabilities
+
+        for network_num in list(network_energies.keys()):
+            energy = network_energies[network_num]  # Energies output from BUDE
+            # are in units of kJ/mol
+            energy = (energy*1000) / (8.314*293)
+            eqm_constant = np.exp(np.negative(energy))
+            network_energies[network_num] = eqm_constant
+        total = np.sum(list(network_energies.values()))
+
+        network_fitness_scores = OrderedDict()
+        for network_num, eqm_constant in list(network_energies.keys()):
+            network_fitness_scores[network_num] = eqm_constant / total
 
         return network_fitness_scores
 
@@ -187,15 +362,15 @@ class run_ga_calcs(initialise_class):
 
         # Determines numbers of fittest and random sequences to be added in
         unfit_pop_size = round((pop_size*unfit_fraction), 0)
-        pop_size = pop_size - unfit_pop_size
+        pop_size -= unfit_pop_size
 
         # Initialises dictionary of fittest networks
         mating_pop_dict = OrderedDict()
 
-        # Sorts networks by their fitness values, from most (-ve) to least
-        # (+ve) fit
+        # Sorts networks by their fitness values, from most (largest
+        # probability) to least (smallest probability) fit
         network_fitness_scores = OrderedDict(sorted(
-            network_fitness_scores.items(), key=itemgetter(1), reverse=False
+            network_fitness_scores.items(), key=itemgetter(1), reverse=True
             ))
 
         # Adds fittest individuals to mating population
@@ -225,7 +400,7 @@ class run_ga_calcs(initialise_class):
 
     def create_mating_population_roulette_wheel(self, surface, networks_dict,
                                                 network_fitness_scores,
-                                                pop_size, raw_or_rank):
+                                                pop_size):
         # Creates mating population from individuals, with the likelihood of
         # selection of each sequence being weighted by its raw fitness score
         print('Creating mating population for {}'.format(surface))
@@ -241,23 +416,14 @@ class run_ga_calcs(initialise_class):
         # networks have been selected)
         count = 0
         while count < pop_size:
-            # Sorts networks by their fitness values, from least (+ve) to most
-            # (-ve) fit
-            sorted_network_fitness_dict = OrderedDict(sorted(
-                network_fitness_scores.items(), key=itemgetter(1), reverse=True
-            ))
-
-            sorted_network_num = (
-                np.array(list(sorted_network_fitness_dict.keys()))
+            network_num_array = (
+                np.array(list(network_fitness_scores.keys()))
             )
-            sorted_network_fitness_scores = (
-                np.array(list(sorted_network_fitness_dict.values()))
+            network_fitness_array = (
+                np.array(list(network_fitness_scores.values()))
             )
-
-            (sorted_network_num, sorted_network_fitness_scores,
-             network_cumulative_probabilities
-            ) = propensity_to_probability_distribution(
-                sorted_network_num, sorted_network_fitness_scores, raw_or_rank
+            network_cumulative_probabilities = gen_cumulative_probabilities(
+                network_fitness_array
             )
 
             random_number = random.uniform(0, 1)
@@ -266,15 +432,15 @@ class run_ga_calcs(initialise_class):
             if network_cumulative_probabilities[nearest_index] < random_number:
                 nearest_index += 1
 
-            selected_network_num = sorted_network_num[nearest_index]
+            selected_network_num = network_num_array[nearest_index]
             mating_pop_dict[selected_network_num] = copy.deepcopy(
                 networks_dict[selected_network_num]
             )
 
             if count != (pop_size - 1):
                 network_fitness_scores = OrderedDict(
-                    zip(np.delete(sorted_network_num, nearest_index),
-                        np.delete(sorted_network_fitness_scores, nearest_index))
+                    zip(np.delete(network_num_array, nearest_index),
+                        np.delete(network_fitness_array, nearest_index))
                 )
 
             count += 1
@@ -483,6 +649,11 @@ class run_ga_pipeline(initialise_class):
 
         ga_calcs = run_ga_calcs(self.parameters)
 
+        if self.method_select_mating_pop in ['fittest', 'roulettewheel']:
+            raw_or_rank = 'raw'
+        elif self.method_select_mating_pop == 'rankroulettewheel':
+            raw_or_rank = 'rank'
+
         count = 0
         while count < self.num_gens:
             count += 1
@@ -524,9 +695,14 @@ class run_ga_pipeline(initialise_class):
                         or
                         (self.method_fitness_score == 'split' and index == 0)
                     ):
-                        (network_fitness_scores
+                        (network_propensity_scores, network_frequency_scores
                         ) = ga_calcs.measure_fitness_propensity(
                             surface, networks_dict
+                        )
+                        (network_fitness_scores
+                        ) = ga_calcs.combine_propensity_and_frequency_scores(
+                            network_propensity_scores,
+                            network_frequency_scores, raw_or_rank
                         )
                     elif (
                         (self.method_fitness_score == 'allatom')
@@ -535,9 +711,13 @@ class run_ga_pipeline(initialise_class):
                         or
                         (self.method_fitness_score == 'split' and index == 1)
                     ):
-                        (network_fitness_scores
+                        (network_energies
                         ) = ga_calcs.measure_fitness_all_atom_scoring_function(
                             surface, networks_dict
+                        )
+                        (network_fitness_scores
+                        ) = ga_calcs.convert_energies_to_probabilities(
+                            network_energies
                         )
 
                     # Selects subpopulation for mating
@@ -546,15 +726,13 @@ class run_ga_pipeline(initialise_class):
                             surface, networks_dict, network_fitness_scores,
                             pop_sizes[index], self.unfit_fraction
                         )
-                    elif self.method_select_mating_pop == 'roulettewheel':
-                        mating_pop_dict = ga_calcs.create_mating_population_roulette_wheel(
+                    elif self.method_select_mating_pop in [
+                        'roulettewheel', 'rankroulettewheel'
+                    ]:
+                        (mating_pop_dict
+                        ) = ga_calcs.create_mating_population_roulette_wheel(
                             surface, networks_dict, network_fitness_scores,
-                            pop_sizes[nearest_index], 'raw'
-                        )
-                    elif self.method_select_mating_pop == 'rankroulettewheel':
-                        mating_pop_dict = ga_calcs.create_mating_population_roulette_wheel(
-                            surface, networks_dict, network_fitness_scores,
-                            pop_sizes[index], 'rank'
+                            pop_sizes[index]
                         )
 
                     # Performs crossover of parent sequences to generate child
@@ -609,13 +787,22 @@ class run_ga_pipeline(initialise_class):
             networks_dict = sequences_dict[surface]
 
             if self.method_fitness_score != 'allatom':
-                network_fitness_scores = ga_calcs.measure_fitness_propensity(
+                (network_propensity_scores, network_frequency_scores
+                ) = ga_calcs.measure_fitness_propensity(
                     surface, networks_dict
+                )
+                (network_fitness_scores
+                ) = ga_calcs.combine_propensity_and_frequency_scores(
+                    network_propensity_scores, network_frequency_scores,
+                    raw_or_rank
                 )
             elif self.method_fitness_score == 'allatom':
-                network_fitness_scores = ga_calcs.measure_fitness_all_atom_scoring_function(
+                (network_energies
+                ) = ga_calcs.measure_fitness_all_atom_scoring_function(
                     surface, networks_dict
                 )
+                (network_fitness_scores
+                ) = ga_calcs.convert_energies_to_probabilities(network_energies)
 
             mating_pop_dict = ga_calcs.create_mating_population_fittest_indv(
                 surface, networks_dict, network_fitness_scores,
