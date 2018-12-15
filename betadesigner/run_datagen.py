@@ -5,7 +5,6 @@ import shutil
 import pandas as pd
 from collections import OrderedDict
 
-"""
 barrel_or_sandwich = input('Barrel or sandwich? ').lower()
 if barrel_or_sandwich == 'barrel':
     barrel_or_sandwich = '2.40'
@@ -16,8 +15,8 @@ pdb_code = pdb_code.lower()  # Needs to be lower case to be recognised in the OP
 input_pdb_file = input('Specify absolute file path of PDB coordinates of backbone structure: ')
 datagen_file_path = input('Specify absolute file path of DataGen wrapper script (datagen.py): ')
 output_directory = input('Specify absolute path of output directory: ')
-"""
 
+"""
 # Defines input parameters, sets up directory framework and writes input file
 # for DataGen
 barrel_or_sandwich = '2.40'
@@ -26,6 +25,7 @@ pdb_code = pdb_code.lower()
 input_pdb_file = '/BetaDesigner_results/Program_input/2fgr.pdb'
 datagen_file_path = '/DataGen/datagen/datagen.py'
 output_directory = '/BetaDesigner_results/Program_output'
+"""
 
 if os.path.isdir(output_directory):
     shutil.rmtree(output_directory)
