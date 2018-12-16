@@ -38,12 +38,16 @@ def pack_side_chains(ampal_object, G, rigid_rotamers):
     # of the sequence until it is the same length.
     fasta_seq = ''
     for res in ampal_object.get_monomers():
-        res_id = '{}{}{}'.format(res.parent.id, res.id, res.insertion_code)
+        res_id = '{}{}{}{}'.format(
+            res.parent.parent.id, res.parent.id, res.id, res.insertion_code
+        )
+
         if res_id in list(G.nodes):
-            fasta_seq += aa_dict[G.nodes[res_id]['aa_id']]
+            fasta_seq += G.nodes[res_id]['aa_id']
         else:
             fasta_seq += res.mol_letter
-    if len(fasta_seq) != len(ampal_object.get_monomers()):
+
+    if len(fasta_seq) != len(list(ampal_object.get_monomers())):
         sys.exit('FASTA sequence and AMPAL object contain different numbers '
                  'of amino acids')
 
@@ -102,7 +106,7 @@ class run_ga_calcs(initialise_class):
                 # Filters propensity and / or frequency scales depending upon
                 # whether the node is in an edge or a central strand
                 if self.barrel_or_sandwich == '2.60':
-                    eoc_1 = G.nodes[node]['eoc']
+                    eoc_1 = G.nodes[node_1]['eoc']
 
                     sub_indv_dicts = OrderedDict({
                         dict_label: aa_dict for dict_label, aa_dict
@@ -160,7 +164,7 @@ class run_ga_calcs(initialise_class):
                         scale_dict_copy = scale_dict.set_index('FASTA', drop=True)
                         if node_prop_1 == '-' and node_prop_2 == '-':
                             try:
-                                value = scale_dict_copy[:,0][aa_1]
+                                value = scale_dict_copy.iloc[:,0][aa_1]
                             except KeyError:
                                 pass
                         elif node_prop_1 == 'phi' and node_prop_2 == 'psi':
@@ -226,10 +230,14 @@ class run_ga_calcs(initialise_class):
                                     if (   (node_prop_2 == '-')
                                         or (node_prop_2 != '-' and not np.isnan(node_val_2))
                                     ):
-                                        value = linear_interpolation(
-                                            node_val_1, scale_dict[aa_pair],
-                                            dict_label, node_val_2
-                                        )
+                                        try:
+                                            aa_scale = scale_dict[aa_pair]
+                                            value = linear_interpolation(
+                                                node_val_1, aa_scale,
+                                                dict_label, node_val_2
+                                            )
+                                        except KeyError:
+                                            pass
 
                                 elif dict_label.split('_')[6] == 'disc':
                                     # Filter dataframe
@@ -309,8 +317,8 @@ class run_ga_calcs(initialise_class):
             propensity = propensity_array[1][index_prop]
             frequency = frequency_array[1][index_freq]
 
-            probability = (  (self.propensity_weight*propensity)
-                           + ((1-self.propensity_weight)*frequency))
+            probability = (  (self.propensity_weight['propensity']*propensity)
+                           + (self.propensity_weight['frequency']*frequency))
             network_fitness_scores[network_num] = probability
 
         return network_fitness_scores
@@ -347,7 +355,8 @@ class run_ga_calcs(initialise_class):
         total = np.sum(list(network_energies.values()))
 
         network_fitness_scores = OrderedDict()
-        for network_num, eqm_constant in list(network_energies.keys()):
+        for network_num in list(network_energies.keys()):
+            eqm_constant = network_energies[network_num]
             network_fitness_scores[network_num] = eqm_constant / total
 
         return network_fitness_scores
@@ -574,7 +583,7 @@ class run_ga_calcs(initialise_class):
                 random_number = random.uniform(0, 1)
                 if random_number <= self.mutation_prob:
                     orig_aa = G.nodes[node]['aa_id']
-                    poss_aas = copy.deepcopy(self.aas)
+                    poss_aas = copy.deepcopy(self.aa_list)
                     poss_aas.remove(orig_aa)
                     new_aa = poss_aas[random.randint(0, (len(poss_aas)-1))]
 

@@ -23,10 +23,19 @@ def calc_parent_voronoi_cluster(input_df, cluster_coords):
 
     if cluster_coords != '':
         for row in range(input_df.shape[0]):
-            phi_psi = np.array([input_df['phi'][row], input_df['psi'][row]])
-            distances = np.sqrt(np.sum(np.square(cluster_coords-phi_psi), axis=1))
-            voronoi_index = np.abs(distances).argmin()
-            phi_psi_list[row] = voronoi_index
+            int_or_ext = input_df['int_ext'][row]
+            phi = input_df['phi'][row]
+            psi = input_df['psi'][row]
+
+            try:
+                phi = float(phi)
+                psi = float(psi)
+                phi_psi = np.array([phi, psi])
+                distances = np.sqrt(np.sum(np.square(cluster_coords[int_or_ext]-phi_psi), axis=1))
+                voronoi_index = np.abs(distances).argmin()
+                phi_psi_list[row] = voronoi_index
+            except ValueError:
+                phi_psi_list[row] = np.nan
 
     phi_psi_class_df = pd.DataFrame({'phi_psi_class': phi_psi_list})
     input_df = pd.concat([input_df, phi_psi_class_df], axis=1)
@@ -212,7 +221,7 @@ def find_parameters(args):
     scales = (  list(parameters['propensityscales'].keys())
               + list(parameters['frequencyscales'].keys()))
     if 'scaleweights' in parameters:
-        if parameters['scaleweights'] == 'equal':
+        if parameters['scaleweights'].strip('/') == 'equal':
             scale_weights = {}
             for dict_name in scales:
                 if dict_name.split('_')[5] == 'indv':
@@ -239,7 +248,7 @@ def find_parameters(args):
         parameters['scaleweights'] = {}
 
     for dict_name in scales:
-        if not dict_name in parameters['scaleweights']:
+        if not dict_name in list(parameters['scaleweights'].keys()):
             print('Weight for {} not provided'.format(dict_name))
             scale_weight = ''
         else:
@@ -275,7 +284,8 @@ def find_parameters(args):
 
     if not 'propvsfreqweight' in parameters:
         if parameters['frequencyscales'] == {}:
-            parameters['propvsfreqweight'] = 1
+            parameters['propvsfreqweight'] = {'propensity': 1,
+                                              'frequency': 0}
         else:
             prop_freq_weight = ''
             while not type(prop_freq_weight) == float:
@@ -304,7 +314,7 @@ def find_parameters(args):
         dict_label = dict_label.split('_')
 
         if all(x in dict_label for x in ['phi', 'psi', 'disc']):
-            if parameters['phipsiclustercoords']:
+            if 'phipsiclustercoords' in list(parameters.keys()):
                 if (
                     (not os.path.isfile(parameters['phipsiclustercoords']))
                     or
@@ -907,13 +917,13 @@ def find_parameters(args):
     shutil.copy('{}'.format(parameters['inputpdb']),
                 'Program_input/Input_PDB.pdb')
     with open('Program_input/Propensity_scales.pkl', 'wb') as pickle_file:
-        pickle.dump(parameters['propensityscales']), pickle_file)
+        pickle.dump((parameters['propensityscales']), pickle_file)
     if parameters['frequencyscales']:
         with open('Program_input/Frequency_scales.pkl', 'wb') as pickle_file:
-            pickle.dump(parameters['frequencyscales']), pickle_file)
-    if parameters['phipsiclustercoords']:
+            pickle.dump((parameters['frequencyscales']), pickle_file)
+    if 'phipsiclustercoords' in list(parameters.keys()):
         with open('Program_input/Ramachandran_voronoi_cluster_coords.pkl', 'wb') as pickle_file:
-            pickle.dump(parameters['phipsiclustercoords']), pickle_file)
+            pickle.dump((parameters['phipsiclustercoords']), pickle_file)
 
     # Writes program parameters to a txt file for user records
     with open('Program_input/BetaDesigner_parameters.txt', 'w') as f:
@@ -931,13 +941,17 @@ def find_parameters(args):
 class initialise_class():
 
     def __init__(self, parameters):
+        aa_dict = gen_amino_acids_dict()
+        if parameters['barrelorsandwich'] == '2.40':
+            aa_dict.pop('CYS')
+
         self.parameters = parameters
 
         self.input_df = parameters['inputdataframe']
         self.input_pdb = parameters['inputpdb']
         self.propensity_dicts = parameters['propensityscales']
         self.frequency_dicts = parameters['frequencyscales']
-        self.aa_list = list(gen_amino_acids_dict.values())
+        self.aa_list = list(aa_dict.values())
         self.dict_weights = parameters['scaleweights']
         self.propensity_weight = parameters['propvsfreqweight']
         self.working_directory = parameters['workingdirectory']

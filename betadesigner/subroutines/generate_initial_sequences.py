@@ -54,10 +54,14 @@ def linear_interpolation(node_val_1, aa_propensity_scale, dict_label,
             propensity = (propensity_1*weight_1) + (propensity_2*weight_2)
 
         else:
-            sys.exit('Parameter values of input backbone coordinate model '
-                     'structural features ({}) are outside of the range of '
-                     'parameter values used to construct propensity '
-                     'scales'.format(dict_label))
+            propensity = np.nan
+            print('Parameter values of input backbone coordinate model '
+                  'structural features ({}) are outside of the range of '
+                  'parameter values used to construct propensity scales - node '
+                  'value = {}, parameter range = {}:{}'.format(
+                      dict_label, node_val_1, aa_propensity_scale[0][0],
+                      aa_propensity_scale[0][-1]
+                ))
 
     elif aa_propensity_scale.shape[0] == 3:
         if (    aa_propensity_scale[0][0][0] <= node_val_1 <= aa_propensity_scale[0][0][-1]
@@ -93,10 +97,16 @@ def linear_interpolation(node_val_1, aa_propensity_scale, dict_label,
             propensity = (propensity_xy1*y1_weight) + (propensity_xy2*y2_weight)
 
         else:
-            sys.exit('Parameter values of input backbone coordinate model '
-                     'structural features ({}) are outside of the range of '
-                     'parameter values used to construct propensity '
-                     'scales'.format(dict_label))
+            propensity = np.nan
+            print('Parameter values of input backbone coordinate model '
+                  'structural features ({}) are outside of the range of '
+                  'parameter values used to construct propensity scales - node '
+                  'value 1 = {}, parameter range 1 = {}:{}, node value 2 = {}, '
+                  'parameter range 2 = {}:{}'.format(
+                      dict_label, node_val_1, aa_propensity_scale[0][0][0],
+                      aa_propensity_scale[0][0][-1], node_val_2,
+                      aa_propensity_scale[1][0][0], aa_propensity_scale[1][-1][0]
+                ))
 
     return propensity
 
@@ -464,7 +474,7 @@ class gen_ga_input_calcs(initialise_class):
                     for aa in self.aa_list:
                         if node_prop_1 == '-' and node_prop_2 == '-':
                             try:
-                                value = scale_dict_copy[:,0][aa]
+                                value = scale_dict_copy.iloc[:,0][aa]
                             except KeyError:
                                 pass
                         elif node_prop_1 == 'phi' and node_prop_2 == 'psi':
@@ -525,8 +535,8 @@ class gen_ga_input_calcs(initialise_class):
                 propensity = node_propensity_probabilities[prop_index]
                 frequency = node_frequency_probabilities[freq_index]
 
-                probability = (  (propensity * self.propensity_weight)
-                               + (frequency * (1-self.propensity_weight)))
+                probability = (  (propensity * self.propensity_weight['propensity'])
+                               + (frequency * self.propensity_weight['frequency']))
                 node_probabilities[prop_index] = probability
 
             node_cumulative_probabilities = gen_cumulative_probabilities(node_probabilities)
