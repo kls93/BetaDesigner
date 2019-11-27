@@ -17,7 +17,7 @@ datagen_file_path = input('Specify absolute file path of DataGen wrapper script 
 output_directory = input('Specify absolute path of output directory: ')
 
 """
-# Defines input parameters, sets up directory framework and writes input file
+# Defines input params, sets up directory framework and writes input file
 # for DataGen
 barrel_or_sandwich = '2.40'
 pdb_code = '2fgr'  # Needs to be lower case to be recognised in the OPM
@@ -30,8 +30,6 @@ output_directory = '/BetaDesigner_results/Program_output'
 if os.path.isdir(output_directory):
     shutil.rmtree(output_directory)
 os.mkdir(output_directory)
-if os.path.isdir('{}/Parent_assemblies'.format(output_directory)):
-    shutil.rmtree('{}/Parent_assemblies'.format(output_directory))
 os.mkdir('{}/Parent_assemblies'.format(output_directory))
 os.system('cp {} {}/Parent_assemblies/{}.pdb'.format(input_pdb_file, output_directory, pdb_code))
 

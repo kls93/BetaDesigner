@@ -1,8 +1,10 @@
 
 import argparse
-import sys
+import copy
+import math
+from hyperopt import fmin, hp, tpe, Trials
 
-# Pipeline script to run the BetaDesigner program. The program takes as input a
+# Wrapper script to run the BetaDesigner program. The program takes as input a
 # PDB file of backbone coordinates. The program optimises an initial dataset of
 # possible sequences to fit the structural features of the backbone coordinates
 # using a genetic algorithm.
@@ -10,13 +12,13 @@ import sys
 
 def main():
     if __name__ == '__main__':
-        from subroutines.find_parameters import find_parameters
-        from subroutines.generate_initial_sequences import gen_ga_input_pipeline
+        from subroutines.find_parameters import find_params
+        from subroutines.generate_initial_sequences import gen_ga_input
         from subroutines.run_genetic_algorithm import run_ga_pipeline
         from subroutines.write_output_structures import gen_output
     else:
-        from betadesigner.subroutines.find_parameters import find_parameters
-        from betadesigner.subroutines.generate_initial_sequences import gen_ga_input_pipeline
+        from betadesigner.subroutines.find_parameters import find_params
+        from betadesigner.subroutines.generate_initial_sequences import gen_ga_input
         from betadesigner.subroutines.run_genetic_algorithm import run_ga_pipeline
         from betadesigner.subroutines.write_output_structures import gen_output
 
@@ -24,15 +26,15 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('-i', '--input_file', help='OPTIONAL: Specifies the '
                         'absolute file path of an input file listing run '
-                        'parameters')
+                        'params')
     args = parser.parse_args()
 
-    # Defines program parameters from input file / user input
-    parameters = find_parameters(args)
+    # Defines program params from input file / user input
+    params = find_params(args)
 
     # Checks that only one structure is listed in the input dataframe
-    if len(set(parameters['inputdataframe']['domain_ids'].tolist())) != 1:
-        sys.exit('More than one structure listed in input dataframe')
+    if len(set(params['inputdataframe']['domain_ids'].tolist())) != 1:
+        raise Exception('More than one structure listed in input dataframe')
 
     # Generates networks of interacting residues from input dataframe, in which
     # residues are represented by nodes (labelled with their identity
@@ -41,26 +43,84 @@ def main():
     # (sandwiches only)), and the interactions between residues are represented
     # by edges (separate edges are constructed for hydrogen-bonding backbone
     # interactions and non-hydrogen bonding backbone interactions (see
-    # Hutchinson et al., 1998), and +/-2 interactions). Two networks are
-    # constructed for a barrel (interior and exterior surfaces), and three
-    # networks are constructured for a sandwich (interior and two exterior
-    # surfaces).
-    gen_initial_sequences = gen_ga_input_pipeline(parameters)
-    initial_sequences_dict = gen_initial_sequences.initial_sequences_pipeline()
+    # Hutchinson et al., 1998), +/-2 interactions and van der Waals
+    # interactions). Two networks are constructed for a barrel (interior and
+    # exterior surfaces), and three networks are constructed for a sandwich
+    # (interior and two exterior surfaces).
+    gen_initial_sequences = gen_ga_input(params)
+    sequences_dict = gen_initial_sequences.initial_sequences_pipeline()
 
-    # Optimises sequences for amino acid propensities (considering both
-    # individual and pairwise interactions) and side-chain packing using a
-    # genetic algorithm.
-    genetic_algorithm = run_ga_pipeline(parameters)
-    output_sequences_dict = genetic_algorithm.run_genetic_algorithm(
-        initial_sequences_dict
-    )
+    run_ga = True
+    run_opt = True
+    max_evals = 100
+    total_gen = 10
+    max_gen = copy.copy(params['maxnumgenerations'])
+    params['maxnumgenerations'] = total_gen
+
+    while run_ga is True:
+        ga = run_ga_pipeline(params, sequences_dict)
+        trials = Trials()
+
+        # Sets the hyperparams unfit_fraction, crossover_probability,
+        # mutation_probability, propensity_to_frequency weighting and
+        # propensity_weights to uniform ranges between 0 and 1 for optimisation via
+        # a tree parzen estimator with hyperopt
+        bayes_params = {}
+        bayes_params['unfitfraction'] = hp.uniform('unfitfraction', 0, 1)
+        bayes_params['crossoverprob'] = hp.uniform('crossoverprob', 0, 1)
+        bayes_params['mutationprob'] = hp.uniform('mutationprob', 0, 1)
+        bayes_params['propvsfreqweight'] = hp.uniform('propvsfreqweight', 0, 1)
+
+        scales = (  list(params['propensityscales'].keys())
+                  + list(params['frequencyscales'].keys()))
+        for scale in scales:
+            bayes_params[scale] = hp.uniform(scale, 0, 1)
+
+        while run_opt is True:
+            best_params = fmin(fn=-ga.run_genetic_algorithm, space=bayes_params,
+                               algo=tpe.suggest, trials=trials,
+                               max_evals=max_evals)
+            if max_evals == 100:
+                current_best = copy.deepcopy(best_params)
+                max_evals = int(max_evals * math.sqrt(10))
+            else:
+                # If best values are within 1% of previous OR number of trials > 1000000
+                similarity_dict = {}
+                for key in list(best_params.keys()):
+                    if (
+                           ((0.99*current_best[key]) <= best_params[key] <= (1.01*current_best[key]))
+                        or max_evals >= 1000000
+                    ):
+                        similarity_dict[key] = True
+                if all(x is True for x in similarity_dict.values()):
+                    run_opt = False
+                else:
+                    current_best = copy.deepcopy(best_params)
+                    max_evals = int(max_evals * math.sqrt(10))
+
+        ga = run_ga_pipeline(params, sequences_dict)
+        fitness = ga.run_genetic_algorithm(best_params)
+        sequences_dict = ga.sequences_dict
+
+        if total_gen == 10:
+            current_fitness = copy.deepcopy(fitness)
+        else:
+            # If updated fitness is within 1% of previous fitness score OR
+            # number of generations > user-defined limit
+            if (
+                   ((0.99*current_fitness) <= fitness <= (1.01*current_fitness))
+                or total_gen >= max_gen
+            ):
+                run_ga = False
+            else:
+                current_fitness = copy.deepcopy(fitness)
+                total_gen += 10
 
     # Uses SCWRL4 within ISAMBARD to pack the output sequences onto the
     # backbone model, and writes the resulting model to a PDB file. Also
     # returns each model's total energy within BUDEFF.
-    output = gen_output(parameters)
-    output.write_pdb(output_sequences_dict)
+    output = gen_output(params)
+    output.write_pdb(sequences_dict)
 
 
 # Calls main() function if betadesigner.py is run as a script

@@ -8,7 +8,7 @@ import numpy as np
 import pandas as pd
 from collections import OrderedDict
 
-if __name__ == 'subroutines.find_parameters':
+if __name__ == 'subroutines.find_params':
     from subroutines.variables import gen_amino_acids_dict
 else:
     from betadesigner.subroutines.variables import gen_amino_acids_dict
@@ -17,12 +17,15 @@ prompt = '> '
 
 
 def calc_parent_voronoi_cluster(input_df, cluster_coords):
-    # Calculates to which discrete bins in Ramachandran (phi psi) space the
-    # residues in the input structure belong
+    """
+    Calculates to which discrete bins in Ramachandran (phi psi) space the
+    residues in the input structure belong
+    """
+
     phi_psi_list = ['']*input_df.shape[0]
 
-    if cluster_coords != '':
-        for row in range(input_df.shape[0]):
+    for row in range(input_df.shape[0]):
+        try:
             int_or_ext = input_df['int_ext'][row]
             phi = input_df['phi'][row]
             psi = input_df['psi'][row]
@@ -37,18 +40,25 @@ def calc_parent_voronoi_cluster(input_df, cluster_coords):
             except ValueError:
                 phi_psi_list[row] = np.nan
 
+        except KeyError:
+            raise KeyError('One or more properties expected to be included in '
+                           'the input dataframe are missing')
+
     phi_psi_class_df = pd.DataFrame({'phi_psi_class': phi_psi_list})
     input_df = pd.concat([input_df, phi_psi_class_df], axis=1)
 
     return input_df
 
 
-def find_parameters(args):
-    # Defines program parameter values. If an input file is provided, the code
-    # first tries to extract program parameters from this file. It then
-    # requests user input for all remaining undefined parameters and any
-    # defined parameters with unrecognised values.
-    parameters = OrderedDict()
+def find_params(args):
+    """
+    Defines program parameter values. If an input file is provided, the code
+    first tries to extract program params from this file. It then
+    requests user input for all remaining undefined params and any
+    defined params with unrecognised values.
+    """
+
+    params = OrderedDict()
 
     if not vars(args)['input_file'] is None:
         try:
@@ -70,28 +80,28 @@ def find_parameters(args):
                     elif key in ['propvsfreqweight', 'barrelorsandwich',
                                  'initialseqmethod', 'fitnessscoremethod',
                                  'splitfraction', 'matingpopmethod',
-                                 'unfitfraction' 'crossovermethod',
+                                 'unfitfraction', 'crossovermethod',
                                  'crossoverprob', 'swapstartprob',
                                  'swapstopprob', 'mutationmethod',
                                  'populationsize', 'numberofgenerations']:
                         value = value.lower().replace(' ', '')
 
-                    parameters[key] = value
+                    params[key] = value
 
         except FileNotFoundError:
             print('Path to input file not recognised')
 
     # Defines absolute file path to input dataframe
-    if 'inputdataframe' in parameters:
+    if 'inputdataframe' in params:
         if (
-            (not os.path.isfile(parameters['inputdataframe']))
+            (not os.path.isfile(params['inputdataframe']))
             or
-            (not parameters['inputdataframe'].endswith('.pkl'))
+            (not params['inputdataframe'].endswith('.pkl'))
         ):
             print('File path to pickled input dataframe not recognised')
-            parameters.pop('inputdataframe')
+            params.pop('inputdataframe')
 
-    if not 'inputdataframe' in parameters:
+    if not 'inputdataframe' in params:
         input_df = ''
         while (
             (not os.path.isfile(input_df))
@@ -99,25 +109,25 @@ def find_parameters(args):
             (not input_df.endswith('.pkl'))
         ):
             print('Specify absolute file path of pickled input dataframe:')
-            input_df = input(prompt)
+            input_df = '/' + input(prompt).replace('\\').strip('/')
 
             if os.path.isfile(input_df) and input_df.endswith('.pkl'):
-                parameters['inputdataframe'] = input_df
+                params['inputdataframe'] = input_df
                 break
             else:
                 print('File path to pickled input dataframe not recognised')
 
     # Defines absolute file path to input PDB file (the file fed into DataGen)
-    if 'inputpdb' in parameters:
+    if 'inputpdb' in params:
         if (
-            (not os.path.isfile(parameters['inputpdb']))
+            (not os.path.isfile(params['inputpdb']))
             or
-            (not parameters['inputpdb'].endswith('.pdb'))
+            (not params['inputpdb'].endswith('.pdb'))
         ):
             print('File path to input PDB file not recognised')
-            parameters.pop('inputpdb')
+            params.pop('inputpdb')
 
-    if not 'inputpdb' in parameters:
+    if not 'inputpdb' in params:
         input_pdb = ''
         while (
             (not os.path.isfile(input_pdb))
@@ -125,29 +135,29 @@ def find_parameters(args):
             (not input_pdb.endswith('.pdb'))
         ):
             print('Specify absolute file path of input PDB file:')
-            input_pdb = input(prompt)
+            input_pdb = '/' + input(prompt).replace('\\').strip('/')
 
             if os.path.isfile(input_pdb) and input_pdb.endswith('.pdb'):
-                parameters['inputpdb'] = input_pdb
+                params['inputpdb'] = input_pdb
                 break
             else:
                 print('File path to input PDB file not recognised')
 
     # Defines absolute file path to pickle file listing propensity scales
-    if 'propensityscales' in parameters:
+    if 'propensityscales' in params:
         if (
-            (not os.path.isfile(parameters['propensityscales']))
+            (not os.path.isfile(params['propensityscales']))
             or
-            (not parameters['propensityscales'].endswith('.pkl'))
+            (not params['propensityscales'].endswith('.pkl'))
         ):
             print('File path to pickled propensity scales not recognised')
-            parameters.pop('propensityscales')
+            params.pop('propensityscales')
         else:
-            with open(parameters['propensityscales'], 'rb') as pickle_file:
+            with open(params['propensityscales'], 'rb') as pickle_file:
                 propensity_scales_dict = pickle.load(pickle_file)
-            parameters['propensityscales'] = propensity_scales_dict
+            params['propensityscales'] = propensity_scales_dict
 
-    if not 'propensityscales' in parameters:
+    if not 'propensityscales' in params:
         propensity_scales_file = ''
         while (
             (not os.path.isfile(propensity_scales_file))
@@ -155,7 +165,7 @@ def find_parameters(args):
             (not propensity_scales_file.endswith('.pkl'))
         ):
             print('Specify absolute file path of pickled propensity scales:')
-            propensity_scales_file = input(prompt)
+            propensity_scales_file = '/' + input(prompt).replace('\\').strip('/')
 
             if (
                 (os.path.isfile(propensity_scales_file))
@@ -164,33 +174,33 @@ def find_parameters(args):
             ):
                 with open(propensity_scales_file, 'rb') as pickle_file:
                     propensity_scales_dict = pickle.load(pickle_file)
-                parameters['propensityscales'] = propensity_scales_dict
+                params['propensityscales'] = propensity_scales_dict
                 break
             else:
                 print('File path to pickled propensity scales not recognised')
 
     # Defines absolute file path to pickle file listing frequency scales
-    if 'frequencyscales' in parameters:
+    if 'frequencyscales' in params:
         if (
-            (not os.path.isfile(parameters['frequencyscales']))
+            (not os.path.isfile(params['frequencyscales']))
             or
-            (not parameters['frequencyscales'].endswith('.pkl'))
+            (not params['frequencyscales'].endswith('.pkl'))
         ):
             print('File path to pickled frequency scales not recognised')
-            parameters.pop('frequencyscales')
+            params.pop('frequencyscales')
         else:
-            with open(parameters['frequencyscales'], 'rb') as pickle_file:
+            with open(params['frequencyscales'], 'rb') as pickle_file:
                 frequency_scales_dict = pickle.load(pickle_file)
-            parameters['frequencyscales'] = frequency_scales_dict
+            params['frequencyscales'] = frequency_scales_dict
 
-    if not 'frequencyscales' in parameters:
+    if not 'frequencyscales' in params:
         print('Include frequency scales?')
         frequency_input = input(prompt)
 
         while not frequency_input in ['yes', 'no', 'y', 'n']:
             print('User input not recognised - please specify ("yes" or "no") '
                   'whether you would like to include frequency scales:')
-            frequency_input = input(prompt)
+            frequency_input = input(prompt).lower()
 
         if frequency_input in ['yes', 'y']:
             frequency_scales_file = ''
@@ -201,7 +211,7 @@ def find_parameters(args):
                 (not frequency_scales_file.endswith('.pkl'))
             ):
                 print('Specify absolute file path of pickled frequency scales:')
-                frequency_scales_file = input(prompt)
+                frequency_scales_file = '/' + input(prompt).replace('\\').strip('/')
 
                 if (
                     (os.path.isfile(frequency_scales_file))
@@ -210,49 +220,55 @@ def find_parameters(args):
                 ):
                     with open(frequency_scales_file, 'rb') as pickle_file:
                         frequency_scales_dict = pickle.load(pickle_file)
-                    parameters['frequencyscales'] = frequency_scales_dict
+                    params['frequencyscales'] = frequency_scales_dict
                     break
                 else:
                     print('File path to pickled frequency scales not recognised')
         else:
-            parameters['frequencyscales'] = {}
+            params['frequencyscales'] = {}
 
     # Defines propensity scale weights
-    scales = (  list(parameters['propensityscales'].keys())
-              + list(parameters['frequencyscales'].keys()))
-    if 'scaleweights' in parameters:
-        if parameters['scaleweights'].strip('/') == 'equal':
+    # N.B. Have left this hyperparameter in for now in case I want to use it in
+    # the future, but in general, and certainly in the case of my initial
+    # design run, I think this is "an optimisation too far". Will keep all the
+    # same (i.e. params['scaleweights'] = 'equal') for now
+    params['scaleweights'] = 'equal'  # Comment out this line if want to use
+    # different weightings for different scales
+    scales = (  list(params['propensityscales'].keys())
+              + list(params['frequencyscales'].keys()))
+    if 'scaleweights' in params:
+        if params['scaleweights'].strip('/').lower() == 'equal':
             scale_weights = {}
             for dict_name in scales:
                 if dict_name.split('_')[5] == 'indv':
                     scale_weights[dict_name] = 1
                 elif dict_name.split('_')[5] == 'pair':
-                    scale_weights[dict_name] = 0.5
-            parameters['scaleweights'] = scale_weights
+                    scale_weights[dict_name] = 0.5  # Each pair is counted twice
+            params['scaleweights'] = scale_weights
         elif (
-            (os.path.isfile(parameters['scaleweights']))
+            (os.path.isfile(params['scaleweights']))
             and
-            (parameters['scaleweights'].endswith('.pkl'))
+            (params['scaleweights'].endswith('.pkl'))
         ):
-            with open(parameters['scaleweights'], 'rb') as pickle_file:
+            with open(params['scaleweights'], 'rb') as pickle_file:
                 scale_weights = pickle.load(pickle_file)
-                if type(scale_weights) == dict:
-                    parameters['scaleweights'] = scale_weights
-                else:
-                    print('Propensity scale weights dictionary not recognised')
-                    parameters['scaleweights'] = {}
+            if type(scale_weights) == dict:
+                params['scaleweights'] = scale_weights
+            else:
+                print('Propensity scale weights dictionary not recognised')
+                params['scaleweights'] = {}
         else:
             print('Propensity scale weights not provided')
-            parameters['scaleweights'] = {}
+            params['scaleweights'] = {}
     else:
-        parameters['scaleweights'] = {}
+        params['scaleweights'] = {}
 
     for dict_name in scales:
-        if not dict_name in list(parameters['scaleweights'].keys()):
+        if not dict_name in list(params['scaleweights'].keys()):
             print('Weight for {} not provided'.format(dict_name))
             scale_weight = ''
         else:
-            scale_weight = parameters['scaleweights'][dict_name]
+            scale_weight = params['scaleweights'][dict_name]
 
         while not type(scale_weight) in [int, float]:
             print('Weighting for {} not recognised.\n'
@@ -261,31 +277,46 @@ def find_parameters(args):
 
             try:
                 scale_weight = float(scale_weight)
-                parameters['scaleweights'][dict_name] = scale_weight
+                params['scaleweights'][dict_name] = scale_weight
                 break
             except ValueError:
                 scale_weight = ''
 
-    # Defines weighting between propensity and frequency scales
-    if 'propvsfreqweight' in parameters:
+    for scale in list(params['scaleweights'].keys()):
+        if not scale in scales:
+            del params['scaleweights'][scale]
+
+    # Defines weighting between propensity and frequency scales. Must be
+    # defined after 'propensityscales' and 'frequencyscales'
+    # Commented out because this hyperparameter has been selected for
+    # optimisation with hyperopt
+    if 'propvsfreqweight' in params:
+        params.pop('propvsfreqweight')
+    """
+    if 'propvsfreqweight' in params:
+        if params['frequencyscales'] == {}:  # This works for both unordered
+        # and ordered dictionaries
+            raise ValueError('Value provided for "propvsfreqweight", but no'
+                             'input frequency scales have been defined.')
+
         try:
-            prop_freq_weight = float(parameters['propvsfreqweight'])
+            prop_freq_weight = float(params['propvsfreqweight'])
             if 0 <= prop_freq_weight <= 1:
-                parameters['propvsfreqweight'] = {'propensity': prop_freq_weight,
-                                                  'frequency': 1-prop_freq_weight}
+                params['propvsfreqweight'] = {'propensity': prop_freq_weight,
+                                              'frequency': 1-prop_freq_weight}
             else:
                 print('Weighting for propensity scales not recognised - please '
                       'enter a value between 0 and 1')
-                parameters.pop('propvsfreqweight')
+                params.pop('propvsfreqweight')
         except ValueError:
             print('Weighting for propensity scales not recognised - please '
                   'enter a value between 0 and 1')
-            parameters.pop('propvsfreqweight')
+            params.pop('propvsfreqweight')
 
-    if not 'propvsfreqweight' in parameters:
-        if parameters['frequencyscales'] == {}:
-            parameters['propvsfreqweight'] = {'propensity': 1,
-                                              'frequency': 0}
+    if not 'propvsfreqweight' in params:
+        if params['frequencyscales'] == {}:
+            params['propvsfreqweight'] = {'propensity': 1,
+                                          'frequency': 0}
         else:
             prop_freq_weight = ''
             while not type(prop_freq_weight) == float:
@@ -295,7 +326,7 @@ def find_parameters(args):
                 try:
                     prop_freq_weight = float(prop_freq_weight)
                     if 0 <= prop_freq_weight <= 1:
-                        parameters['propvsfreqweight'] = {
+                        params['propvsfreqweight'] = {
                             'propensity': prop_freq_weight,
                             'frequency': 1-prop_freq_weight
                         }
@@ -308,27 +339,28 @@ def find_parameters(args):
                     print('Weighting for propensity scales not recognised - '
                           'please enter a value between 0 and 1')
                     prop_freq_weight = ''
+    """
 
     # Calculates phi and psi classes if discrete phi / psi dict is input
     for dict_label in scales:
         dict_label = dict_label.split('_')
 
         if all(x in dict_label for x in ['phi', 'psi', 'disc']):
-            if 'phipsiclustercoords' in list(parameters.keys()):
+            if 'phipsiclustercoords' in list(params.keys()):
                 if (
-                    (not os.path.isfile(parameters['phipsiclustercoords']))
+                    (not os.path.isfile(params['phipsiclustercoords']))
                     or
-                    (not parameters['phipsiclustercoords'].endswith('.pkl'))
+                    (not params['phipsiclustercoords'].endswith('.pkl'))
                 ):
                     print('File path to pickled phi / psi voronoi point '
                           'coordinates not recognised')
-                    parameters.pop('phipsiclustercoords')
+                    params.pop('phipsiclustercoords')
                 else:
-                    with open(parameters['phipsiclustercoords'], 'rb') as pickle_file:
+                    with open(params['phipsiclustercoords'], 'rb') as pickle_file:
                         cluster_coords = pickle.load(pickle_file)
-                    parameters['phipsiclustercoords'] = cluster_coords
+                    params['phipsiclustercoords'] = cluster_coords
 
-            if not 'phipsiclustercoords' in parameters:
+            if not 'phipsiclustercoords' in params:
                 cluster_coords_file = ''
                 while (
                     (not os.path.isfile(cluster_coords_file))
@@ -337,7 +369,7 @@ def find_parameters(args):
                 ):
                     print('Specify absolute file path of pickled phi / psi '
                           'voronoi point coordinates:')
-                    cluster_coords_file = input(prompt)
+                    cluster_coords_file = '/' + input(prompt).replace('\\').strip('/')
 
                     if (
                         (os.path.isfile(cluster_coords_file))
@@ -346,7 +378,7 @@ def find_parameters(args):
                     ):
                         with open(cluster_coords_file, 'rb') as pickle_file:
                             cluster_coords = pickle.load(pickle_file)
-                        parameters['phipsiclustercoords'] = cluster_coords
+                        params['phipsiclustercoords'] = cluster_coords
                         break
                     else:
                         print('File path to pickled phi / psi voronoi point '
@@ -355,77 +387,80 @@ def find_parameters(args):
 
     # Checks whether for loop has been broken
     else:
-        parameters['phipsiclustercoords'] = ''
+        if 'phipsiclustercoords' in params:
+            params.pop('phipsiclustercoords')
 
     # Defines working directory
-    if 'workingdirectory' in parameters:
-        if not os.path.isdir(parameters['workingdirectory']):
+    if 'workingdirectory' in params:
+        if not os.path.isdir(params['workingdirectory']):
             print('File path to working directory not recognised')
-            parameters.pop('workingdirectory')
+            params.pop('workingdirectory')
 
-    if not 'workingdirectory' in parameters:
+    if not 'workingdirectory' in params:
         working_directory = ''
         while not os.path.isdir(working_directory):
             print('Specify absolute path of working directory')
-            working_directory = input(prompt)
+            working_directory = (
+                '/' + input(prompt).replace('\\', '/').strip('/') + '/'
+            )
 
             if os.path.isdir(working_directory):
-                parameters['workingdirectory'] = working_directory
+                params['workingdirectory'] = working_directory
                 break
             else:
                 print('File path to working directory not recognised')
 
     # Defines whether the input structure is a beta-sandwich or a beta-barrel
     # backbone
-    if 'barrelorsandwich' in parameters:
-        if parameters['barrelorsandwich'] == 'barrel':
-            parameters['barrelorsandwich'] = '2.40'
-        elif parameters['barrelorsandwich'] == 'sandwich':
-            parameters['barrelorsandwich'] = '2.60'
+    if 'barrelorsandwich' in params:
+        if params['barrelorsandwich'] == 'barrel':
+            params['barrelorsandwich'] = '2.40'
+        elif params['barrelorsandwich'] == 'sandwich':
+            params['barrelorsandwich'] = '2.60'
 
-        if not parameters['barrelorsandwich'] in ['2.40', '2.60']:
+        if not params['barrelorsandwich'] in ['2.40', '2.60']:
             print('Backbone structure not recognised')
-            parameters.pop('barrelorsandwich')
+            params.pop('barrelorsandwich')
 
-    if not 'barrelorsandwich' in parameters:
+    if not 'barrelorsandwich' in params:
         barrel_or_sandwich = ''
         while not barrel_or_sandwich in ['barrel', '2.40', 'sandwich', '2.60']:
             print('Specify structure type - please enter "barrel" or "sandwich":')
             barrel_or_sandwich = input(prompt).lower().replace(' ', '')
 
             if barrel_or_sandwich in ['2.40', '2.60']:
-                parameters['barrelorsandwich'] = barrel_or_sandwich
+                params['barrelorsandwich'] = barrel_or_sandwich
                 break
             elif barrel_or_sandwich in ['barrel', 'sandwich']:
                 if barrel_or_sandwich == 'barrel':
-                    parameters['barrelorsandwich'] = '2.40'
+                    params['barrelorsandwich'] = '2.40'
                 elif barrel_or_sandwich == 'sandwich':
-                    parameters['barrelorsandwich'] = '2.60'
+                    params['barrelorsandwich'] = '2.60'
                 break
             else:
                 print('Structure type not recognised')
 
     # Assigns unique identification code to job
-    if not 'jobid' in parameters:
-        print('Specify unique ID for input structure (if you would like '
-              'BetaDesigner to assign a random ID, enter "random")):')
+    if not 'jobid' in params:
+        print('Specify unique ID (without spaces) for input structure (if you '
+              'would like BetaDesigner to assign a random ID, enter "random")):')
         job_id = input(prompt)
         if job_id.lower() == 'random':
             job_id = ''.join([random.choice(string.ascii_letters + string.digits)
                               for i in range(6)])
-        parameters['jobid'] = job_id
+        params['jobid'] = job_id
 
     # Defines method used to generate initial sequences for backbone structure
-    if 'initialseqmethod' in parameters:
-        if not parameters['initialseqmethod'] in [
+    if 'initialseqmethod' in params:
+        if not params['initialseqmethod'] in [
             'random', 'rawpropensity', 'rankpropensity'
         ]:
             print('Method for determining initial side chain assignments not '
                   'recognised - please select one of "random", "rawpropensity" '
                   'or "rankpropensity"')
-            parameters.pop('initialseqmethod')
+            params.pop('initialseqmethod')
 
-    if not 'initialseqmethod' in parameters:
+    if not 'initialseqmethod' in params:
         method_initial_side_chains = ''
         while not method_initial_side_chains in [
             'random', 'rawpropensity', 'rankpropensity'
@@ -436,23 +471,26 @@ def find_parameters(args):
             if method_initial_side_chains in [
                 'random', 'rawpropensity', 'rankpropensity'
             ]:
-                parameters['initialseqmethod'] = method_initial_side_chains
+                params['initialseqmethod'] = method_initial_side_chains
                 break
             else:
                 print('Method not recognised - please select one of "random", '
                       '"rawpropensity" or "rankpropensity"')
 
     # Defines method used to measure sequence fitness
-    if 'fitnessscoremethod' in parameters:
-        if not parameters['fitnessscoremethod'] in [
+    # N.B. Have fixed this hyperparameter as "split" for now
+    params['fitnessscoremethod'] = 'split'
+    """
+    if 'fitnessscoremethod' in params:
+        if not params['fitnessscoremethod'] in [
             'propensity', 'allatom', 'alternate', 'split'
         ]:
             print('Method for measuring sequence fitness not recognised - '
-                  'please select one of "propensity", "all-atom", "alternate" '
+                  'please select one of "propensity", "allatom", "alternate" '
                   'or "split"')
-            parameters.pop('fitnessscoremethod')
+            params.pop('fitnessscoremethod')
 
-    if not 'fitnessscoremethod' in parameters:
+    if not 'fitnessscoremethod' in params:
         method_fitness_score = ''
         while not method_fitness_score in [
             'propensity', 'allatom', 'alternate', 'split'
@@ -463,31 +501,38 @@ def find_parameters(args):
             if method_fitness_score in [
                 'propensity', 'allatom', 'alternate', 'split'
             ]:
-                parameters['fitnessscoremethod'] = method_fitness_score
+                params['fitnessscoremethod'] = method_fitness_score
                 break
             else:
                 print('Method not recognised - please select one of '
-                      '"propensity", "all-atom", "alternate", "split"')
+                      '"propensity", "allatom", "alternate", "split"')
+    """
 
     # Defines fraction of samples to be optimised against propensity in each
-    # generation of the genetic algorithm
-    if parameters['fitnessscoremethod'] == 'split':
-        if 'splitfraction' in parameters:
+    # generation of the genetic algorithm.
+    # N.B. Have left this hyperparameter in for now in case I want to use it in
+    # the future, but in general, and certainly in the case of my initial
+    # design run, I think this is "an optimisation too far". Have fixed at 0.5
+    # for now
+    params['splitfraction'] = 0.5
+    """
+    if params['fitnessscoremethod'] == 'split':
+        if 'splitfraction' in params:
             try:
-                split_fraction = float(parameters['splitfraction'])
+                split_fraction = float(params['splitfraction'])
                 if 0 <= split_fraction <= 1:
-                    parameters['splitfraction'] = split_fraction
+                    params['splitfraction'] = split_fraction
                 else:
                     print('Fraction of samples to be optimised against '
                           'propensity not recognised - please enter a value '
                           'between 0 and 1')
-                    parameters.pop('splitfraction')
+                    params.pop('splitfraction')
             except ValueError:
                 print('Fraction of samples to be optimised against propensity '
                       'not recognised - please enter a value between 0 and 1')
-                parameters.pop('splitfraction')
+                params.pop('splitfraction')
 
-        if not 'splitfraction' in parameters:
+        if not 'splitfraction' in params:
             split_fraction = ''
             while not type(split_fraction) == float:
                 print('Specify fraction of samples to be optimised against '
@@ -497,7 +542,7 @@ def find_parameters(args):
                 try:
                     split_fraction = float(split_fraction)
                     if 0 <= split_fraction <= 1:
-                        parameters['splitfraction'] = split_fraction
+                        params['splitfraction'] = split_fraction
                         break
                     else:
                         print('Fraction of samples to be optimised against '
@@ -509,17 +554,27 @@ def find_parameters(args):
                           'not recognised - please enter a value between 0 and 1')
                     split_fraction = ''
 
+    else:
+        if 'splitfraction' in params:
+            params.pop('splitfraction')
+    """
+
     # Defines method used to select a population of individuals for mating
-    if 'matingpopmethod' in parameters:
-        if not parameters['matingpopmethod'] in [
+    # Commented out because this hyperparameter has been selected to be fixed
+    # as "fittest" (with the value of the hyperparameter "unfitfraction" being
+    # optimised with hyperopt)
+    params['matingpopmethod'] = 'fittest'
+    """
+    if 'matingpopmethod' in params:
+        if not params['matingpopmethod'] in [
             'fittest', 'roulettewheel', 'rankroulettewheel'
         ]:
-            print('Method for genertaing mating population not recognised - '
+            print('Method for generating mating population not recognised - '
                   'please select one of "fittest", "roulettewheel" or '
                   '"rankroulettewheel"')
-            parameters.pop('matingpopmethod')
+            params.pop('matingpopmethod')
 
-    if not 'matingpopmethod' in parameters:
+    if not 'matingpopmethod' in params:
         method_select_mating_pop = ''
         while not method_select_mating_pop in [
             'fittest', 'roulettewheel', 'rankroulettewheel'
@@ -530,33 +585,39 @@ def find_parameters(args):
             if method_select_mating_pop in [
                 'fittest', 'roulettewheel', 'rankroulettewheel'
             ]:
-                parameters['matingpopmethod'] = method_select_mating_pop
+                params['matingpopmethod'] = method_select_mating_pop
                 break
             else:
                 print('Method not recognised - please select one of "fittest", '
                       '"roulettewheel" or "rankroulettewheel"')
+    """
 
     # Defines fraction of unfit sequences to be included in the mating
     # population at each generation of the genetic algorithm if
     # self.method_select_mating_pop == 'fittest'
-    if parameters['matingpopmethod'] == 'fittest':
-        if 'unfitfraction' in parameters:
+    # Commented out because this hyperparameter has been selected to be
+    # optimised with hyperopt
+    if 'unfitfraction' in params:
+        params.pop('unfitfraction')
+    """
+    if params['matingpopmethod'] == 'fittest':
+        if 'unfitfraction' in params:
             try:
-                unfit_fraction = float(parameters['unfitfraction'])
+                unfit_fraction = float(params['unfitfraction'])
                 if 0 <= unfit_fraction <= 1:
-                    parameters['unfitfraction'] = unfit_fraction
+                    params['unfitfraction'] = unfit_fraction
                 else:
                     print('Fraction of mating population to be comprised of '
                           'unfit samples not recognised - please enter a '
                           'value between 0 and 1')
-                    parameters.pop('unfitfraction')
+                    params.pop('unfitfraction')
             except ValueError:
                 print('Fraction of mating population to be comprised of unfit '
                       'samples not recognised - please enter a value between '
                       '0 and 1')
-                parameters.pop('unfitfraction')
+                params.pop('unfitfraction')
 
-        if not 'unfitfraction' in parameters:
+        if not 'unfitfraction' in params:
             unfit_fraction = ''
             while not type(unfit_fraction) == float:
                 print('Specify fraction of mating population to be comprised '
@@ -566,7 +627,7 @@ def find_parameters(args):
                 try:
                     unfit_fraction = float(unfit_fraction)
                     if 0 <= unfit_fraction <= 1:
-                        parameters['unfitfraction'] = unfit_fraction
+                        params['unfitfraction'] = unfit_fraction
                         break
                     else:
                         print('Fraction of mating population to be comprised '
@@ -579,44 +640,60 @@ def find_parameters(args):
                           'value between 0 and 1')
                     unfit_fraction = ''
 
+    else:
+        if 'unfitfraction' in params:
+            params.pop('unfitfraction')
+    """
+
     # Defines method used to crossover parent sequences to generate children
-    if 'crossovermethod' in parameters:
-        if not parameters['crossovermethod'] in ['uniform', 'segmented']:
+    # Commented out because this hyperparameter has been selected to be fixed
+    # as "uniform" (with the value of the hyperparameter "crossoverprob" being
+    # optimised with hyperopt)
+    params['crossovermethod'] = 'uniform'
+    """
+    if 'crossovermethod' in params:
+        if not params['crossovermethod'] in ['uniform', 'segmented']:
             print('Crossover method not recognised - please select one of '
                   '"uniform" or "segmented"')
-            parameters.pop('crossovermethod')
+            params.pop('crossovermethod')
 
-    if not 'crossovermethod' in parameters:
+    if not 'crossovermethod' in params:
         method_crossover = ''
         while not method_crossover in ['uniform', 'segmented']:
             print('Specify crossover method:')
             method_crossover = input(prompt).lower().replace(' ', '')
 
             if method_crossover in ['uniform', 'segmented']:
-                parameters['crossovermethod'] = method_crossover
+                params['crossovermethod'] = method_crossover
                 break
             else:
                 print('Crossover method not recognised - please select one of '
                       '"uniform" or "segmented"')
+    """
 
     # Defines probability of exchanging amino acid identities for each node in
     # the network as part of a uniform crossover
-    if parameters['crossovermethod'] == 'uniform':
-        if 'crossoverprob' in parameters:
+    # Commented out because this hyperparameter has been selected to be
+    # optimised with hyperopt
+    if 'crossoverprob' in params:
+        params.pop('crossoverprob')
+    """
+    if params['crossovermethod'] == 'uniform':
+        if 'crossoverprob' in params:
             try:
-                crossover_probability = float(parameters['crossoverprob'])
+                crossover_probability = float(params['crossoverprob'])
                 if 0 <= crossover_probability <= 1:
-                    parameters['crossoverprob'] = crossover_probability
+                    params['crossoverprob'] = crossover_probability
                 else:
                     print('Probability of uniform crossover not recognised - '
                           'please enter a value between 0 and 1')
-                    parameters.pop('crossoverprob')
+                    params.pop('crossoverprob')
             except ValueError:
                 print('Probability of uniform crossover not recognised - '
                       'please enter a value between 0 and 1')
-                parameters.pop('crossoverprob')
+                params.pop('crossoverprob')
 
-        if not 'crossoverprob' in parameters:
+        if not 'crossoverprob' in params:
             crossover_probability = ''
             while not type(crossover_probability) == float:
                 print('Specify probability of uniform crossover:')
@@ -625,7 +702,7 @@ def find_parameters(args):
                 try:
                     crossover_probability = float(crossover_probability)
                     if 0 <= crossover_probability <= 1:
-                        parameters['crossoverprob'] = crossover_probability
+                        params['crossoverprob'] = crossover_probability
                         break
                     else:
                         print('Probability of uniform crossover not recognised '
@@ -636,23 +713,32 @@ def find_parameters(args):
                           'please enter a value between 0 and 1')
                     crossover_probability = ''
 
+    else:
+        if 'crossoverprob' in params:
+            params.pop('crossoverprob')
+    """
+
     # Defines probability of starting a (segmented) crossover
-    if parameters['crossovermethod'] == 'segmented':
-        if 'swapstartprob' in parameters:
+    # Commented out because crossover method has been fixed as "uniform" for now
+    if 'swapstartprob'in params:
+        params.pop('swapstartprob')
+    """
+    if params['crossovermethod'] == 'segmented':
+        if 'swapstartprob' in params:
             try:
-                start_crossover_prob = float(parameters['swapstartprob'])
+                start_crossover_prob = float(params['swapstartprob'])
                 if 0 <= start_crossover_prob <= 1:
-                    parameters['swapstartprob'] = start_crossover_prob
+                    params['swapstartprob'] = start_crossover_prob
                 else:
                     print('Probability of initiating segmented crossover not '
                           'recognised - please enter a value between 0 and 1')
-                    parameters.pop('swapstartprob')
+                    params.pop('swapstartprob')
             except ValueError:
                 print('Probability of initiating segmented crossover not '
                       'recognised - please enter a value between 0 and 1')
-                parameters.pop('swapstartprob')
+                params.pop('swapstartprob')
 
-        if not 'swapstartprob' in parameters:
+        if not 'swapstartprob' in params:
             start_crossover_prob = ''
             while not type(start_crossover_prob) == float:
                 print('Specify probability of initiating crossover:')
@@ -661,7 +747,7 @@ def find_parameters(args):
                 try:
                     start_crossover_prob = float(start_crossover_prob)
                     if 0 <= start_crossover_prob <= 1:
-                        parameters['swapstartprob'] = start_crossover_prob
+                        params['swapstartprob'] = start_crossover_prob
                         break
                     else:
                         print('Probability of initiating segmented crossover '
@@ -673,23 +759,32 @@ def find_parameters(args):
                           'recognised - please enter a value between 0 and 1')
                     start_crossover_prob = ''
 
+    else:
+        if 'swapstartprob' in params:
+            params.pop('swapstartprob')
+    """
+
     # Defines probability of stopping a (segmented) crossover
-    if parameters['crossovermethod'] == 'segmented':
-        if 'swapstopprob' in parameters:
+    # Commented out because crossover method has been fixed as "uniform" for now
+    if 'swapstopprob'in params:
+        params.pop('swapstopprob')
+    """
+    if params['crossovermethod'] == 'segmented':
+        if 'swapstopprob' in params:
             try:
-                stop_crossover_prob = float(parameters['swapstopprob'])
+                stop_crossover_prob = float(params['swapstopprob'])
                 if 0 <= stop_crossover_prob <= 1:
-                    parameters['swapstopprob'] = stop_crossover_prob
+                    params['swapstopprob'] = stop_crossover_prob
                 else:
                     print('Probability of ending segmented crossover not '
                           'recognised - please enter a value between 0 and 1')
-                    parameters.pop('swapstopprob')
+                    params.pop('swapstopprob')
             except ValueError:
                 print('Probability of ending segmented crossover not '
                       'recognised - please enter a value between 0 and 1')
-                parameters.pop('swapstopprob')
+                params.pop('swapstopprob')
 
-        if not 'swapstopprob' in parameters:
+        if not 'swapstopprob' in params:
             stop_crossover_prob = ''
             while not type(stop_crossover_prob) == float:
                 print('Specify probability of ending crossover:')
@@ -698,7 +793,7 @@ def find_parameters(args):
                 try:
                     stop_crossover_prob = float(stop_crossover_prob)
                     if 0 <= stop_crossover_prob <= 1:
-                        parameters['swapstopprob'] = stop_crossover_prob
+                        params['swapstopprob'] = stop_crossover_prob
                         break
                     else:
                         print('Probability of ending segmented crossover not '
@@ -710,43 +805,53 @@ def find_parameters(args):
                           'recognised - please enter a value between 0 and 1')
                     stop_crossover_prob = ''
 
+    else:
+        if 'swapstopprob' in params:
+            params.pop('swapstopprob')
+    """
+
     # Defines method used to mutate children sequences (generated in the
     # previous step from parent crossover)
-    if 'mutationmethod' in parameters:
-        if not parameters['mutationmethod'] in ['swap', 'scramble']:
+    if 'mutationmethod' in params:
+        if not params['mutationmethod'] in ['swap', 'scramble']:
             print('Mutation method not recognised - please select one of '
                   '"swap" or "scramble"')
-            parameters.pop('mutationmethod')
+            params.pop('mutationmethod')
 
-    if not 'mutationmethod' in parameters:
+    if not 'mutationmethod' in params:
         method_mutation = ''
         while not method_mutation in ['swap', 'scramble']:
             print('Specify mutation method:')
             method_mutation = input(prompt).lower().replace(' ', '')
 
             if method_mutation in ['swap', 'scramble']:
-                parameters['mutationmethod'] = method_mutation
+                params['mutationmethod'] = method_mutation
                 break
             else:
                 print('Mutation method not recognised - please select one of '
                       '"swap" or "scramble"')
 
     # Defines probability of mutation of each node in the network
-    if 'mutationprob' in parameters:
+    # Commented out because this parameter has been selected to be optimised
+    # with hyperopt
+    if 'mutationprob' in params:
+        params.pop('mutationprob')
+    """
+    if 'mutationprob' in params:
         try:
-            mutation_probability = float(parameters['mutationprob'])
+            mutation_probability = float(params['mutationprob'])
             if 0 <= mutation_probability <= 1:
-                parameters['mutationprob'] = mutation_probability
+                params['mutationprob'] = mutation_probability
             else:
                 print('Probability of mutation not recognised - please enter '
                       'a value between 0 and 1')
-                parameters.pop('mutationprob')
+                params.pop('mutationprob')
         except ValueError:
             print('Probability of mutation not recognised - please enter a '
                   'value between 0 and 1')
-            parameters.pop('mutationprob')
+            params.pop('mutationprob')
 
-    if not 'mutationprob' in parameters:
+    if not 'mutationprob' in params:
         mutation_probability = ''
         while not type(mutation_probability) == float:
             print('Specify probability of mutation:')
@@ -755,7 +860,7 @@ def find_parameters(args):
             try:
                 mutation_probability = float(mutation_probability)
                 if 0 <= mutation_probability <= 1:
-                    parameters['mutationprob'] = mutation_probability
+                    params['mutationprob'] = mutation_probability
                     break
                 else:
                     print('Probability of mutation not recognised - please '
@@ -765,53 +870,59 @@ def find_parameters(args):
                 print('Probability of mutation not recognised - please enter '
                       'a value between 0 and 1')
                 mutation_probability = ''
+    """
 
     # Defines the size of the population of sequences to be optimised by the
     # genetic algorithm. The population size should be an even number, in order
     # that all parent sequences can be paired off for crossover (mating).
-    # NOTE must be defined after fitnessscoremethod
-    if 'populationsize' in parameters:
+    # N.B. must be defined after fitnessscoremethod
+    # TO BE CHECKED!
+    if 'populationsize' in params:
         try:
-            new_population_size = int(parameters['populationsize'])
-            if parameters['fitnessscoremethod'] == 'split':
+            new_population_size = int(params['populationsize'])
+            if params['fitnessscoremethod'] == 'split':
                 population_fraction = (
-                    new_population_size * 0.5 * parameters['splitfraction']
+                    new_population_size * 0.5 * params['splitfraction']
                 )
             else:
                 population_fraction = ''
 
             if (
-                    parameters['fitnessscoremethod'] != 'split'
-                and str(new_population_size) == parameters['populationsize']
+                    params['fitnessscoremethod'] != 'split'
+                and str(new_population_size) == params['populationsize']
                 and new_population_size > 0
                 and new_population_size % 2 == 0
             ):
-                parameters['populationsize'] = new_population_size
+                params['populationsize'] = new_population_size
             elif (
-                    parameters['fitnessscoremethod'] == 'split'
-                and str(new_population_size) == parameters['populationsize']
+                    params['fitnessscoremethod'] == 'split'
+                and str(new_population_size) == params['populationsize']
                 and new_population_size > 0
                 and float(population_fraction).is_integer()
             ):
-                parameters['populationsize'] = new_population_size
+                params['populationsize'] = new_population_size
             else:
-                if parameters['fitnessscoremethod'] != 'split':
+                if params['fitnessscoremethod'] != 'split':
                     print('Population size not recognised - please enter a '
                           'positive even integer')
                 else:
                     print('Population size not recognised - please enter a '
-                          'positive integer divisible by 4')
-                parameters.pop('populationsize')
+                          'positive integer that when multiplied by 2x the '
+                          'fraction of samples to be optimised against '
+                          'propensity gives an integer value')
+                params.pop('populationsize')
         except ValueError:
-            if parameters['fitnessscoremethod'] != 'split':
+            if params['fitnessscoremethod'] != 'split':
                 print('Population size not recognised - please enter a '
                       'positive even integer')
             else:
                 print('Population size not recognised - please enter a '
-                      'positive integer divisible by 4')
-            parameters.pop('populationsize')
+                      'positive integer that when multiplied by 2x the '
+                      'fraction of samples to be optimised against propensity '
+                      'gives an integer value')
+            params.pop('populationsize')
 
-    if not 'populationsize' in parameters:
+    if not 'populationsize' in params:
         population_size = ''
         while type(population_size) != int:
             print('Specify number of sequences in population:')
@@ -819,69 +930,74 @@ def find_parameters(args):
 
             try:
                 new_population_size = int(population_size)
-                if parameters['fitnessscoremethod'] == 'split':
+                if params['fitnessscoremethod'] == 'split':
                     population_fraction = (
-                        new_population_size * 0.5 * parameters['splitfraction']
+                        new_population_size * 0.5 * params['splitfraction']
                     )
                 else:
                     population_fraction = ''
 
                 if (
-                        parameters['fitnessscoremethod'] != 'split'
+                        params['fitnessscoremethod'] != 'split'
                     and str(new_population_size) == population_size
                     and new_population_size > 0
                     and new_population_size % 2 == 0
                 ):
-                    parameters['populationsize'] = new_population_size
+                    params['populationsize'] = new_population_size
                     break
                 elif (
-                        parameters['fitnessscoremethod'] == 'split'
+                        params['fitnessscoremethod'] == 'split'
                     and str(new_population_size) == population_size
                     and new_population_size > 0
                     and float(population_fraction).is_integer()
                 ):
-                    parameters['populationsize'] = new_population_size
+                    params['populationsize'] = new_population_size
                     break
                 else:
-                    if parameters['fitnessscoremethod'] != 'split':
+                    if params['fitnessscoremethod'] != 'split':
                         print('Population size not recognised - please enter '
                               'a positive even integer')
-                    elif parameters['fitnessscoremethod'] == 'split':
-                        print('Population size not recognised - please enter '
-                              'a positive integer divisible by 4')
+                    elif params['fitnessscoremethod'] == 'split':
+                        print('Population size not recognised - please enter a '
+                              'positive integer that when multiplied by 2x the '
+                              'fraction of samples to be optimised against '
+                              'propensity gives an integer value')
                     population_size = ''
             except ValueError:
-                if parameters['fitnessscoremethod'] != 'split':
+                if params['fitnessscoremethod'] != 'split':
                     print('Population size not recognised - please enter a '
                           'positive even integer')
                 else:
                     print('Population size not recognised - please enter a '
-                          'positive integer divisible by 4')
+                          'positive integer that when multiplied by 2x the '
+                          'fraction of samples to be optimised against '
+                          'propensity gives an integer value')
                 population_size = ''
 
     # Defines the number of generations for which to run the genetic algorithm
-    if 'numberofgenerations' in parameters:
+    if 'maxnumgenerations' in params:
         try:
-            new_num_gens = int(parameters['numberofgenerations'])
+            new_num_gens = int(params['maxnumgenerations'])
             if (
-                    str(new_num_gens) == parameters['numberofgenerations']
+                    str(new_num_gens) == params['maxnumgenerations']  # Checks
+                    # that value provided in input file is an integer
                 and new_num_gens > 0
             ):
-                parameters['numberofgenerations'] = new_num_gens
+                params['maxnumgenerations'] = new_num_gens
             else:
-                print('Number of generations not recognised - please enter a '
-                      'positive integer')
-                parameters.pop('numberofgenerations')
+                print('Maximum number of generations not recognised - please '
+                      'enter a positive integer')
+                params.pop('maxnumgenerations')
         except ValueError:
-            print('Number of generations not recognised - please enter a '
-                  'positive integer')
-            parameters.pop('numberofgenerations')
+            print('Maximum number of generations not recognised - please enter '
+                  'a positive integer')
+            params.pop('maxnumgenerations')
 
-    if not 'numberofgenerations' in parameters:
+    if not 'maxnumgenerations' in params:
         num_gens = ''
         while type(num_gens) != int:
-            print('Specify number of generations for which to run GA:')
-            num_gens = input(prompt).strip()
+            print('Specify maximum number of generations for which to run GA:')
+            num_gens = input(prompt)
 
             try:
                 new_num_gens = int(num_gens)
@@ -889,90 +1005,118 @@ def find_parameters(args):
                         str(new_num_gens) == num_gens
                     and new_num_gens > 0
                 ):
-                    parameters['numberofgenerations'] = new_num_gens
+                    params['maxnumgenerations'] = new_num_gens
                     break
                 else:
-                    print('Number of generations not recognised - please '
-                          'enter a positive integer')
+                    print('Maximum number of generations not recognised - '
+                          'please enter a positive integer')
                     num_gens = ''
             except ValueError:
-                print('Number of generations not recognised - please enter a '
-                      'positive integer')
+                print('Maximum number of generations not recognised - please '
+                      'enter a positive integer')
                 num_gens = ''
 
-    # Changes directory to user-specified "working directory"
-    os.chdir(parameters['workingdirectory'])
+    # Changes directory to user-specified "working directory" and copies across
+    # necessary input files in preparation for running the genetic algorithm
+    os.chdir(params['workingdirectory'])
     if not os.path.isdir('BetaDesigner_results'):
         os.mkdir('BetaDesigner_results')
 
-    working_directory = 'BetaDesigner_results/{}'.format(parameters['jobid'])
-    if os.path.isdir(working_directory):
-        shutil.rmtree(working_directory)
+    if os.path.isdir('BetaDesigner_results/{}'.format(params['jobid'])):
+        print('Directory {} already exists in {}BetaDesigner_results/'.format(
+            params['jobid'], params['workingdirectory']
+        ))
+        delete_dir = ''
+
+        while not delete_dir in ['yes', 'y', 'no', 'n']:
+            print('Delete {}?'.format(params['jobid']))
+            delete_dir = input(prompt).lower()
+
+            if delete_dir in ['yes', 'y']:
+                shutil.rmtree('BetaDesigner_results/{}'.format(params['jobid']))
+                os.mkdir(('BetaDesigner_results/{}'.format(params['jobid'])))
+                break
+            elif delete_dir in ['no', 'n']:
+                raise OSError(
+                    'Exiting BetaDesigner - please provide a jobid that is not '
+                    'already a directory in {}BetaDesigner_results/ for future '
+                    'runs'.format(params['workingdirectory'])
+                )
+            else:
+                print('Input not recognised - please specify "yes" or "no"')
+                delete_dir = ''
+
+    working_directory = 'BetaDesigner_results/{}'.format(params['jobid'])
     os.makedirs('{}/Program_input'.format(working_directory))
     os.makedirs('{}/Program_output'.format(working_directory))
     os.chdir(working_directory)
 
-    shutil.copy('{}'.format(parameters['inputdataframe']),
+    shutil.copy('{}'.format(params['inputdataframe']),
                 'Program_input/Input_DataFrame.pkl')
-    shutil.copy('{}'.format(parameters['inputpdb']),
+    shutil.copy('{}'.format(params['inputpdb']),
                 'Program_input/Input_PDB.pdb')
     with open('Program_input/Propensity_scales.pkl', 'wb') as pickle_file:
-        pickle.dump((parameters['propensityscales']), pickle_file)
-    if parameters['frequencyscales']:
+        pickle.dump((params['propensityscales']), pickle_file)
+    if params['frequencyscales']:
         with open('Program_input/Frequency_scales.pkl', 'wb') as pickle_file:
-            pickle.dump((parameters['frequencyscales']), pickle_file)
-    if 'phipsiclustercoords' in list(parameters.keys()):
+            pickle.dump((params['frequencyscales']), pickle_file)
+    if 'phipsiclustercoords' in list(params.keys()):
         with open('Program_input/Ramachandran_voronoi_cluster_coords.pkl', 'wb') as pickle_file:
-            pickle.dump((parameters['phipsiclustercoords']), pickle_file)
+            pickle.dump((params['phipsiclustercoords']), pickle_file)
 
-    # Writes program parameters to a txt file for user records
-    with open('Program_input/BetaDesigner_parameters.txt', 'w') as f:
-        for key, parameter in parameters.items():
+    # Writes program params to a txt file for user records
+    with open('Program_input/BetaDesigner_params.txt', 'w') as f:
+        for key, parameter in params.items():
             f.write('{}: {}\n'.format(key, parameter))
 
-    # Unpickles dataframe
-    input_df = pd.read_pickle(parameters['inputdataframe'])
-    parameters['inputdataframe'] = calc_parent_voronoi_cluster(
-        input_df, parameters['phipsiclustercoords']
-    )
+    # Unpickles input dataframe generated by DataGen
+    input_df = pd.read_pickle(params['inputdataframe'])
+    if params['phipsiclustercoords']:
+        params['inputdataframe'] = calc_parent_voronoi_cluster(
+            input_df, params['phipsiclustercoords']
+        )
 
-    return parameters
+    return params
 
-class initialise_class():
 
-    def __init__(self, parameters):
+class initialise_ga_object():
+
+    def __init__(self, params):
         aa_dict = gen_amino_acids_dict()
-        if parameters['barrelorsandwich'] == '2.40':
+        if params['barrelorsandwich'] == '2.40':
             aa_dict.pop('CYS')
 
-        self.parameters = parameters
+        self.params = params
 
-        self.input_df = parameters['inputdataframe']
-        self.input_pdb = parameters['inputpdb']
-        self.propensity_dicts = parameters['propensityscales']
-        self.frequency_dicts = parameters['frequencyscales']
+        self.input_df = params['inputdataframe']
+        self.input_pdb = params['inputpdb']
+        self.propensity_dicts = params['propensityscales']
+        if params['frequencyscales'] != {}:
+            self.frequency_dicts = params['frequencyscales']
+        else:
+            self.frequency_dicts = np.nan
         self.aa_list = list(aa_dict.values())
-        self.dict_weights = parameters['scaleweights']
-        self.propensity_weight = parameters['propvsfreqweight']
-        self.working_directory = parameters['workingdirectory']
-        self.barrel_or_sandwich = parameters['barrelorsandwich']
-        self.job_id = parameters['jobid']
-        self.method_initial_side_chains = parameters['initialseqmethod']
-        self.method_fitness_score = parameters['fitnessscoremethod']
+        self.dict_weights = params['scaleweights']
+        # self.propensity_weight = params['propvsfreqweight']  To be optimised with hyperopt
+        self.working_directory = params['workingdirectory']
+        self.barrel_or_sandwich = params['barrelorsandwich']
+        self.job_id = params['jobid']
+        self.method_initial_side_chains = params['initialseqmethod']
+        self.method_fitness_score = params['fitnessscoremethod']
         if self.method_fitness_score == 'split':
-            self.split_fraction = parameters['splitfraction']
-        self.method_select_mating_pop = parameters['matingpopmethod']
-        if self.method_select_mating_pop == 'fittest':
-            self.unfit_fraction = parameters['unfitfraction']
-        self.method_crossover = parameters['crossovermethod']
-        if self.method_crossover == 'uniform':
-            self.crossover_prob = parameters['crossoverprob']
-        elif self.method_crossover == 'segmented':
-            self.swap_start_prob = parameters['swapstartprob']
-            self.swap_stop_prob = parameters['swapstopprob']
-        self.method_mutation = parameters['mutationmethod']
-        self.mutation_prob = parameters['mutationprob']
-        self.pop_size = parameters['populationsize']
+            self.split_fraction = params['splitfraction']
+        self.method_select_mating_pop = params['matingpopmethod']
+        # if self.method_select_mating_pop == 'fittest':
+            # self.unfit_fraction = params['unfitfraction']  To be optimised with hyperopt
+        self.method_crossover = params['crossovermethod']
+        # if self.method_crossover == 'uniform':
+            # self.crossover_prob = params['crossoverprob']  To be optimised with hyperopt
+        if self.method_crossover == 'segmented':  # Change to elif if uncomment lines above
+            self.swap_start_prob = params['swapstartprob']
+            self.swap_stop_prob = params['swapstopprob']
+        self.method_mutation = params['mutationmethod']
+        # self.mutation_prob = params['mutationprob']  To be optimised with hyperopt
+        self.pop_size = params['populationsize']
         if self.method_fitness_score == 'split':
-            self.propensity_pop_size = round(self.pop_size*self.split_fraction, 0)
-        self.num_gens = parameters['numberofgenerations']
+            self.propensity_pop_size = self.pop_size*self.split_fraction
+        self.num_gens = params['maxnumgenerations']

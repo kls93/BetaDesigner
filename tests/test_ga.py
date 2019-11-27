@@ -6,6 +6,13 @@ from betadesigner.subroutines.generate_initial_sequences import
 from betadesigner.subroutines.run_genetic_algorithm import
 from betadesigner.subroutines.write_output_structures import
 
+class testGeneticAlgorithm(unittest.TestCase):
+    """
+    """
+
+    def test():
+        return
+
 class TestGeneticAlgorithm(unittest.TestCase):
 
     def setUp(self):
@@ -22,19 +29,6 @@ class TestGeneticAlgorithm(unittest.TestCase):
         self.aas = list(self.propensity_dicts['int_z_indv'].keys())
         self.propensity_dict_weights = OrderedDict({'int_z_indv': 1,
                                                     'ext_z_indv': 1})
-
-    def test_find_parameters(self):
-
-    def test_interpolation(self):
-
-    def test_propensity_to_probability(self):
-
-    def test_slice_df_and_generate_networks(self):
-        # Use example structure (manually processed)
-
-    def test_initial_side_chains_random(self):
-
-    def test_initial_side_chains_propensity(self):
 
     def test_pack_side_chains(self):
 

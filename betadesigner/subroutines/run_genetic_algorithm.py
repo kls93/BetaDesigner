@@ -1,5 +1,9 @@
 
-# Do I need to worry about genetic algorithm overfitting?
+# Do I need to worry about genetic algorithm overfitting? NO - GAs, like other
+# optimisation techniques, can't be overfit. You can get overfitting if using
+# the optimisation technique on something which can be overfit, e.g. for
+# hyperpameter selection for an ML algorithm, but this is not the case here.
+
 import budeff
 import copy
 import isambard
@@ -12,14 +16,14 @@ from collections import OrderedDict
 from operator import itemgetter
 
 if __name__ == 'subroutines.run_genetic_algorithm':
-    from subroutines.find_parameters import initialise_class
+    from subroutines.find_parameters import initialise_ga_object
     from subroutines.generate_initial_sequences import (
         linear_interpolation, propensity_to_probability_distribution,
         frequency_to_probability_distribution, gen_cumulative_probabilities
     )
     from subroutines.variables import gen_amino_acids_dict
 else:
-    from betadesigner.subroutines.find_parameters import initialise_class
+    from betadesigner.subroutines.find_parameters import initialise_ga_object
     from betadesigner.subroutines.generate_initial_sequences import (
         linear_interpolation, propensity_to_probability_distribution,
         frequency_to_probability_distribution, gen_cumulative_probabilities
@@ -58,19 +62,23 @@ def pack_side_chains(ampal_object, G, rigid_rotamers):
         hydrogens=False
     )
 
-    # Calculates total energy of the AMPAL object (note that this does not
-    # include the interaction of the object with its surrounding environment,
-    # hence hydrophobic side chains will not be penalised on the surface of a
-    # globular protein and vice versa for membrane proteins)
+    # Calculates total energy of the AMPAL object within BUDE (note that this
+    # does not include the interaction of the object with its surrounding
+    # environment, hence hydrophobic side chains will not be penalised on the
+    # surface of a globular protein and vice versa for membrane proteins)
     energy = budeff.get_internal_energy(new_ampal_object).total_energy
+    # Calculates the total energy of the AMPAL object within PyRosetta
+    pose = pyrosetta.pose_from_pdb(path_to_pdb)
+    score_function = pyrosetta.get_fa_scorefxn()
+    energy = score_function(pose)
 
     return new_ampal_object, energy
 
 
-class run_ga_calcs(initialise_class):
+class run_ga_calcs(initialise_ga_object):
 
-    def __init__(self, parameters):
-        initialise_class.__init__(self, parameters)
+    def __init__(self, params):
+        initialise_ga_object.__init__(self, params)
 
     def measure_fitness_propensity(self, surface, networks_dict):
         # Measures fitness of amino acid sequences from their propensities for
@@ -647,16 +655,22 @@ class run_ga_calcs(initialise_class):
         return merged_networks_dict
 
 
-class run_ga_pipeline(initialise_class):
+class run_ga_pipeline(initialise_ga_object):
 
-    def __init__(self, parameters):
-        initialise_class.__init__(self, parameters)
+    def __init__(self, params, sequences_dict):
+        initialise_ga_object.__init__(self, params)
+        self.sequences_dict = sequences_dict
 
-    def run_genetic_algorithm(self, sequences_dict):
+    def run_genetic_algorithm(self, bayes_params):
         # Pipeline function to run genetic algorithm
+
         print('Running genetic algorithm')
 
-        ga_calcs = run_ga_calcs(self.parameters)
+        self.propensity_weight = bayes_params['propvsfreqweight']
+        if self.method_select_mating_pop == 'fittest':
+            self.unfit_fraction = bayes_params['unfitfraction']
+
+        ga_calcs = run_ga_calcs(self.params)
 
         if self.method_select_mating_pop in ['fittest', 'roulettewheel']:
             raw_or_rank = 'raw'
@@ -668,8 +682,8 @@ class run_ga_pipeline(initialise_class):
             count += 1
             print('Generation {}'.format(count))
 
-            for surface in list(sequences_dict.keys()):
-                networks_dict_all = sequences_dict[surface]
+            for surface in list(self.sequences_dict.keys()):
+                networks_dict_all = self.sequences_dict[surface]
                 networks_list_all = []
 
                 # Splits networks to optimise via different objectives
@@ -778,7 +792,7 @@ class run_ga_pipeline(initialise_class):
                     # optimisation
                     if self.method_fitness_score == 'split' and index == 1:
                         merged_networks_dict = OrderedDict(
-                            {**sequences_dict[surface], **merged_networks_dict}
+                            {**self.sequences_dict[surface], **merged_networks_dict}
                         )
 
                     merged_networks_num = list(merged_networks_dict.keys())
@@ -788,12 +802,12 @@ class run_ga_pipeline(initialise_class):
                         {merged_networks_num[i]: merged_networks[i]
                          for i in range(len(merged_networks_num))}
                     )
-                    sequences_dict[surface] = shuffled_merged_networks_dict
+                    self.sequences_dict[surface] = shuffled_merged_networks_dict
 
         # Calculates fitness of output sequences and filters population based
         # upon fitness
-        for surface in list(sequences_dict.keys()):
-            networks_dict = sequences_dict[surface]
+        for surface in list(self.sequences_dict.keys()):
+            networks_dict = self.sequences_dict[surface]
 
             if self.method_fitness_score != 'allatom':
                 (network_propensity_scores, network_frequency_scores
@@ -817,6 +831,6 @@ class run_ga_pipeline(initialise_class):
                 surface, networks_dict, network_fitness_scores,
                 self.pop_size, unfit_fraction=0
             )
-            sequences_dict[surface] = mating_pop_dict
+            self.sequences_dict[surface] = mating_pop_dict
 
-        return sequences_dict
+        return self.sequences_dict

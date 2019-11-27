@@ -3,16 +3,16 @@ import isambard
 from collections import OrderedDict
 
 if __name__ == 'subroutines.write_output_structures':
-    from subroutines.find_parameters import initialise_class
+    from subroutines.find_parameters import initialise_ga_object
     from subroutines.run_genetic_algorithm import pack_side_chains
 else:
-    from betadesigner.subroutines.find_parameters import initialise_class
+    from betadesigner.subroutines.find_parameters import initialise_ga_object
     from betadesigner.subroutines.run_genetic_algorithm import pack_side_chains
 
-class gen_output(initialise_class):
+class gen_output(initialise_ga_object):
 
-    def __init__(self, parameters):
-        initialise_class.__init__(self, parameters)
+    def __init__(self, params):
+        initialise_ga_object.__init__(self, params)
 
     def write_pdb(self, sequences_dict):
         # Uses SCWRL4 to pack network side chains onto the backbone structure
