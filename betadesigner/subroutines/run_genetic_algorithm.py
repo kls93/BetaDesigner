@@ -19,23 +19,24 @@ if __name__ == 'subroutines.run_genetic_algorithm':
     from subroutines.find_parameters import initialise_ga_object
     from subroutines.generate_initial_sequences import (
         linear_interpolation, propensity_to_probability_distribution,
-        frequency_to_probability_distribution, gen_cumulative_probabilities
+        frequency_to_probability_distribution, combine_propensities,
+        gen_cumulative_probabilities
     )
     from subroutines.variables import gen_amino_acids_dict
 else:
     from betadesigner.subroutines.find_parameters import initialise_ga_object
     from betadesigner.subroutines.generate_initial_sequences import (
         linear_interpolation, propensity_to_probability_distribution,
-        frequency_to_probability_distribution, gen_cumulative_probabilities
+        frequency_to_probability_distribution, combine_propensities,
+        gen_cumulative_probabilities
     )
     from betadesigner.subroutines.variables import gen_amino_acids_dict
 
+aa_code_dict = gen_amino_acids_dict()
 
 def pack_side_chains(ampal_object, G, rigid_rotamers):
     # Uses SCWRL4 to pack network side chains onto a backbone structure and
     # measures the total energy of the model within BUDE
-
-    aa_dict = gen_amino_acids_dict()
 
     # Makes FASTA sequence to feed into SCWRL4. BEWARE: if FASTA sequence is
     # shorter than AMPAL object, SCWRL4 will add random amino acids to the end
@@ -76,13 +77,23 @@ def pack_side_chains(ampal_object, G, rigid_rotamers):
 
 
 class run_ga_calcs(initialise_ga_object):
+    """
+    Functions required to run each stage of the GA (measuring fitness,
+    selecting a mating population, performing crossover and mutation, and
+    merging the parent and child generations)
+    """
 
     def __init__(self, params):
+        self.sequences_dict = params['sequencesdict']
+        params = {key: value for key, value in params if key != 'sequencesdict'}
         initialise_ga_object.__init__(self, params)
 
     def measure_fitness_propensity(self, surface, networks_dict):
-        # Measures fitness of amino acid sequences from their propensities for
-        # the structural features of the input backbone structure.
+        """
+        Measures fitness of amino acid sequences from their propensities for
+        the structural features of the input backbone structure.
+        """
+
         print('Measuring {} network fitness'.format(surface))
 
         # Initialises dictionaries of network propensity and frequency scores
@@ -273,10 +284,12 @@ class run_ga_calcs(initialise_ga_object):
 
         return network_propensity_scores, network_frequency_scores
 
-    def combine_propensity_and_frequency_scores(self, network_propensity_scores,
-                                                network_frequency_scores,
-                                                raw_or_rank):
-        # Combines propensity and frequency scores
+    def combine_prop_and_freq_scores(self, network_propensity_scores,
+                                     network_frequency_scores, raw_or_rank):
+        """
+        Combines propensity and frequency scores
+        """
+
         network_probabilities = []
         for index, network_score_dict in enumerate(
             [network_propensity_scores, network_frequency_scores]
@@ -331,9 +344,12 @@ class run_ga_calcs(initialise_ga_object):
 
         return network_fitness_scores
 
-    def measure_fitness_all_atom_scoring_function(self, surface, networks_dict):
-        # Measures fitness of sequences using an all-atom scoring function
-        # within BUDE
+    def measure_fitness_allatom(self, surface, networks_dict):
+        """
+        Measures fitness of sequences using an all-atom scoring function
+        within BUDE
+        """
+
         print('Measuring {} network fitness'.format(surface))
 
         # Initialises dictionary of fitness scores
@@ -352,7 +368,9 @@ class run_ga_calcs(initialise_ga_object):
         return network_energies
 
     def convert_energies_to_probabilities(self, network_energies):
-        # Converts energy values output from BUDE into probabilities
+        """
+        Converts energy values output from BUDE into probabilities
+        """
 
         for network_num in list(network_energies.keys()):
             energy = network_energies[network_num]  # Energies output from BUDE
@@ -369,12 +387,15 @@ class run_ga_calcs(initialise_ga_object):
 
         return network_fitness_scores
 
-    def create_mating_population_fittest_indv(self, surface, networks_dict,
+    def create_mat_pop_fittest(self, surface, networks_dict,
                                               network_fitness_scores, pop_size,
                                               unfit_fraction):
-        # Creates mating population from the fittest sequences plus a subset of
-        # less fit sequences (so as to maintain diversity in the mating
-        # population in order to prevent convergence on a non-global minimum)
+        """
+        Creates mating population from the fittest sequences plus a subset of
+        less fit sequences (so as to maintain diversity in the mating
+        population in order to prevent convergence on a non-global minimum)
+        """
+
         print('Creating mating population for {}'.format(surface))
 
         # Determines numbers of fittest and random sequences to be added in
@@ -415,11 +436,14 @@ class run_ga_calcs(initialise_ga_object):
 
         return mating_pop_dict
 
-    def create_mating_population_roulette_wheel(self, surface, networks_dict,
+    def create_mat_pop_roulette_wheel(self, surface, networks_dict,
                                                 network_fitness_scores,
                                                 pop_size):
-        # Creates mating population from individuals, with the likelihood of
-        # selection of each sequence being weighted by its raw fitness score
+        """
+        Creates mating population from individuals, with the likelihood of
+        selection of each sequence being weighted by its raw fitness score
+        """
+
         print('Creating mating population for {}'.format(surface))
 
         # Initialises dictionary of fittest networks
@@ -465,8 +489,11 @@ class run_ga_calcs(initialise_ga_object):
         return mating_pop_dict
 
     def uniform_crossover(self, surface, mating_pop_dict):
-        # Selects pairs of individuals at random from mating population and
-        # performs uniform crossover
+        """
+        Selects pairs of individuals at random from mating population and
+        performs uniform crossover
+        """
+
         print('Performing crossovers for {}'.format(surface))
 
         # Initialises dictionary of child networks
@@ -514,8 +541,11 @@ class run_ga_calcs(initialise_ga_object):
         return crossover_pop_dict
 
     def segmented_crossover(self, surface, mating_pop_dict):
-        # Selects pairs of individuals at random from mating population and
-        # performs segmented crossover
+        """
+        Selects pairs of individuals at random from mating population and
+        performs segmented crossover
+        """
+
         print('Performing crossovers for {}'.format(surface))
 
         # Initialises dictionary of child networks
@@ -576,8 +606,11 @@ class run_ga_calcs(initialise_ga_object):
         return crossover_pop_dict
 
     def swap_mutate(self, surface, crossover_pop_dict):
-        # Performs swap mutations (= mutates randomly selected individual
-        # network nodes to a randomly selected (different) amino acid identity)
+        """
+        Performs swap mutations (= mutates randomly selected individual
+        network nodes to a randomly selected (different) amino acid identity)
+        """
+
         print('Performing mutations for {}'.format(surface))
 
         # Initialises dictionary of mutated child networks
@@ -602,8 +635,11 @@ class run_ga_calcs(initialise_ga_object):
         return mutated_pop_dict
 
     def scramble_mutate(self, surface, crossover_pop_dict):
-        # Performs scramble mutations (= scrambles the identities of a subset
-        # of amino acids selected at random)
+        """
+        Performs scramble mutations (= scrambles the identities of a subset
+        of amino acids selected at random)
+        """
+
         print('Performing mutations for {}'.format(surface))
 
         # Initialises dictionary of mutated child networks
@@ -634,7 +670,10 @@ class run_ga_calcs(initialise_ga_object):
 
     def add_children_to_parents(self, surface, mutated_pop_dict,
                                 mating_pop_dict, index):
-        # Combines parent and child generations
+        """
+        Combines parent and child generations
+        """
+
         print('Combining parent and child generations for {}'.format(surface))
 
         # Renumbers networks to prevent overlap
@@ -655,182 +694,175 @@ class run_ga_calcs(initialise_ga_object):
         return merged_networks_dict
 
 
-class run_ga_pipeline(initialise_ga_object):
+def run_genetic_algorithm(params):
+    """
+    Pipeline function to run genetic algorithm
+    """
 
-    def __init__(self, params, sequences_dict):
-        initialise_ga_object.__init__(self, params)
-        self.sequences_dict = sequences_dict
+    print('Running genetic algorithm')
 
-    def run_genetic_algorithm(self, bayes_params):
-        # Pipeline function to run genetic algorithm
+    # Unpacks parameters (unfortunately hyperopt can only feed a single
+    # parameter into the objective function, so can't use class inheritance to
+    # avoid this issue, and am instead using pickling)
+    input_params_file = 'Program_input/Input_parameters.pkl'
+    with open(input_params_file, 'rb') as f:
+        params = pickle.load(f)
+    if type(params) != dict:
+        raise TypeError('Data in {} is not a pickled dictionary'.format(input_params_file))
 
-        print('Running genetic algorithm')
+    # Records sequences and their fitnesses after each generation
+    with open('Program_output/Sequence_track.txt', 'w') as f:
+        f.write('Tracking GA optimisation progress\n')
 
-        self.propensity_weight = bayes_params['propvsfreqweight']
-        if self.method_select_mating_pop == 'fittest':
-            self.unfit_fraction = bayes_params['unfitfraction']
+    ga_calcs = run_ga_calcs(params)
 
-        ga_calcs = run_ga_calcs(self.params)
+    if params['matingpopmethod'] in ['fittest', 'roulettewheel']:
+        raw_or_rank = 'raw'
+    elif params['matingpopmethod'] == 'rankroulettewheel':
+        raw_or_rank = 'rank'
 
-        if self.method_select_mating_pop in ['fittest', 'roulettewheel']:
-            raw_or_rank = 'raw'
-        elif self.method_select_mating_pop == 'rankroulettewheel':
-            raw_or_rank = 'rank'
+    gen = 0
+    while gen < params['maxnumgenerations']:
+        gen += 1
+        print('Generation {}'.format(gen))
+        with open('Program_output/Sequence_track.txt', 'w') as f:
+            f.write('\n\n\n\n\nGeneration {}\n'.format(count))
 
-        count = 0
-        while count < self.num_gens:
-            count += 1
-            print('Generation {}'.format(count))
+        for surface in list(params['sequencesdict'].keys()):
+            all_networks_dict = params['sequencesdict'][surface]
+            all_networks_list = []
 
-            for surface in list(self.sequences_dict.keys()):
-                networks_dict_all = self.sequences_dict[surface]
-                networks_list_all = []
-
-                # Splits networks to optimise via different objectives
-                # (propensity and side-chain packing) if
-                # self.method_fitness_score == 'split'
-                if self.method_fitness_score == 'split':
-                    networks_dict_propensity = OrderedDict(
-                        {key: networks_dict_all[key] for index, key in
-                         enumerate(list(networks_dict_all.keys()))
-                         if index < 2*self.propensity_pop_size}
-                    )
-                    networks_dict_all_atom = OrderedDict(
-                        {key: networks_dict_all[key] for index, key in
-                         enumerate(list(networks_dict_all.keys()))
-                         if index >= 2*self.propensity_pop_size}
-                    )
-                    networks_list_all = [networks_dict_propensity,
-                                         networks_dict_all_atom]
-                    pop_sizes = [self.propensity_pop_size,
-                                 (self.pop_size-self.propensity_pop_size)]
-
-                else:
-                    networks_list_all = [networks_dict_all]
-                    pop_sizes = [self.pop_size]
-
-                for index, networks_dict in enumerate(networks_list_all):
-                    # Measures fitness of sequences in starting population
-                    if (
-                        (self.method_fitness_score == 'propensity')
-                        or
-                        (self.method_fitness_score == 'alternate' and count % 2 == 1)
-                        or
-                        (self.method_fitness_score == 'split' and index == 0)
-                    ):
-                        (network_propensity_scores, network_frequency_scores
-                        ) = ga_calcs.measure_fitness_propensity(
-                            surface, networks_dict
-                        )
-                        (network_fitness_scores
-                        ) = ga_calcs.combine_propensity_and_frequency_scores(
-                            network_propensity_scores,
-                            network_frequency_scores, raw_or_rank
-                        )
-                    elif (
-                        (self.method_fitness_score == 'allatom')
-                        or
-                        (self.method_fitness_score == 'alternate' and count % 2 == 0)
-                        or
-                        (self.method_fitness_score == 'split' and index == 1)
-                    ):
-                        (network_energies
-                        ) = ga_calcs.measure_fitness_all_atom_scoring_function(
-                            surface, networks_dict
-                        )
-                        (network_fitness_scores
-                        ) = ga_calcs.convert_energies_to_probabilities(
-                            network_energies
-                        )
-
-                    # Selects subpopulation for mating
-                    if self.method_select_mating_pop == 'fittest':
-                        mating_pop_dict = ga_calcs.create_mating_population_fittest_indv(
-                            surface, networks_dict, network_fitness_scores,
-                            pop_sizes[index], self.unfit_fraction
-                        )
-                    elif self.method_select_mating_pop in [
-                        'roulettewheel', 'rankroulettewheel'
-                    ]:
-                        (mating_pop_dict
-                        ) = ga_calcs.create_mating_population_roulette_wheel(
-                            surface, networks_dict, network_fitness_scores,
-                            pop_sizes[index]
-                        )
-
-                    # Performs crossover of parent sequences to generate child
-                    # sequences
-                    if self.method_crossover == 'uniform':
-                        crossover_pop_dict = ga_calcs.uniform_crossover(
-                            surface, mating_pop_dict
-                        )
-                    elif self.method_crossover == 'segmented':
-                        crossover_pop_dict = ga_calcs.segmented_crossover(
-                            surface, mating_pop_dict
-                        )
-
-                    # Mutates child sequences
-                    if self.method_mutation == 'swap':
-                        mutated_pop_dict = ga_calcs.swap_mutate(
-                            surface, crossover_pop_dict
-                        )
-                    elif self.method_mutation == 'scramble':
-                        mutated_pop_dict = ga_calcs.scramble_mutate(
-                            surface, crossover_pop_dict
-                        )
-
-                    # Combines parent and child sequences into single
-                    # generation
-                    merged_networks_dict = ga_calcs.add_children_to_parents(
-                        surface, mutated_pop_dict, mating_pop_dict, index
-                    )
-
-                    # Shuffles metworks dictionary so that in the case of a
-                    # split optimisation a mixture of parent and child networks
-                    # are combined into the sub-classes whose fitnesses are
-                    # measured by different methods in the following round of
-                    # optimisation
-                    if self.method_fitness_score == 'split' and index == 1:
-                        merged_networks_dict = OrderedDict(
-                            {**self.sequences_dict[surface], **merged_networks_dict}
-                        )
-
-                    merged_networks_num = list(merged_networks_dict.keys())
-                    merged_networks = list(merged_networks_dict.values())
-                    random.shuffle(merged_networks)
-                    shuffled_merged_networks_dict = OrderedDict(
-                        {merged_networks_num[i]: merged_networks[i]
-                         for i in range(len(merged_networks_num))}
-                    )
-                    self.sequences_dict[surface] = shuffled_merged_networks_dict
-
-        # Calculates fitness of output sequences and filters population based
-        # upon fitness
-        for surface in list(self.sequences_dict.keys()):
-            networks_dict = self.sequences_dict[surface]
-
-            if self.method_fitness_score != 'allatom':
-                (network_propensity_scores, network_frequency_scores
-                ) = ga_calcs.measure_fitness_propensity(
-                    surface, networks_dict
+            # Splits networks to optimise via different objectives (propensity
+            # and side-chain packing) if self.method_fitness_score == 'split'
+            if params['fitnessscoremethod'] == 'split':
+                prop_networks = OrderedDict(
+                    {key: all_networks_dict[key] for index, key in
+                    enumerate(list(all_networks_dict.keys()))
+                    if index < 2*params['propensitypopsize']}
                 )
-                (network_fitness_scores
-                ) = ga_calcs.combine_propensity_and_frequency_scores(
-                    network_propensity_scores, network_frequency_scores,
-                    raw_or_rank
+                energymin_networks = OrderedDict(
+                    {key: all_networks_dict[key] for index, key in
+                    enumerate(list(all_networks_dict.keys()))
+                    if index >= 2*params['propensitypopsize']}
                 )
-            elif self.method_fitness_score == 'allatom':
-                (network_energies
-                ) = ga_calcs.measure_fitness_all_atom_scoring_function(
-                    surface, networks_dict
-                )
-                (network_fitness_scores
-                ) = ga_calcs.convert_energies_to_probabilities(network_energies)
+                all_networks_list = [prop_networks, energymin_networks]
+                pop_sizes = [params['propensitypopsize'],
+                             (params['populationsize']-params['propensitypopsize'])]
 
-            mating_pop_dict = ga_calcs.create_mating_population_fittest_indv(
-                surface, networks_dict, network_fitness_scores,
-                self.pop_size, unfit_fraction=0
+            else:
+                all_networks_list = [all_networks_dict]
+                pop_sizes = [params['populationsize']]
+
+            for index, networks_dict in enumerate(all_networks_list):
+                # Measures fitness of sequences in starting population
+                if (
+                    (params['fitnessscoremethod'] == 'propensity')
+                    or
+                    (params['fitnessscoremethod'] == 'alternate' and gen % 2 == 1)
+                    or
+                    (params['fitnessscoremethod'] == 'split' and index == 0)
+                ):
+                    (network_propensity_scores, network_frequency_scores
+                    ) = ga_calcs.measure_fitness_propensity(surface, networks_dict)
+                    network_fitness_scores = ga_calcs.combine_prop_and_freq_scores(
+                        network_propensity_scores, network_frequency_scores, raw_or_rank
+                    )
+                elif (
+                    (params['fitnessscoremethod'] == 'allatom')
+                    or
+                    (params['fitnessscoremethod'] == 'alternate' and gen % 2 == 0)
+                    or
+                    (params['fitnessscoremethod'] == 'split' and index == 1)
+                ):
+                    (network_energies
+                    ) = ga_calcs.measure_fitness_allatom(surface, networks_dict)
+                    (network_fitness_scores
+                    ) = ga_calcs.convert_energies_to_probabilities(network_energies)
+
+                # Selects subpopulation for mating
+                if params['matingpopmethod'] == 'fittest':
+                    mating_pop_dict = ga_calcs.create_mat_pop_fittest(
+                        surface, networks_dict, network_fitness_scores,
+                        pop_sizes[index], params['unfitfraction']
+                    )
+                elif params['matingpopmethod'] in ['roulettewheel', 'rankroulettewheel']:
+                    mating_pop_dict = ga_calcs.create_mat_pop_roulette_wheel(
+                        surface, networks_dict, network_fitness_scores, pop_sizes[index]
+                    )
+
+                # Performs crossover of parent sequences to generate child sequences
+                if params['crossovermethod'] == 'uniform':
+                    crossover_pop_dict = ga_calcs.uniform_crossover(surface, mating_pop_dict)
+                elif params['crossovermethod'] == 'segmented':
+                    crossover_pop_dict = ga_calcs.segmented_crossover(surface, mating_pop_dict)
+
+                # Mutates child sequences
+                if params['mutationmethod'] == 'swap':
+                    mutated_pop_dict = ga_calcs.swap_mutate(surface, crossover_pop_dict)
+                elif params['mutationmethod'] == 'scramble':
+                    mutated_pop_dict = ga_calcs.scramble_mutate(surface, crossover_pop_dict)
+
+                # Combines parent and child sequences into single generation
+                merged_networks_dict = ga_calcs.add_children_to_parents(
+                    surface, mutated_pop_dict, mating_pop_dict, index
+                )
+
+                # Shuffles metworks dictionary so that in the case of a split
+                # optimisation a mixture of parent and child networks are
+                # combined into the sub-classes whose fitnesses are measured by
+                # different methods in the following round of optimisation
+                if params['fitnessscoremethod'] == 'split' and index == 1:
+                    merged_networks_dict = OrderedDict(
+                        {**params['sequencesdict'][surface], **merged_networks_dict}
+                    )
+
+                merged_networks_keys = list(merged_networks_dict.keys())
+                merged_networks_vals = list(merged_networks_dict.values())
+                random.shuffle(merged_networks_vals)
+                shuffled_merged_networks_dict = OrderedDict(
+                    {merged_networks_keys[i]: merged_networks_vals[i]
+                     for i in range(len(merged_networks_keys))}
+                )
+                params['sequencesdict'][surface] = shuffled_merged_networks_dict
+
+                # Records sequences output from this generation and their
+                # associated fitnesses
+                with open('Program_output/Sequence_track.txt', 'w') as f:
+                    f.write('{}\n'.format(surface))
+                    for network, G in params['sequencesdict'][surface].items():
+                        sequence = ''.join([G.nodes[node]['aa_id'] for node in G.nodes])
+                        probability = network_fitness_scores[network]
+                        f.write('{}, {}, {}\n'.format(network, sequence, probability))
+                    f.write('\n')
+
+    # Calculates fitness of output sequences and filters population to maintain
+    # the fittest 50%, plus sums the probabilities of the retained sequences and
+    # returns this value (to be minimised with hyperopt)
+    summed_fitness = 0
+    for surface in list(params['sequencesdict'].keys()):
+        networks_dict = params['sequencesdict'][surface]
+
+        if params['fitnessscoremethod'] != 'allatom':
+            (network_propensity_scores, network_frequency_scores
+            ) = ga_calcs.measure_fitness_propensity(surface, networks_dict)
+            network_fitness_scores = ga_calcs.combine_prop_and_freq_scores(
+                network_propensity_scores, network_frequency_scores, raw_or_rank
             )
-            self.sequences_dict[surface] = mating_pop_dict
+        elif params['fitnessscoremethod'] == 'allatom':
+            network_energies = ga_calcs.measure_fitness_allatom(surface, networks_dict)
+            (network_fitness_scores
+            ) = ga_calcs.convert_energies_to_probabilities(network_energies)
 
-        return self.sequences_dict
+        mating_pop_dict = ga_calcs.create_mat_pop_fittest(
+            surface, networks_dict, network_fitness_scores,
+            params['populationsize'], unfit_fraction=0
+        )
+        params['sequencesdict'][surface] = mating_pop_dict
+
+        for network in params['sequencesdict'][surface].keys():
+            summed_fitness += network_fitness_scores[network]
+
+    with open('Program_output/GA_output_sequences_dict.pkl', 'wb') as f:
+        pickle.dump(params['sequencesdict'], f)
+
+    return -summed_fitness

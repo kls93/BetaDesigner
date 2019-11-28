@@ -15,12 +15,14 @@ class gen_output(initialise_ga_object):
         initialise_ga_object.__init__(self, params)
 
     def write_pdb(self, sequences_dict):
-        # Uses SCWRL4 to pack network side chains onto the backbone structure
-        # and writes a PDB file of the output structure. Note that each network
-        # is considered individually, hence only a single surface is replaced
-        # at a time (and so in the case of a barrel for example if an exterior
-        # face network were packed onto the structure, the interior face and
-        # loops would remain the same as the original input structure)
+        """
+        Uses SCWRL4 to pack network side chains onto the backbone structure
+        and writes a PDB file of the output structure. Note that each network
+        is considered individually, hence only a single surface is replaced
+        at a time (and so in the case of a barrel for example if an exterior
+        face network were packed onto the structure, the interior face and
+        loops would remain the same as the original input structure)
+        """
 
         # Loads backbone model into ISAMBARD. NOTE must have been pre-processed
         # to remove ligands etc. so that only backbone coordinates remain.

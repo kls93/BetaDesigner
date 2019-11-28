@@ -12,14 +12,14 @@ from hyperopt import fmin, hp, tpe, Trials
 
 def main():
     if __name__ == '__main__':
-        from subroutines.find_parameters import find_params
+        from subroutines.find_parameters import find_params, setup_input_output
         from subroutines.generate_initial_sequences import gen_ga_input
-        from subroutines.run_genetic_algorithm import run_ga_pipeline
+        from subroutines.run_genetic_algorithm import run_genetic_algorithm
         from subroutines.write_output_structures import gen_output
     else:
-        from betadesigner.subroutines.find_parameters import find_params
+        from betadesigner.subroutines.find_parameters import find_params, setup_input_output
         from betadesigner.subroutines.generate_initial_sequences import gen_ga_input
-        from betadesigner.subroutines.run_genetic_algorithm import run_ga_pipeline
+        from betadesigner.subroutines.run_genetic_algorithm import run_genetic_algorithm
         from betadesigner.subroutines.write_output_structures import gen_output
 
     # Reads in command line inputs
@@ -31,6 +31,13 @@ def main():
 
     # Defines program params from input file / user input
     params = find_params(args)
+
+    # Deletes parameters to be optimised with hyperopt
+    del params['unfitfraction']
+    del params['crossoverprob']
+    del params['mutationprob']
+    del params['propvsfreqweight']
+    del params['jobid']
 
     # Checks that only one structure is listed in the input dataframe
     if len(set(params['inputdataframe']['domain_ids'].tolist())) != 1:
@@ -48,7 +55,7 @@ def main():
     # exterior surfaces), and three networks are constructed for a sandwich
     # (interior and two exterior surfaces).
     gen_initial_sequences = gen_ga_input(params)
-    sequences_dict = gen_initial_sequences.initial_sequences_pipeline()
+    new_sequences_dict = gen_initial_sequences.initial_sequences_pipeline()
 
     run_ga = True
     run_opt = True
@@ -57,29 +64,30 @@ def main():
     max_gen = copy.copy(params['maxnumgenerations'])
     params['maxnumgenerations'] = total_gen
 
+    count = 0
     while run_ga is True:
-        ga = run_ga_pipeline(params, sequences_dict)
+        count += 1
+        params['jobid'] = 'Optimisation_cycle_{}'.format(count)
+        setup_input_output(params)
+
+        orig_sequences_dict = copy.deepcopy(new_sequences_dict)
         trials = Trials()
 
         # Sets the hyperparams unfit_fraction, crossover_probability,
         # mutation_probability, propensity_to_frequency weighting and
-        # propensity_weights to uniform ranges between 0 and 1 for optimisation via
-        # a tree parzen estimator with hyperopt
+        # propensity_weights to uniform ranges between 0 and 1 for optimisation
+        # via a tree parzen estimator with hyperopt
         bayes_params = {}
         bayes_params['unfitfraction'] = hp.uniform('unfitfraction', 0, 1)
         bayes_params['crossoverprob'] = hp.uniform('crossoverprob', 0, 1)
         bayes_params['mutationprob'] = hp.uniform('mutationprob', 0, 1)
         bayes_params['propvsfreqweight'] = hp.uniform('propvsfreqweight', 0, 1)
-
-        scales = (  list(params['propensityscales'].keys())
-                  + list(params['frequencyscales'].keys()))
-        for scale in scales:
-            bayes_params[scale] = hp.uniform(scale, 0, 1)
+        bayes_params['sequencesdict'] = orig_sequences_dict
+        bayes_params = {**copy.deepcopy(params), **bayes_params}
 
         while run_opt is True:
-            best_params = fmin(fn=-ga.run_genetic_algorithm, space=bayes_params,
-                               algo=tpe.suggest, trials=trials,
-                               max_evals=max_evals)
+            best_params = fmin(fn=run_genetic_algorithm, space=bayes_params,
+                               algo=tpe.suggest, trials=trials, max_evals=max_evals)
             if max_evals == 100:
                 current_best = copy.deepcopy(best_params)
                 max_evals = int(max_evals * math.sqrt(10))
@@ -98,9 +106,9 @@ def main():
                     current_best = copy.deepcopy(best_params)
                     max_evals = int(max_evals * math.sqrt(10))
 
-        ga = run_ga_pipeline(params, sequences_dict)
-        fitness = ga.run_genetic_algorithm(best_params)
-        sequences_dict = ga.sequences_dict
+        fitness = run_genetic_algorithm(best_params)
+        with open('Program_output/GA_output_sequences_dict.pkl', 'rb') as f:
+            new_sequences_dict = pickle.load(f)
 
         if total_gen == 10:
             current_fitness = copy.deepcopy(fitness)

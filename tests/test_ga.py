@@ -1,16 +1,53 @@
 
-import unittest
 import numpy as np
-from betadesigner.subroutines.find_parameters import find_parameters
-from betadesigner.subroutines.generate_initial_sequences import
-from betadesigner.subroutines.run_genetic_algorithm import
-from betadesigner.subroutines.write_output_structures import
+import unittest
+from betadesigner.subroutines.find_params import initialise_ga_object
+from betadesigner.subroutines.run_genetic_algorithm import run_ga_calcs
 
 class testGeneticAlgorithm(unittest.TestCase):
     """
     """
 
-    def test():
+    def test_measure_fitness_propensity():
+        """
+        """
+
+        return
+
+    def test_measure_fitness_all_atom_scoring_function():
+        """
+        """
+
+        return
+
+    def test_create_mating_population_fittest_indv():
+        """
+        """
+
+        return
+
+    def test_create_mating_population_roulette_wheel():
+        """
+        """
+
+        return
+
+    def test_uniform_crossover():
+        """
+        """
+
+        return
+
+    def test_segmented_crossover():
+        return
+
+    def test_swap_mutate():
+        return
+
+    def test_scramble_mutate():
+        return
+
+    def test_add_children_to_parents():
         return
 
 class TestGeneticAlgorithm(unittest.TestCase):
@@ -35,17 +72,3 @@ class TestGeneticAlgorithm(unittest.TestCase):
     def test_measure_fitness_propensity(self):
 
     def test_measure_fitness_all_atom_scoring_function(self):
-
-    def test_create_mating_population_fittest_indv(self):
-
-    def test_create_mating_population_roulette_wheel(self):
-
-    def test_uniform_crossover(self):
-
-    def test_segmented_crossover(self):
-
-    def test_swap_mutate(self):
-
-    def test_scramble_mutate(self):
-
-    def test_add_children_to_parents(self):

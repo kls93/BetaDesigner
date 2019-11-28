@@ -538,8 +538,10 @@ class gen_ga_input_calcs(initialise_ga_object):
                 propensity = node_propensity_probabilities[prop_index]
                 frequency = node_frequency_probabilities[freq_index]
 
-                probability = (  (propensity*self.propensity_weight['propensity'])
-                               + (frequency*self.propensity_weight['frequency']))
+                # Since propensity_weight is a hyperparameter to be optimised
+                # with hyperopt, for initial sequence generation the propensity
+                # and frequency scales are weighted equally
+                probability = propensity + frequency
                 node_probabilities[prop_index] = probability
             filtered_aa_list = filtered_aa_list[node_indv_aa_index_propensity]
             node_cumulative_probabilities = gen_cumulative_probabilities(

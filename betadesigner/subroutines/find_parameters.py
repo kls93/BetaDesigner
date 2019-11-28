@@ -67,7 +67,7 @@ def find_params(args):
                     key = line.split(':')[0].replace(' ', '').lower()
                     value = line.split(':')[1].replace('\n', '').strip()
 
-                    if key in ['inputdataframe', 'inputpdb', 'propensityscales',
+                    if key in ['inputdataframepath', 'inputpdb', 'propensityscales',
                                'frequencyscales', 'scaleweights',
                                'phipsiclustercoords']:
                         value = value.replace('\\', '/')  # For windows file paths
@@ -92,16 +92,16 @@ def find_params(args):
             print('Path to input file not recognised')
 
     # Defines absolute file path to input dataframe
-    if 'inputdataframe' in params:
+    if 'inputdataframepath' in params:
         if (
-            (not os.path.isfile(params['inputdataframe']))
+            (not os.path.isfile(params['inputdataframepath']))
             or
-            (not params['inputdataframe'].endswith('.pkl'))
+            (not params['inputdataframepath'].endswith('.pkl'))
         ):
             print('File path to pickled input dataframe not recognised')
-            params.pop('inputdataframe')
+            params.pop('inputdataframepath')
 
-    if not 'inputdataframe' in params:
+    if not 'inputdataframepath' in params:
         input_df = ''
         while (
             (not os.path.isfile(input_df))
@@ -112,7 +112,7 @@ def find_params(args):
             input_df = '/' + input(prompt).replace('\\').strip('/')
 
             if os.path.isfile(input_df) and input_df.endswith('.pkl'):
-                params['inputdataframe'] = input_df
+                params['inputdataframepath'] = input_df
                 break
             else:
                 print('File path to pickled input dataframe not recognised')
@@ -155,15 +155,15 @@ def find_params(args):
         else:
             with open(params['propensityscales'], 'rb') as pickle_file:
                 propensity_scales_dict = pickle.load(pickle_file)
-            params['propensityscales'] = propensity_scales_dict
+            if type(propensity_scales_dict) == dict:
+                params['propensityscales'] = propensity_scales_dict
+            else:
+                params.pop('propensityscales')
 
     if not 'propensityscales' in params:
         propensity_scales_file = ''
-        while (
-            (not os.path.isfile(propensity_scales_file))
-            or
-            (not propensity_scales_file.endswith('.pkl'))
-        ):
+        scales_provided = False
+        while scales_provided is False:
             print('Specify absolute file path of pickled propensity scales:')
             propensity_scales_file = '/' + input(prompt).replace('\\').strip('/')
 
@@ -174,8 +174,14 @@ def find_params(args):
             ):
                 with open(propensity_scales_file, 'rb') as pickle_file:
                     propensity_scales_dict = pickle.load(pickle_file)
-                params['propensityscales'] = propensity_scales_dict
-                break
+                if type(propensity_scales_dict) == dict:
+                    params['propensityscales'] = propensity_scales_dict
+                    scales_provided = True
+                    break
+                else:
+                    print('Data in {} is not a pickled dictionary'.format(
+                        propensity_scales_file)
+                    )
             else:
                 print('File path to pickled propensity scales not recognised')
 
@@ -191,7 +197,10 @@ def find_params(args):
         else:
             with open(params['frequencyscales'], 'rb') as pickle_file:
                 frequency_scales_dict = pickle.load(pickle_file)
-            params['frequencyscales'] = frequency_scales_dict
+            if type(frequency_scales_dict) == dict:
+                params['frequencyscales'] = frequency_scales_dict
+            else:
+                params.pop('frequencyscales')
 
     if not 'frequencyscales' in params:
         print('Include frequency scales?')
@@ -205,11 +214,8 @@ def find_params(args):
         if frequency_input in ['yes', 'y']:
             frequency_scales_file = ''
 
-            while (
-                (not os.path.isfile(frequency_scales_file))
-                or
-                (not frequency_scales_file.endswith('.pkl'))
-            ):
+            scales_provided = False
+            while scales_provided is False:
                 print('Specify absolute file path of pickled frequency scales:')
                 frequency_scales_file = '/' + input(prompt).replace('\\').strip('/')
 
@@ -220,8 +226,14 @@ def find_params(args):
                 ):
                     with open(frequency_scales_file, 'rb') as pickle_file:
                         frequency_scales_dict = pickle.load(pickle_file)
-                    params['frequencyscales'] = frequency_scales_dict
-                    break
+                    if type(frequency_scales_dict) == dict:
+                        params['frequencyscales'] = frequency_scales_dict
+                        scales_provided = True
+                        break
+                    else:
+                        print('Data in {} is not a pickled dictionary'.format(
+                            frequency_scales_file)
+                        )
                 else:
                     print('File path to pickled frequency scales not recognised')
         else:
@@ -1046,12 +1058,28 @@ def find_params(args):
                 print('Input not recognised - please specify "yes" or "no"')
                 delete_dir = ''
 
+    # Unpickles input dataframe generated by DataGen
+    input_df = pd.read_pickle(params['inputdataframepath'])
+    if params['phipsiclustercoords']:
+        params['inputdataframe'] = calc_parent_voronoi_cluster(
+            input_df, params['phipsiclustercoords']
+        )
+
+    return params
+
+
+def setup_input_output(params):
+    """
+    Creates directories for input and output data and copies the necessary
+    input files across to the input directory
+    """
+
     working_directory = 'BetaDesigner_results/{}'.format(params['jobid'])
     os.makedirs('{}/Program_input'.format(working_directory))
     os.makedirs('{}/Program_output'.format(working_directory))
     os.chdir(working_directory)
 
-    shutil.copy('{}'.format(params['inputdataframe']),
+    shutil.copy('{}'.format(params['inputdataframepath']),
                 'Program_input/Input_DataFrame.pkl')
     shutil.copy('{}'.format(params['inputpdb']),
                 'Program_input/Input_PDB.pdb')
@@ -1069,35 +1097,22 @@ def find_params(args):
         for key, parameter in params.items():
             f.write('{}: {}\n'.format(key, parameter))
 
-    # Unpickles input dataframe generated by DataGen
-    input_df = pd.read_pickle(params['inputdataframe'])
-    if params['phipsiclustercoords']:
-        params['inputdataframe'] = calc_parent_voronoi_cluster(
-            input_df, params['phipsiclustercoords']
-        )
-
-    return params
-
 
 class initialise_ga_object():
 
     def __init__(self, params):
-        aa_dict = gen_amino_acids_dict()
+        aa_code_dict = gen_amino_acids_dict()
         if params['barrelorsandwich'] == '2.40':
-            aa_dict.pop('CYS')
-
-        self.params = params
+            aa_code_dict.pop('CYS')
+        params['aa_codes'] = aa_code_dict.values()
 
         self.input_df = params['inputdataframe']
         self.input_pdb = params['inputpdb']
         self.propensity_dicts = params['propensityscales']
-        if params['frequencyscales'] != {}:
-            self.frequency_dicts = params['frequencyscales']
-        else:
-            self.frequency_dicts = np.nan
-        self.aa_list = list(aa_dict.values())
+        self.frequency_dicts = params['frequencyscales']
+        self.aa_list = params['aa_codes']
         self.dict_weights = params['scaleweights']
-        # self.propensity_weight = params['propvsfreqweight']  To be optimised with hyperopt
+        self.propensity_weight = np.nan  # params['propvsfreqweight']  To be optimised with hyperopt
         self.working_directory = params['workingdirectory']
         self.barrel_or_sandwich = params['barrelorsandwich']
         self.job_id = params['jobid']
@@ -1106,17 +1121,23 @@ class initialise_ga_object():
         if self.method_fitness_score == 'split':
             self.split_fraction = params['splitfraction']
         self.method_select_mating_pop = params['matingpopmethod']
-        # if self.method_select_mating_pop == 'fittest':
-            # self.unfit_fraction = params['unfitfraction']  To be optimised with hyperopt
+        if self.method_select_mating_pop == 'fittest':
+            self.unfit_fraction = np.nan  # params['unfitfraction']  To be optimised with hyperopt
         self.method_crossover = params['crossovermethod']
-        # if self.method_crossover == 'uniform':
-            # self.crossover_prob = params['crossoverprob']  To be optimised with hyperopt
-        if self.method_crossover == 'segmented':  # Change to elif if uncomment lines above
+        if self.method_crossover == 'uniform':
+            self.crossover_prob = np.nan  # params['crossoverprob']  To be optimised with hyperopt
+        elif self.method_crossover == 'segmented':  # Change to "if" if re-comment out lines above
             self.swap_start_prob = params['swapstartprob']
             self.swap_stop_prob = params['swapstopprob']
         self.method_mutation = params['mutationmethod']
-        # self.mutation_prob = params['mutationprob']  To be optimised with hyperopt
+        self.mutation_prob = np.nan  # params['mutationprob']  To be optimised with hyperopt
         self.pop_size = params['populationsize']
         if self.method_fitness_score == 'split':
-            self.propensity_pop_size = self.pop_size*self.split_fraction
+            params['propensitypopsize'] = self.pop_size*self.split_fraction
+            self.propensity_pop_size = params['propensitypopsize']
         self.num_gens = params['maxnumgenerations']
+
+        self.params = copy.deepcopy(params)
+
+        with open('Program_input/Input_parameters.pkl', 'wb') as f:
+            pickle.dump((params), f)
