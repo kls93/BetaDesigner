@@ -106,8 +106,8 @@ def combine_propensities(node_indv_propensities, node_indv_frequencies,
         node_indv_propensities[:,index] *= dict_weight
         node_indv_frequencies[:,index] *= dict_weight
 
-    node_indv_propensities = nansum_axis_1(node_indv_propensities, axis=1)
-    node_indv_frequencies = nansum_axis_1(node_indv_frequencies, axis=1)
+    node_indv_propensities = nansum_axis_1(node_indv_propensities)
+    node_indv_frequencies = nansum_axis_1(node_indv_frequencies)
 
     # Removes NaN values
     filtered_aa_list = np.array(copy.deepcopy(aa_list))

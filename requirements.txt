@@ -1,6 +1,5 @@
 
 argparse
-Cython
 hyperopt
 networkx
 numpy
