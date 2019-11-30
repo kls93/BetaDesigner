@@ -1,7 +1,7 @@
 
 argparse
 budeff
-cython
+Cython
 hyperopt
 isambard
 networkx

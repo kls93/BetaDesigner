@@ -146,6 +146,10 @@ def propensity_to_probability_distribution(index_num, node_indv_propensities):
     differences
     """
 
+    # Checks for NaN values
+    if np.isnan(node_indv_propensities).any():
+        raise Exception('NaN value encountered in propensity array')
+
     # Converts fitness scores into probabilities
     node_eqm_constant_values = np.exp(np.negative(node_indv_propensities))
     total = np.sum(node_eqm_constant_values)
@@ -166,14 +170,18 @@ def propensity_to_probability_distribution(index_num, node_indv_propensities):
     return index_num, node_indv_propensities, node_probabilities
 
 
-def frequency_to_probability_distribution(index_num, node_indv_vals,
-                                          propensity_or_frequency):
+def frequency_to_probability_distribution(index_num, node_indv_vals, prop_or_freq):
     """
     Generates probability distribution in which networks are weighted in
     proportion to their rank propensity / frequency values
     """
 
-    if propensity_or_frequency == 'propensity':
+    # Checks for NaN values
+
+    if np.isnan(node_indv_vals).any():
+        raise Exception('NaN value encountered in {} array'.format(prop_or_freq))
+
+    if prop_or_freq == 'propensity':
         node_indv_vals = np.array(range(1, (node_indv_vals.shape[0]+1)))
 
     # Converts fitness scores into probabilities
@@ -326,12 +334,9 @@ class gen_ga_input_calcs(initialise_ga_object):
                     node = sub_df['domain_ids'][num] + sub_df['res_ids'][num]
                     int_or_ext = sub_df['int_ext'][num]
                     z_coord = sub_df['z_coords'][num]
-                    phi = sub_df['phi'][num]
-                    psi = sub_df['psi'][num]
                     phi_psi_class = sub_df['phi_psi_class'][num]
                     G.add_node(node, aa_id='UNK', int_ext=int_or_ext,
-                               z=z_coord, phi=phi, psi=psi,
-                               phipsiclass=phi_psi_class)
+                               z=z_coord, phipsi=phi_psi_class)
             elif self.barrel_or_sandwich == '2.60':
                 for num in range(sub_df.shape[0]):
                     node = sub_df['domain_ids'][num] + sub_df['res_ids'][num]
@@ -340,14 +345,12 @@ class gen_ga_input_calcs(initialise_ga_object):
                     z_strand_coord = sub_df['strand_z_coords'][num]
                     buried_surface_area = sub_df['buried_surface_area'][num]
                     edge_or_central = sub_df['edge_or_central'][num]
-                    phi = sub_df['phi'][num]
-                    psi = sub_df['psi'][num]
                     phi_psi_class = sub_df['phi_psi_class'][num]
                     G.add_node(node, aa_id='UNK', int_ext=int_or_ext,
                                zsandwich=z_sandwich_coord,
                                zstrand=z_strand_coord,
                                bsa=buried_surface_area, eoc=edge_or_central,
-                               phi=phi, psi=psi, phipsiclass=phi_psi_class)
+                               phipsi=phi_psi_class)
 
             domain_res_ids = list(G.nodes)
 
@@ -423,9 +426,6 @@ class gen_ga_input_calcs(initialise_ga_object):
         starting population of sequences to be fed into the genetic algorithm.
         """
 
-        # TODO: Remove fixed numbers for dict name properties, and instead have
-        # the user define
-
         # Initialises dictionary of starting sequences
         initial_networks = OrderedDict()
         for num in range(2*self.pop_size):
@@ -433,8 +433,8 @@ class gen_ga_input_calcs(initialise_ga_object):
 
         # Extracts individual amino acid propensity scales for the surface
         intext_index = self.dict_name_indices['intorext']
-        pairindv_index = self.dict_name_indices['pairorindv']
         prop_index = self.dict_name_indices['prop1']
+        pairindv_index = self.dict_name_indices['pairorindv']
         discorcont_index = self.dict_name_indices['discorcont']
         proporfreq_index = self.dict_name_indices['proporfreq']
         dicts = OrderedDict({
@@ -527,10 +527,15 @@ class gen_ga_input_calcs(initialise_ga_object):
              node_propensity_probabilities) = calc_probability_distribution(
                 sub_dicts, node_indv_propensities, 'propensity', raw_or_rank
             )
-            (node_indv_aa_index_frequency, node_indv_frequencies,
-             node_frequency_probabilities) = calc_probability_distribution(
-                 sub_dicts, node_indv_frequencies, 'frequency', raw_or_rank
-            )
+            if self.frequency_dicts != {}:
+                (node_indv_aa_index_frequency, node_indv_frequencies,
+                 node_frequency_probabilities) = calc_probability_distribution(
+                     sub_dicts, node_indv_frequencies, 'frequency', raw_or_rank
+                )
+            else:
+                node_indv_aa_index_frequency = copy.deepcopy(node_indv_aa_index_propensity)
+                node_indv_frequencies = np.full(node_indv_frequencies.shape, 0)
+                node_frequency_probabilities = np.full(node_indv_frequencies.shape, 0)
 
             node_probabilities = np.full(node_propensity_probabilities.shape, np.nan)
             for prop_index in copy.deepcopy(node_indv_aa_index_propensity):

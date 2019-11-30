@@ -75,7 +75,7 @@ def find_params(args):
                     elif key in ['workingdirectory']:
                         value = value.replace('\\', '/')  # For windows file paths
                         value = '/{}/'.format(value.strip('/'))
-                    elif key in ['jobid']:
+                    elif key in ['jobid', 'dictnameindices']:
                         value = value.replace(' ', '')
                     elif key in ['propvsfreqweight', 'barrelorsandwich',
                                  'initialseqmethod', 'fitnessscoremethod',
@@ -297,6 +297,77 @@ def find_params(args):
     for scale in list(params['scaleweights'].keys()):
         if not scale in scales:
             del params['scaleweights'][scale]
+
+    # Defines order of properties in names of input propensity / frequency
+    # scales. For now this is fixed in the order below, update as necessary if
+    # the current naming convention changes.
+    params['dictnameindices'] = {'intorext': 0,
+                                 'edgeorcent': 1,
+                                 'prop1': 2,
+                                 'interactiontype': 3,
+                                 'pairorindv': 4,
+                                 'discorcont': 5,
+                                 'proporfreq': 6}
+    """
+    if 'dictnameindices' in params:
+        if (
+            (not os.path.isfile(params['dictnameindices']))
+            or
+            (not params['dictnameindices'].endswith('.pkl'))
+        ):
+            print('File path to pickled dictionary describing propensity scale'
+                  ' naming convention not recognised')
+            params.pop('dictnameindices')
+        else:
+            with open(params['dictnameindices'], 'rb') as pickle_file:
+                dict_name_indices = pickle.load(pickle_file)
+            if type(dict_name_indices) == dict:
+                params['dictnameindices'] = dict_name_indices
+            else:
+                params.pop('dictnameindices')
+
+    if not 'dictnameindices' in params:
+        dict_name_desc = ''
+        while not (    dict_name_desc[0] == '{'
+                   and dict_name_desc[-1] == '}'
+                   and ':' in dict_name_desc
+        ):
+            dict_name_indices = {}
+            dict_name_desc = input('Input dictionary describing propensity '
+                                   'scale naming convention').strip()
+            if (    dict_name_desc[0] == '{'
+                and dict_name_desc[-1] == '}'
+                and ':' in dict_name_desc
+            ):
+                dict_name_desc = dict_name_desc.strip('{').strip('}')
+                error = False
+                for key_val_pair in dict_name_desc.split(','):
+                    if len(key_val_pair.split(':')) == 2:
+                        key = key_val_pair.split(':')[0]
+                        val = key_val_pair.split(':')[1]
+                        try:
+                            int_val = int(val)
+                            if val == str(int_val):
+                                val = int_val
+                            else:
+                                error = True
+                        except ValueError:
+                            error = True
+                        dict_name_indices[key] = val
+                    else:
+                        error = True
+                if error is False:
+                    params['dictnameindices'] = dict_name_indices
+                    break
+                else:
+                    dict_name_desc = ''
+                    print('File path to pickled dictionary describing propensity'
+                          ' scale naming convention not recognised')
+            else:
+                dict_name_desc = ''
+                print('File path to pickled dictionary describing propensity '
+                      'scale naming convention not recognised')
+    """
 
     # Defines weighting between propensity and frequency scales. Must be
     # defined after 'propensityscales' and 'frequencyscales'
@@ -1112,6 +1183,7 @@ class initialise_ga_object():
         self.frequency_dicts = params['frequencyscales']
         self.aa_list = params['aa_codes']
         self.dict_weights = params['scaleweights']
+        self.dict_name_indices = params['dictnameindices']
         self.propensity_weight = np.nan  # params['propvsfreqweight']  To be optimised with hyperopt
         self.working_directory = params['workingdirectory']
         self.barrel_or_sandwich = params['barrelorsandwich']

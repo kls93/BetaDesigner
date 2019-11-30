@@ -8,7 +8,6 @@ import budeff
 import copy
 import isambard
 import random
-import sys
 import isambard.modelling as modelling
 import networkx as nx
 import numpy as np
@@ -18,25 +17,25 @@ from operator import itemgetter
 if __name__ == 'subroutines.run_genetic_algorithm':
     from subroutines.find_parameters import initialise_ga_object
     from subroutines.generate_initial_sequences import (
-        linear_interpolation, propensity_to_probability_distribution,
-        frequency_to_probability_distribution, combine_propensities,
-        gen_cumulative_probabilities
+        linear_interpolation, random_shuffle, propensity_to_probability_distribution,
+        frequency_to_probability_distribution, gen_cumulative_probabilities
     )
     from subroutines.variables import gen_amino_acids_dict
 else:
     from betadesigner.subroutines.find_parameters import initialise_ga_object
     from betadesigner.subroutines.generate_initial_sequences import (
-        linear_interpolation, propensity_to_probability_distribution,
-        frequency_to_probability_distribution, combine_propensities,
-        gen_cumulative_probabilities
+        linear_interpolation, random_shuffle, propensity_to_probability_distribution,
+        frequency_to_probability_distribution, gen_cumulative_probabilities
     )
     from betadesigner.subroutines.variables import gen_amino_acids_dict
 
 aa_code_dict = gen_amino_acids_dict()
 
 def pack_side_chains(ampal_object, G, rigid_rotamers):
-    # Uses SCWRL4 to pack network side chains onto a backbone structure and
-    # measures the total energy of the model within BUDE
+    """
+    Uses SCWRL4 to pack network side chains onto a backbone structure and
+    measures the total energy of the model within BUDE
+    """
 
     # Makes FASTA sequence to feed into SCWRL4. BEWARE: if FASTA sequence is
     # shorter than AMPAL object, SCWRL4 will add random amino acids to the end
@@ -45,19 +44,21 @@ def pack_side_chains(ampal_object, G, rigid_rotamers):
     for res in ampal_object.get_monomers():
         res_id = '{}{}{}{}'.format(
             res.parent.parent.id, res.parent.id, res.id, res.insertion_code
-        )
+        )  # structure id, chain id, residue number, insertion code e.g. 4pnbD24
 
         if res_id in list(G.nodes):
             fasta_seq += G.nodes[res_id]['aa_id']
         else:
-            fasta_seq += res.mol_letter
+            fasta_seq += res.mol_letter  # Retains original ids of residues
+            # outside of sequence to be mutated, e.g. in loop regions
 
     if len(fasta_seq) != len(list(ampal_object.get_monomers())):
-        sys.exit('FASTA sequence and AMPAL object contain different numbers '
-                 'of amino acids')
+        raise Exception('FASTA sequence and AMPAL object contain different '
+                        'numbers of amino acids')
 
     # Packs side chains with SCWRL4. NOTE that fasta sequence must be provided
-    # as a list
+    # as a list. NOTE: Setting rigid_rotamers to True increases the speed of
+    # side-chain but results in a concomitant decrease in accuracy.
     new_ampal_object = modelling.pack_side_chains_scwrl(
         ampal_object, [fasta_seq], rigid_rotamer_model=rigid_rotamers,
         hydrogens=False
@@ -66,12 +67,9 @@ def pack_side_chains(ampal_object, G, rigid_rotamers):
     # Calculates total energy of the AMPAL object within BUDE (note that this
     # does not include the interaction of the object with its surrounding
     # environment, hence hydrophobic side chains will not be penalised on the
-    # surface of a globular protein and vice versa for membrane proteins)
+    # surface of a globular protein and vice versa for membrane proteins).
+    # Hence this is just a rough measure of side-chain clashes.
     energy = budeff.get_internal_energy(new_ampal_object).total_energy
-    # Calculates the total energy of the AMPAL object within PyRosetta
-    pose = pyrosetta.pose_from_pdb(path_to_pdb)
-    score_function = pyrosetta.get_fa_scorefxn()
-    energy = score_function(pose)
 
     return new_ampal_object, energy
 
@@ -102,17 +100,25 @@ class run_ga_calcs(initialise_ga_object):
 
         # Extracts propensity and frequency scales for the surface (both
         # individual and pairwise)
+        intext_index = self.dict_name_indices['intorext']
+        eoc_index = self.dict_name_indices['edgeorcent']
+        prop_index = self.dict_name_indices['prop1']
+        interaction_index = self.dict_name_indices['interactiontype']
+        pairindv_index = self.dict_name_indices['pairorindv']
+        discorcont_index = self.dict_name_indices['discorcont']
+        proporfreq_index = self.dict_name_indices['proporfreq']
+
         sub_indv_dicts = OrderedDict({
             dict_label: aa_dict for dict_label, aa_dict in
             {**self.propensity_dicts, **self.frequency_dicts}.items() if
-             (    (dict_label.split('_')[0] in [surface[0:3], '-'])
-              and (dict_label.split('_')[5] == 'indv'))
+             (    (dict_label.split('_')[intext_index] in [surface[0:3], '-'])
+              and (dict_label.split('_')[pairindv_index] == 'indv'))
         })
         sub_pair_dicts = OrderedDict({
             dict_label: aa_dict for dict_label, aa_dict in
             {**self.propensity_dicts, **self.frequency_dicts}.items() if
-             (    (dict_label.split('_')[0] in [surface[0:3], '-'])
-              and (dict_label.split('_')[5] == 'pair'))
+             (    (dict_label.split('_')[intext_index] in [surface[0:3], '-'])
+              and (dict_label.split('_')[pairindv_index] == 'pair'))
         })
 
         for num in list(networks_dict.keys()):
@@ -130,12 +136,12 @@ class run_ga_calcs(initialise_ga_object):
                     sub_indv_dicts = OrderedDict({
                         dict_label: aa_dict for dict_label, aa_dict
                         in sub_indv_dicts.items()
-                        if dict_label.split('_')[1] in [eoc_1, '-']
+                        if dict_label.split('_')[eoc_index] in [eoc_1, '-']
                     })
                     sub_pair_dicts = OrderedDict({
                         dict_label: aa_dict for dict_label, aa_dict
                         in sub_pair_dicts.items()
-                        if dict_label.split('_')[1] in [eoc_1, '-']
+                        if dict_label.split('_')[eoc_index] in [eoc_1, '-']
                     })
 
                 # Calculates interpolated propensity of each node for all
@@ -144,191 +150,163 @@ class run_ga_calcs(initialise_ga_object):
                 for dict_label, scale_dict in sub_indv_dicts.items():
                     weight = self.dict_weights[dict_label]
 
-                    node_prop_1 = dict_label.split('_')[2]
-                    node_prop_2 = dict_label.split('_')[3]
-                    node_val_1 = np.nan
-                    node_val_2 = np.nan
+                    node_prop = dict_label.split('_')[prop_index]
+                    node_val = np.nan
 
-                    if node_prop_1 != '-':
-                        node_val_1 = G.nodes[node_1][node_prop_1]
-                    if node_prop_2 != '-':
-                        node_val_2 = G.nodes[node_1][node_prop_2]
-                    if (
-                             node_prop_1 == 'phi'
-                         and node_prop_2 == 'psi'
-                         and dict_label[6] == 'disc'
-                    ):
-                        node_val_1 = G.nodes[node]['phipsiclass']
-                        node_val_2 = np.nan
+                    if node_prop != '-':
+                        try:
+                            node_val = G.nodes[node][node_prop]
+                        except KeyError:
+                            raise KeyError('{} not defined for node {}'.format(node_prop, node))
 
                     # Converts non-float values into np.nan
-                    if node_val_1 in ['', 'nan', 'NaN', np.nan]:
-                        node_val_1 = np.nan
-                    if node_val_2 in ['', 'nan', 'NaN', np.nan]:
-                        node_val_2 = np.nan
+                    if node_val in ['', 'nan', 'NaN', np.nan]:
+                        node_val = np.nan
 
                     value = np.nan
-                    if dict_label.split('_')[6] == 'cont' and not np.isnan(node_val_1):
+                    if (    dict_label.split('_')[discorcont_index] == 'cont'
+                        and not np.isnan(node_val)
+                    ):
                         # Interpolate dictionary
-                        if (   (node_prop_2 == '-')
-                            or (node_prop_2 != '-' and not np.isnan(node_val_2))
-                        ):
-                            value = linear_interpolation(
-                                node_val_1, scale_dict[aa_1], dict_label,
-                                node_val_2
-                            )
+                        value = linear_interpolation(node_val, scale_dict[aa_1], dict_label)
 
-                    elif dict_label.split('_')[6] == 'disc':
+                    elif dict_label.split('_')[discorcont_index] == 'disc':
                         # Filter dataframe
-                        scale_dict_copy = scale_dict.set_index('FASTA', drop=True)
-                        if node_prop_1 == '-' and node_prop_2 == '-':
+                        scale_dict_copy = copy.deepcopy(scale_dict).set_index('FASTA', drop=True)
+                        if node_prop == '-':
                             try:
                                 value = scale_dict_copy.iloc[:,0][aa_1]
                             except KeyError:
-                                pass
-                        elif node_prop_1 == 'phi' and node_prop_2 == 'psi':
-                            if not np.isnan(node_val_1):
+                                raise Exception('{} not defined in {}'.format(aa_1, dict_label))
+                        elif node_prop == 'phipsi':
+                            if not np.isnan(node_val):
                                 try:
-                                    value = scale_dict_copy[node_val_1][aa_1]
+                                    value = scale_dict_copy[node_val][aa_1]
                                 except KeyError:
-                                    pass
+                                    raise Exception('{} not defined in {}'.format(aa_1, dict_label))
 
                     if not np.isnan(value):
-                        if dict_label.split('_')[7] == 'propensity':
+                        if dict_label.split('_')['proporfreq_index'] == 'propensity':
                             # NOTE: Must take -ve logarithm of each
                             # individual propensity score before summing
                             # (rather than taking the -ve logarithm of the
                             # summed propensities)
                             value = weight*np.negative(np.log(value))
                             propensity_count += value
-                        elif dict_label.split('_')[7] == 'frequency':
+                        elif dict_label.split('_')['proporfreq_index'] == 'frequency':
                             value *= weight
                             frequency_count += value
 
                 # Loops through each node pair to sum pairwise propensity values
                 for node_pair in G.edges(node_1):
-                    boolean = random.randint(0, 1)
-                    if boolean == 0:
-                        node_a = node_pair[0]
-                        node_b = node_pair[1]
-                    elif boolean == 1:
-                        node_a = node_pair[1]
-                        node_b = node_pair[0]
-
-                    aa_1 = G.nodes[node_a]['aa_id']
-                    aa_2 = G.nodes[node_b]['aa_id']
+                    # No need to randomly order pair since each will be counted
+                    # twice in this analysis (once for node 1 and once for node 2)
+                    # (and so which node's value will be used
+                    node_2 = node_pair[1]
+                    aa_1 = G.nodes[node_1]['aa_id']
+                    aa_2 = G.nodes[node_2]['aa_id']
                     aa_pair = '{}_{}'.format(aa_1, aa_2)
 
                     # Loops through each interaction between a pair of nodes
-                    for edge in G[node_a][node_b]:
-                        edge_label = G[node_a][node_b][edge]['interaction']
+                    for edge in G[node_1][node_2]:
+                        edge_label = G[node_1][node_2][edge]['interaction']
 
                         for dict_label, scale_dict in sub_pair_dicts.items():
-                            if dict_label.split('_')[4] == edge_label:
+                            if dict_label.split('_')['interaction_index'] == edge_label:
                                 weight = self.dict_weights[dict_label]
 
-                                node_prop_1 = dict_label.split('_')[2]
-                                node_prop_2 = dict_label.split('_')[3]
-                                node_val_1 = np.nan
-                                node_val_2 = np.nan
+                                node_prop = dict_label.split('_')['prop_index']
+                                node_val = np.nan
 
-                                if node_prop_1 != '-':
-                                    node_val_1 = G.nodes[node_a][node_prop_1]
-                                if node_prop_2 != '-':
-                                    node_val_2 = G.nodes[node_a][node_prop_2]
+                                if node_prop != '-':
+                                    try:
+                                        node_val = G.nodes[node_1][node_prop]
+                                    except KeyError:
+                                        raise KeyError('{} not defined for node {}'.format(
+                                            node_prop, node_1
+                                        ))
 
                                 # Converts non-float values into np.nan
-                                if node_val_1 in ['', 'nan', 'NaN', np.nan]:
-                                    node_val_1 = np.nan
-                                if node_val_2 in ['', 'nan', 'NaN', np.nan]:
-                                    node_val_2 = np.nan
+                                if node_val in ['', 'nan', 'NaN', np.nan]:
+                                    node_val = np.nan
 
                                 value = np.nan
-                                if dict_label.split('_')[6] == 'cont' and not np.isnan(node_val_1):
-                                    # Interpolate dictionary
-                                    if (   (node_prop_2 == '-')
-                                        or (node_prop_2 != '-' and not np.isnan(node_val_2))
-                                    ):
-                                        try:
-                                            aa_scale = scale_dict[aa_pair]
-                                            value = linear_interpolation(
-                                                node_val_1, aa_scale,
-                                                dict_label, node_val_2
-                                            )
-                                        except KeyError:
-                                            pass
+                                if (    dict_label.split('_')['discorcont_index'] == 'cont'
+                                    and not np.isnan(node_val)
+                                ):
+                                    aa_scale = scale_dict[aa_pair]
+                                    value = linear_interpolation(node_val, aa_scale, dict_label)
 
-                                elif dict_label.split('_')[6] == 'disc':
+                                elif dict_label.split('_')['discorcont_index'] == 'disc':
                                     # Filter dataframe
                                     scale_dict_copy = scale_dict.set_index('FASTA', drop=True)
-                                    if node_prop_1 == '-' and node_prop_2 == '-':
-                                        try:
-                                            value = scale_dict_copy[aa_1][aa_2]
-                                        except KeyError:
-                                            pass
+                                    value = scale_dict_copy[aa_1][aa_2]
 
                                 if not np.isnan(value):
-                                    if dict_label.split('_')[7] == 'propensity':
+                                    if dict_label.split('_')['proporfreq_index'] == 'propensity':
                                         # NOTE: Must take -ve logarithm of each
                                         # individual propensity score before
                                         # summing (rather than taking the -ve
                                         # logarithm of the summed propensities)
                                         value = weight*np.negative(np.log(value))
                                         propensity_count += value
-                                    elif dict_label.split('_')[7] == 'frequency':
+                                    elif dict_label.split('_')['proporfreq_index'] == 'frequency':
                                         value *= weight
                                         frequency_count += value
 
+            if propensity_count == 0:
+                print('WARNING: propensity for network {} is 0'.format(num))
             network_propensity_scores[num] = propensity_count
             network_frequency_scores[num] = frequency_count
 
         return network_propensity_scores, network_frequency_scores
 
-    def combine_prop_and_freq_scores(self, network_propensity_scores,
-                                     network_frequency_scores, raw_or_rank):
+    def combine_prop_and_freq_scores(self, network_prop_scores,
+                                     network_freq_scores, raw_or_rank):
         """
         Combines propensity and frequency scores
         """
 
-        network_probabilities = []
-        for index, network_score_dict in enumerate(
-            [network_propensity_scores, network_frequency_scores]
-        ):
+        for index, network_score_dict in enumerate([network_prop_scores, network_freq_scores]):
+            # Only need to order propensities if converting to probability
+            # scores via their rank
             if index == 0:
                 prop_or_freq = 'propensity'
-                sorted_network_dict = OrderedDict(sorted(
-                    network_score_dict.items(), key=itemgetter(1), reverse=True
-                ))
+                if raw_or_rank == 'rank':
+                    network_score_dict = OrderedDict(sorted(
+                        network_score_dict.items(), key=itemgetter(1), reverse=False
+                    ))
             elif index == 1:
-                prop_or_freq = 'frequency'
-                sorted_network_dict = OrderedDict(sorted(
-                    network_score_dict.items(), key=itemgetter(1), reverse=False
-                ))
+                prop_or_freq == 'frequency'
 
-            sorted_network_num = np.array(list(sorted_network_dict.keys()))
-            sorted_network_scores = np.array(list(sorted_network_dict.values()))
+            network_num = np.array(list(network_score_dict.keys()))
+            network_scores = np.array(list(network_score_dict.values()))
 
             if index == 0 and raw_or_rank == 'raw':
-                (sorted_network_num, sorted_network_scores,
-                 sorted_network_probabilities
+                (network_num, network_scores, network_prob
                 ) = propensity_to_probability_distribution(
-                    sorted_network_num, sorted_network_scores
+                    network_num, network_scores
                 )
-            elif (   (index == 0 and raw_or_rank == 'rank')
-                  or (index == 1)
-            ):
-                (sorted_network, sorted_network_scores,
-                 sorted_network_probabilities
+            elif index == 0 and raw_or_rank == 'rank':
+                (network_num, network_scores, network_prob
                 ) = frequency_to_probability_distribution(
-                    sorted_network_num, sorted_network_scores,
-                    prop_or_freq
+                    network_num, network_scores, prop_or_freq
                 )
+            elif index == 1:
+                if self.frequency_dicts != {}:
+                    (network_num, network_scores, network_prob
+                    ) = frequency_to_probability_distribution(
+                        network_num, network_scores, prop_or_freq
+                    )
+                else:
+                    network_prob = np.full(network_num.shape, 0)
 
-            network_array = np.array([sorted_network_num, sorted_network_probabilities])
-            network_probabilities.append(network_array)
-
-        propensity_array = network_probabilities[0]
-        frequency_array = network_probabilities[1]
+            if prop_or_freq == 'propensity':
+                propensity_array = np.array([copy.deepcopy(network_num),
+                                             copy.deepcopy(network_prob)])
+            elif prop_or_freq == 'frequency':
+                frequency_array = np.array([copy.deepcopy(network_num),
+                                             copy.deepcopy(network_prob)])
 
         network_fitness_scores = OrderedDict()
         for index_prop, network_num in np.ndenumerate(propensity_array[0]):
@@ -372,24 +350,33 @@ class run_ga_calcs(initialise_ga_object):
         Converts energy values output from BUDE into probabilities
         """
 
-        for network_num in list(network_energies.keys()):
-            energy = network_energies[network_num]  # Energies output from BUDE
-            # are in units of kJ/mol
-            energy = (energy*1000) / (8.314*293)
-            eqm_constant = np.exp(np.negative(energy))
-            network_energies[network_num] = eqm_constant
-        total = np.sum(list(network_energies.values()))
-
         network_fitness_scores = OrderedDict()
         for network_num in list(network_energies.keys()):
-            eqm_constant = network_energies[network_num]
+            energy = network_energies[network_num]  # Energies output from BUDE
+            # are in units of kJ/mol, Boltzmann equation = e^-(ΔE / kT)
+            energy = (energy*1000) / (8.314*293)
+            eqm_constant = np.exp(np.negative(energy))
+            network_fitness_scores[network_num] = eqm_constant
+        total = np.sum(list(network_fitness_scores.values()))
+
+        for network_num in list(network_energies.keys()):
+            eqm_constant = network_fitness_scores[network_num]
             network_fitness_scores[network_num] = eqm_constant / total
+
+        # Equivalent shuffling of the networks as occurs in the propensity /
+        # frequency measures of fitness
+        network_fitness_keys = np.array(list(network_fitness_scores.keys()))
+        network_fitness_vals = np.array(list(network_fitness_scores.values()))
+        dummy_array = np.full(network_fitness_keys.shape, np.nan)
+        network_fitness_keys, network_fitness_vals, dummy_array = random_shuffle(
+            network_fitness_keys, network_fitness_vals, dummy_array
+        )
+        network_fitness_scores = OrderedDict(zip(network_fitness_keys, network_fitness_vals))
 
         return network_fitness_scores
 
-    def create_mat_pop_fittest(self, surface, networks_dict,
-                                              network_fitness_scores, pop_size,
-                                              unfit_fraction):
+    def create_mat_pop_fittest(self, surface, networks_dict, network_fitness_scores,
+                               pop_size, unfit_fraction):
         """
         Creates mating population from the fittest sequences plus a subset of
         less fit sequences (so as to maintain diversity in the mating
@@ -409,7 +396,7 @@ class run_ga_calcs(initialise_ga_object):
         # probability) to least (smallest probability) fit
         network_fitness_scores = OrderedDict(sorted(
             network_fitness_scores.items(), key=itemgetter(1), reverse=True
-            ))
+        ))
 
         # Adds fittest individuals to mating population
         for index, num in enumerate(list(network_fitness_scores.keys())):
@@ -437,8 +424,7 @@ class run_ga_calcs(initialise_ga_object):
         return mating_pop_dict
 
     def create_mat_pop_roulette_wheel(self, surface, networks_dict,
-                                                network_fitness_scores,
-                                                pop_size):
+                                      network_fitness_scores, pop_size):
         """
         Creates mating population from individuals, with the likelihood of
         selection of each sequence being weighted by its raw fitness score
@@ -463,14 +449,14 @@ class run_ga_calcs(initialise_ga_object):
             network_fitness_array = (
                 np.array(list(network_fitness_scores.values()))
             )
-            network_cumulative_probabilities = gen_cumulative_probabilities(
+            network_cumulative_prob = gen_cumulative_probabilities(
                 network_fitness_array
             )
 
             random_number = random.uniform(0, 1)
-            nearest_index = (np.abs(network_cumulative_probabilities-random_number)).argmin()
+            nearest_index = (np.abs(network_cumulative_prob-random_number)).argmin()
 
-            if network_cumulative_probabilities[nearest_index] < random_number:
+            if network_cumulative_prob[nearest_index] < random_number:
                 nearest_index += 1
 
             selected_network_num = network_num_array[nearest_index]
@@ -502,12 +488,12 @@ class run_ga_calcs(initialise_ga_object):
         # Selects pairs of networks at random to crossover with each other
         network_num = list(mating_pop_dict.keys())
         random.shuffle(network_num)
-        network_num = iter(network_num)  # Do not merge with line below,
-        # and do not introduce any lines of code between them!
+        network_num = iter(network_num)  # Do not merge with line below, and do
+        # not introduce any lines of code between them!
         network_num = list(zip(network_num, network_num))
 
         # Performs uniform crossover
-        for index, network_pair in enumerate(network_num):
+        for network_pair in network_num:
             network_num_1 = network_pair[0]
             network_num_2 = network_pair[1]
             mate_1 = copy.deepcopy(mating_pop_dict[network_num_1])
@@ -523,15 +509,8 @@ class run_ga_calcs(initialise_ga_object):
                     # over)
                     mate_1_node_attributes = copy.deepcopy(mate_1.nodes[node])
                     mate_2_node_attributes = copy.deepcopy(mate_2.nodes[node])
-
-                    # Ensures that if labels of nodes don't match between the
-                    # two networks (although they should match), non-matched as
-                    # well as matched labels are copied across
-                    for attribute in list(mate_1.nodes[node].keys()):
-                        del mate_1.nodes[node][attribute]
-                    for attribute in list(mate_2.nodes[node].keys()):
-                        del mate_2.nodes[node][attribute]
-
+                    mate_1.nodes[node] = {}
+                    mate_2.nodes[node] = {}
                     nx.set_node_attributes(mate_1, values={node: mate_2_node_attributes})
                     nx.set_node_attributes(mate_2, values={node: mate_1_node_attributes})
 
@@ -554,12 +533,12 @@ class run_ga_calcs(initialise_ga_object):
         # Selects pairs of networks at random to crossover with each other
         network_num = list(mating_pop_dict.keys())
         random.shuffle(network_num)
-        network_num = iter(network_num)  # Do not merge with line below,
-        # and do not introduce any lines of code between them!
+        network_num = iter(network_num)  # Do not merge with line below, and do
+        # not introduce any lines of code between them!
         network_num = list(zip(network_num, network_num))
 
         # Performs segmented crossover
-        for index, network_pair in enumerate(network_num):
+        for network_pair in network_num:
             network_num_1 = network_pair[0]
             network_num_2 = network_pair[1]
             mate_1 = copy.deepcopy(mating_pop_dict[network_num_1])
@@ -588,15 +567,8 @@ class run_ga_calcs(initialise_ga_object):
                     # over)
                     mate_1_attributes = copy.deepcopy(mate_1.nodes[node])
                     mate_2_attributes = copy.deepcopy(mate_2.nodes[node])
-
-                    # Ensures that if labels of nodes don't match between the
-                    # two networks (although they should match), non-matched as
-                    # well as matched labels are copied across
-                    for attribute in list(mate_1.nodes[node].keys()):
-                        del mate_1.nodes[node][attribute]
-                    for attribute in list(mate_2.nodes[node].keys()):
-                        del mate_2.nodes[node][attribute]
-
+                    mate_1.nodes[node] = {}
+                    mate_2.nodes[node] = {}
                     nx.set_node_attributes(mate_1, values={node: mate_2_attributes})
                     nx.set_node_attributes(mate_2, values={node: mate_1_attributes})
 
@@ -659,8 +631,7 @@ class run_ga_calcs(initialise_ga_object):
 
             random.shuffle(aa_ids)
             attributes = OrderedDict({
-                node: {'aa_id': aa_id} for node, aa_id in
-                zip(scrambled_nodes, aa_ids)
+                node: {'aa_id': aa_id} for node, aa_id in zip(scrambled_nodes, aa_ids)
             })
             nx.set_node_attributes(G, values=attributes)
 
@@ -787,7 +758,7 @@ def run_genetic_algorithm(params):
                     )
                 elif params['matingpopmethod'] in ['roulettewheel', 'rankroulettewheel']:
                     mating_pop_dict = ga_calcs.create_mat_pop_roulette_wheel(
-                        surface, networks_dict, network_fitness_scores, pop_sizes[index]
+                        surface, networks_dict, network_fitness_scores, pop_sizes[index], params['']
                     )
 
                 # Performs crossover of parent sequences to generate child sequences
