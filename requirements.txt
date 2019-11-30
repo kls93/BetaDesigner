@@ -1,7 +1,7 @@
 
 argparse
 hyperopt
-networkx
+networkx==2.2
 numpy
 pandas
 scipy
