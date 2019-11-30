@@ -8,4 +8,4 @@ jobs:
       - checkout
       - run: pip install Cython
       - run: pip install -r requirements.txt
-      - run: python -m unittest tests.test_initial_sequence_generation
+      - run: python -m unittest tests.test_initial_sequence_gen
