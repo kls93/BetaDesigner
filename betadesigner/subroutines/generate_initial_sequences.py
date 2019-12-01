@@ -578,8 +578,8 @@ class gen_ga_input_calcs(initialise_ga_object):
 
 class gen_ga_input(initialise_ga_object):
 
-    def __init__(self, params):
-        initialise_ga_object.__init__(self, params)
+    def __init__(self, params, test=False):
+        initialise_ga_object.__init__(self, params, test)
 
     def initial_sequences_pipeline(self):
         """

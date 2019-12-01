@@ -67,7 +67,9 @@ def main():
     count = 0
     while run_ga is True:
         count += 1
-        params['jobid'] = 'Optimisation_cycle_{}'.format(count)
+        params['workingdirectory'] = '{}/Optimisation_cycle_{}'.format(
+            params['workingdirectory'], count
+        )
         setup_input_output(params)
 
         orig_sequences_dict = copy.deepcopy(new_sequences_dict)
@@ -95,11 +97,12 @@ def main():
                 # If best values are within 1% of previous OR number of trials > 1000000
                 similarity_dict = {}
                 for key in list(best_params.keys()):
-                    if (
-                           ((0.99*current_best[key]) <= best_params[key] <= (1.01*current_best[key]))
-                        or max_evals >= 1000000
-                    ):
-                        similarity_dict[key] = True
+                    if key in ['unfitfraction', 'crossoverprob', 'mutationprob', 'propvsfreqweight']:
+                        if (
+                               ((0.99*current_best[key]) <= best_params[key] <= (1.01*current_best[key]))
+                            or max_evals >= 1000000
+                        ):
+                            similarity_dict[key] = True
                 if all(x is True for x in similarity_dict.values()):
                     run_opt = False
                 else:
@@ -107,7 +110,8 @@ def main():
                     max_evals = int(max_evals * math.sqrt(10))
 
         fitness = run_genetic_algorithm(best_params)
-        with open('Program_output/GA_output_sequences_dict.pkl', 'rb') as f:
+        with open('{}/Program_output/GA_output_sequences_dict.pkl'.format(
+            params['workingdirectory']), 'rb') as f:
             new_sequences_dict = pickle.load(f)
 
         if total_gen == 10:
@@ -127,8 +131,18 @@ def main():
     # Uses SCWRL4 within ISAMBARD to pack the output sequences onto the
     # backbone model, and writes the resulting model to a PDB file. Also
     # returns each model's total energy within BUDEFF.
-    output = gen_output(params)
+    with open('{}/Program_output/GA_output_sequences_dict.pkl'.format(
+        params['workingdirectory']), 'rb') as f:
+        sequences_dict = pickle.load(f)
+    best_bayes_params = {'unfitfraction': best_params['unfitfraction'],
+                         'crossoverprob': best_params['crossoverprob'],
+                         'mutationprob': best_params['mutationprob'],
+                         'propvsfreqweight': best_params['propvsfreqweight'],
+                         'sequencesdict': sequences_dict}
+    output = gen_output(params, best_bayes_params)
     output.write_pdb(sequences_dict)
+    output.score_pdb_pyrosetta()
+    output.score_pdb_molprobity()
 
 
 # Calls main() function if betadesigner.py is run as a script

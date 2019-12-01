@@ -1101,29 +1101,29 @@ def find_params(args):
 
     # Changes directory to user-specified "working directory" and copies across
     # necessary input files in preparation for running the genetic algorithm
-    os.chdir(params['workingdirectory'])
-    if not os.path.isdir('BetaDesigner_results'):
-        os.mkdir('BetaDesigner_results')
+    params['workingdirectory'] = '{}BetaDesigner_results/{}'.format(
+        params['workingdirectory'], params['jobid']
+    )
+    if not os.path.isdir(params['workingdirectory']):
+        os.mkdir(params['workingdirectory'])
 
-    if os.path.isdir('BetaDesigner_results/{}'.format(params['jobid'])):
-        print('Directory {} already exists in {}BetaDesigner_results/'.format(
-            params['jobid'], params['workingdirectory']
-        ))
+    if os.path.isdir('{}'.format(params['workingdirectory'])):
+        print('Directory {} already exists'.format(params['workingdirectory']))
         delete_dir = ''
 
         while not delete_dir in ['yes', 'y', 'no', 'n']:
-            print('Delete {}?'.format(params['jobid']))
+            print('Delete {}?'.format(params['workingdirectory']))
             delete_dir = input(prompt).lower()
 
             if delete_dir in ['yes', 'y']:
-                shutil.rmtree('BetaDesigner_results/{}'.format(params['jobid']))
-                os.mkdir(('BetaDesigner_results/{}'.format(params['jobid'])))
+                shutil.rmtree('{}'.format(params['workingdirectory']))
+                os.mkdir('{}'.format(params['workingdirectory']))
                 break
             elif delete_dir in ['no', 'n']:
                 raise OSError(
                     'Exiting BetaDesigner - please provide a jobid that is not '
-                    'already a directory in {}BetaDesigner_results/ for future '
-                    'runs'.format(params['workingdirectory'])
+                    'already a directory in {}/ for future '
+                    'runs'.format(''.join(params['workingdirectory'].split('/')[:-1]))
                 )
             else:
                 print('Input not recognised - please specify "yes" or "no"')
@@ -1145,46 +1145,48 @@ def setup_input_output(params):
     input files across to the input directory
     """
 
-    working_directory = 'BetaDesigner_results/{}'.format(params['jobid'])
-    os.makedirs('{}/Program_input'.format(working_directory))
-    os.makedirs('{}/Program_output'.format(working_directory))
-    os.chdir(working_directory)
+    os.makedirs('{}/Program_input'.format(params['workingdirectory']))
+    os.makedirs('{}/Program_output'.format(params['workingdirectory']))
 
     shutil.copy('{}'.format(params['inputdataframepath']),
-                'Program_input/Input_DataFrame.pkl')
+                '{}/Program_input/Input_DataFrame.pkl'.format(params['workingdirectory']))
     shutil.copy('{}'.format(params['inputpdb']),
-                'Program_input/Input_PDB.pdb')
-    with open('Program_input/Propensity_scales.pkl', 'wb') as pickle_file:
+                '{}/Program_input/Input_PDB.pdb'.format(params['workingdirectory']))
+    with open('{}/Program_input/Propensity_scales.pkl'.format(
+        params['workingdirectory']), 'wb') as pickle_file:
         pickle.dump((params['propensityscales']), pickle_file)
     if params['frequencyscales']:
-        with open('Program_input/Frequency_scales.pkl', 'wb') as pickle_file:
+        with open('{}/Program_input/Frequency_scales.pkl'.format(
+            params['workingdirectory']), 'wb') as pickle_file:
             pickle.dump((params['frequencyscales']), pickle_file)
     if 'phipsiclustercoords' in list(params.keys()):
-        with open('Program_input/Ramachandran_voronoi_cluster_coords.pkl', 'wb') as pickle_file:
+        with open('{}/Program_input/Ramachandran_voronoi_cluster_coords.pkl'.format(
+            params['workingdirectory']), 'wb') as pickle_file:
             pickle.dump((params['phipsiclustercoords']), pickle_file)
 
     # Writes program params to a txt file for user records
-    with open('Program_input/BetaDesigner_params.txt', 'w') as f:
+    with open('{}/Program_input/BetaDesigner_params.txt'.format(
+        params['workingdirectory']), 'w') as f:
         for key, parameter in params.items():
             f.write('{}: {}\n'.format(key, parameter))
 
 
 class initialise_ga_object():
 
-    def __init__(self, params):
+    def __init__(self, params, test=False):
         aa_code_dict = gen_amino_acids_dict()
         if params['barrelorsandwich'] == '2.40':
             aa_code_dict.pop('CYS')
-        params['aa_codes'] = aa_code_dict.values()
+        params['aacodes'] = aa_code_dict.values()
 
         self.input_df = params['inputdataframe']
         self.input_pdb = params['inputpdb']
         self.propensity_dicts = params['propensityscales']
         self.frequency_dicts = params['frequencyscales']
-        self.aa_list = params['aa_codes']
+        self.aa_list = params['aacodes']
         self.dict_weights = params['scaleweights']
         self.dict_name_indices = params['dictnameindices']
-        self.propensity_weight = np.nan  # params['propvsfreqweight']  To be optimised with hyperopt
+        # self.propensity_weight = np.nan  # params['propvsfreqweight']  To be optimised with hyperopt
         self.working_directory = params['workingdirectory']
         self.barrel_or_sandwich = params['barrelorsandwich']
         self.job_id = params['jobid']
@@ -1193,23 +1195,24 @@ class initialise_ga_object():
         if self.method_fitness_score == 'split':
             self.split_fraction = params['splitfraction']
         self.method_select_mating_pop = params['matingpopmethod']
-        if self.method_select_mating_pop == 'fittest':
-            self.unfit_fraction = np.nan  # params['unfitfraction']  To be optimised with hyperopt
+        # if self.method_select_mating_pop == 'fittest':
+        #    self.unfit_fraction = np.nan  # params['unfitfraction']  To be optimised with hyperopt
         self.method_crossover = params['crossovermethod']
-        if self.method_crossover == 'uniform':
-            self.crossover_prob = np.nan  # params['crossoverprob']  To be optimised with hyperopt
-        elif self.method_crossover == 'segmented':  # Change to "if" if re-comment out lines above
+        # if self.method_crossover == 'uniform':
+        #    self.crossover_prob = np.nan  # params['crossoverprob']  To be optimised with hyperopt
+        if self.method_crossover == 'segmented':  # Change to "if" if re-comment out lines above
             self.swap_start_prob = params['swapstartprob']
             self.swap_stop_prob = params['swapstopprob']
         self.method_mutation = params['mutationmethod']
-        self.mutation_prob = np.nan  # params['mutationprob']  To be optimised with hyperopt
+        # self.mutation_prob = np.nan  params['mutationprob']  To be optimised with hyperopt
         self.pop_size = params['populationsize']
         if self.method_fitness_score == 'split':
             params['propensitypopsize'] = self.pop_size*self.split_fraction
             self.propensity_pop_size = params['propensitypopsize']
         self.num_gens = params['maxnumgenerations']
+        self.test = test
 
-        self.params = copy.deepcopy(params)
-
-        with open('Program_input/Input_parameters.pkl', 'wb') as f:
-            pickle.dump((params), f)
+        if self.test is False:
+            with open('{}/Program_input/Input_parameters.pkl'.format(
+                params['workingdirectory']), 'wb') as f:
+                pickle.dump((params), f)

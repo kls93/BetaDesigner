@@ -81,10 +81,12 @@ class run_ga_calcs(initialise_ga_object):
     merging the parent and child generations)
     """
 
-    def __init__(self, params):
-        self.sequences_dict = params['sequencesdict']
-        params = {key: value for key, value in params if key != 'sequencesdict'}
-        initialise_ga_object.__init__(self, params)
+    def __init__(self, params, test=False):
+        initialise_ga_object.__init__(self, params, test)
+        self.propensity_weight = params['propvsfreqweight']
+        self.unfit_fraction = params['unfitfraction']
+        self.crossover_prob = params['crossoverprob']
+        self.mutation_prob = params['mutationprob']
 
     def measure_fitness_propensity(self, surface, networks_dict):
         """
@@ -155,9 +157,11 @@ class run_ga_calcs(initialise_ga_object):
 
                     if node_prop != '-':
                         try:
-                            node_val = G.nodes[node][node_prop]
+                            node_val = G.nodes[node_1][node_prop]
                         except KeyError:
-                            raise KeyError('{} not defined for node {}'.format(node_prop, node))
+                            raise KeyError('{} not defined for node {}'.format(
+                                node_prop, node_1
+                            ))
 
                     # Converts non-float values into np.nan
                     if node_val in ['', 'nan', 'NaN', np.nan]:
@@ -186,14 +190,14 @@ class run_ga_calcs(initialise_ga_object):
                                     raise Exception('{} not defined in {}'.format(aa_1, dict_label))
 
                     if not np.isnan(value):
-                        if dict_label.split('_')['proporfreq_index'] == 'propensity':
+                        if dict_label.split('_')[proporfreq_index] == 'propensity':
                             # NOTE: Must take -ve logarithm of each
                             # individual propensity score before summing
                             # (rather than taking the -ve logarithm of the
                             # summed propensities)
                             value = weight*np.negative(np.log(value))
                             propensity_count += value
-                        elif dict_label.split('_')['proporfreq_index'] == 'frequency':
+                        elif dict_label.split('_')[proporfreq_index] == 'frequency':
                             value *= weight
                             frequency_count += value
 
@@ -212,10 +216,10 @@ class run_ga_calcs(initialise_ga_object):
                         edge_label = G[node_1][node_2][edge]['interaction']
 
                         for dict_label, scale_dict in sub_pair_dicts.items():
-                            if dict_label.split('_')['interaction_index'] == edge_label:
+                            if dict_label.split('_')[interaction_index] == edge_label:
                                 weight = self.dict_weights[dict_label]
 
-                                node_prop = dict_label.split('_')['prop_index']
+                                node_prop = dict_label.split('_')[prop_index]
                                 node_val = np.nan
 
                                 if node_prop != '-':
@@ -231,26 +235,26 @@ class run_ga_calcs(initialise_ga_object):
                                     node_val = np.nan
 
                                 value = np.nan
-                                if (    dict_label.split('_')['discorcont_index'] == 'cont'
+                                if (    dict_label.split('_')[discorcont_index] == 'cont'
                                     and not np.isnan(node_val)
                                 ):
                                     aa_scale = scale_dict[aa_pair]
                                     value = linear_interpolation(node_val, aa_scale, dict_label)
 
-                                elif dict_label.split('_')['discorcont_index'] == 'disc':
+                                elif dict_label.split('_')[discorcont_index] == 'disc':
                                     # Filter dataframe
                                     scale_dict_copy = scale_dict.set_index('FASTA', drop=True)
                                     value = scale_dict_copy[aa_1][aa_2]
 
                                 if not np.isnan(value):
-                                    if dict_label.split('_')['proporfreq_index'] == 'propensity':
+                                    if dict_label.split('_')[proporfreq_index] == 'propensity':
                                         # NOTE: Must take -ve logarithm of each
                                         # individual propensity score before
                                         # summing (rather than taking the -ve
                                         # logarithm of the summed propensities)
                                         value = weight*np.negative(np.log(value))
                                         propensity_count += value
-                                    elif dict_label.split('_')['proporfreq_index'] == 'frequency':
+                                    elif dict_label.split('_')[proporfreq_index] == 'frequency':
                                         value *= weight
                                         frequency_count += value
 
@@ -675,14 +679,15 @@ def run_genetic_algorithm(params):
     # Unpacks parameters (unfortunately hyperopt can only feed a single
     # parameter into the objective function, so can't use class inheritance to
     # avoid this issue, and am instead using pickling)
-    input_params_file = 'Program_input/Input_parameters.pkl'
+    input_params_file = '{}/Program_input/Input_parameters.pkl'.format(params['workingdirectory'])
     with open(input_params_file, 'rb') as f:
         params = pickle.load(f)
     if type(params) != dict:
         raise TypeError('Data in {} is not a pickled dictionary'.format(input_params_file))
 
     # Records sequences and their fitnesses after each generation
-    with open('Program_output/Sequence_track.txt', 'w') as f:
+    with open('{}/Program_output/Sequence_track.txt'.format(
+        params['workingdirectory']), 'w') as f:
         f.write('Tracking GA optimisation progress\n')
 
     ga_calcs = run_ga_calcs(params)
@@ -696,7 +701,8 @@ def run_genetic_algorithm(params):
     while gen < params['maxnumgenerations']:
         gen += 1
         print('Generation {}'.format(gen))
-        with open('Program_output/Sequence_track.txt', 'w') as f:
+        with open('Program_output/Sequence_track.txt'.format(
+            params['workingdirectory']), 'w') as f:
             f.write('\n\n\n\n\nGeneration {}\n'.format(count))
 
         for surface in list(params['sequencesdict'].keys()):
@@ -798,7 +804,8 @@ def run_genetic_algorithm(params):
 
                 # Records sequences output from this generation and their
                 # associated fitnesses
-                with open('Program_output/Sequence_track.txt', 'w') as f:
+                with open('Program_output/Sequence_track.txt'.format(
+                    params['workingdirectory']), 'w') as f:
                     f.write('{}\n'.format(surface))
                     for network, G in params['sequencesdict'][surface].items():
                         sequence = ''.join([G.nodes[node]['aa_id'] for node in G.nodes])
@@ -833,7 +840,8 @@ def run_genetic_algorithm(params):
         for network in params['sequencesdict'][surface].keys():
             summed_fitness += network_fitness_scores[network]
 
-    with open('Program_output/GA_output_sequences_dict.pkl', 'wb') as f:
+    with open('Program_output/GA_output_sequences_dict.pkl'.format(
+        params['workingdirectory']), 'wb') as f:
         pickle.dump(params['sequencesdict'], f)
 
     return -summed_fitness

@@ -11,8 +11,12 @@ else:
 
 class gen_output(initialise_ga_object):
 
-    def __init__(self, params):
-        initialise_ga_object.__init__(self, params)
+    def __init__(self, params, best_bayes_params, test=False):
+        initialise_ga_object.__init__(self, params, test)
+        self.unfit_fraction = best_bayes_params['unfitfraction']
+        self.crossover_prob = best_bayes_params['crossoverprob']
+        self.mutation_prob = best_bayes_params['mutationprob']
+        self.propensity_weight = best_bayes_params['propvsfreqweight']
 
     def write_pdb(self, sequences_dict):
         """
@@ -36,8 +40,23 @@ class gen_output(initialise_ga_object):
                 new_pdb, energy = pack_side_chains(pdb, G, False)
 
                 # Writes PDB file of model
-                with open('Program_output/{}_{}.pdb'.format(surface, num), 'w') as f:
+                with open('{}/Program_output/{}_{}.pdb'.format(
+                    params['workingdirectory'], surface, num), 'w') as f:
                     f.write(new_pdb.make_pdb())
 
-                with open('Program_output/Model_energies.txt', 'a') as f:
+                with open('{}/Program_output/Model_energies.txt'.format(
+                    params['workingdirectory']), 'a') as f:
                     f.write('{}_{}: {}\n'.format(surface, num, energy))
+
+    def score_pdb_pyrosetta(self):
+        """
+        Relaxes structures and calculates their energy in the Rosetta force-field
+        """
+
+        return
+
+    def score_pdb_molprobity(self):
+        """
+        """
+
+        return

@@ -14,31 +14,6 @@ from betadesigner.subroutines.generate_initial_sequences import (
 )
 
 
-def make_prop_and_freq_distributions():
-    """
-    """
-
-    # Example propensity and frequency dictionaries
-    dicts = {'int_-_z_-_-_indv_cont_propensity': {'A': np.array([[-20, -10, 0, 10, 20], [2.5, 2.0, 1.5, 1.0, 0.5]]),
-                                                  'B': np.array([[-20, -10, 0, 10, 20], [0.5, 1.0, 1.5, 2.0, 2.5]]),
-                                                  'C': np.array([[-20, -10, 0, 10, 20], [0.5, 1.5, 2.5, 1.5, 0.5]])},
-             'ext_-_z_-_-_indv_cont_propensity': {'A': np.array([[-20, -10, 0, 10, 20], [0.5, 1.0, 1.5, 2.0, 2.5]]),
-                                                  'B': np.array([[-20, -10, 0, 10, 20], [2.5, 2.0, 1.5, 1.0, 0.5]]),
-                                                  'C': np.array([[-20, -10, 0, 10, 20], [0.5, 1.5, 2.5, 1.5, 0.5]])},
-             'int_-_z_-_hb_pair_cont_propensity': {'A': np.array([[-20, -10, 0, 10, 20], [0.5, 0.5, 0.5, 0.2, 0.1]]),
-                                                   'B': np.array([[-20, -10, 0, 10, 20], [0.1, 0.25, 0.4, 0.55, 0.7]]),
-                                                   'C': np.array([[-20, -10, 0, 10, 20], [0.4, 0.25, 0.1, 0.25, 0.2]])},
-             'ext_-_z_-_hb_pair_cont_propensity': {'A': np.array([[-20, -10, 0, 10, 20], [0.1, 0.25, 0.4, 0.55, 0.7]]),
-                                                   'B': np.array([[-20, -10, 0, 10, 20], [0.4, 0.25, 0.1, 0.25, 0.2]]),
-                                                   'C': np.array([[-20, -10, 0, 10, 20], [0.5, 0.5, 0.5, 0.2, 0.1]])},
-             'int_-_-_-_-_indv_disc_frequency': pd.DataFrame({'FASTA': ['A', 'B', 'C'],
-                                                               'int': [0.8, 0.15, 0.05]}),
-             'ext_-_-_-_-_indv_disc_frequency': pd.DataFrame({'FASTA': ['A', 'B', 'C'],
-                                                               'ext': [0.1, 0.6, 0.3]})}
-
-    return dicts
-
-
 class test_initial_sequence_generation(unittest.TestCase):
     """
     """
