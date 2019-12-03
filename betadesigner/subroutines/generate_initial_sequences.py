@@ -209,9 +209,8 @@ def calc_probability_distribution(sub_dicts, prop_freq_array, prop_or_freq,
     distribution
     """
 
-    # Orders amino acids by their propensity values from least (+ve)
-    # to most (-ve) favourable / by their frequency values from least (smaller)
-    # to most (higher) favourable
+    # If scoring by rank, orders amino acids by their propensity values from
+    # least (+ve) to most (-ve) favourable
     if prop_or_freq == 'propensity' and raw_or_rank == 'rank':
         prop_freq_array_indices = np.argsort(prop_freq_array)[::-1]
         prop_freq_array = np.sort(prop_freq_array)[::-1]
@@ -235,7 +234,7 @@ def calc_probability_distribution(sub_dicts, prop_freq_array, prop_or_freq,
     return prop_freq_array_indices, prop_freq_array, node_probabilities
 
 
-def gen_cumulative_probabilities(node_probabilities, node):
+def gen_cumulative_probabilities(node_probabilities, node, adjust_scale=False):
     """
     Converts raw probability values into a cumulative probability
     distribution
@@ -243,6 +242,10 @@ def gen_cumulative_probabilities(node_probabilities, node):
 
     if node_probabilities.size == 0:
         raise Exception('No probability values calculated for {}'.format(node))
+
+    if adjust_scale is True:
+        total = np.sum(node_probabilities)
+        node_probabilities = node_probabilities / total
 
     node_cumulative_probabilities = np.full(node_probabilities.shape, np.nan)
     cumulative_probability = 0

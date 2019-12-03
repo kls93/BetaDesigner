@@ -265,8 +265,9 @@ class run_ga_calcs(initialise_ga_object):
 
         return network_propensity_scores, network_frequency_scores
 
-    def combine_prop_and_freq_scores(self, network_prop_scores,
-                                     network_freq_scores, raw_or_rank):
+    def combine_prop_and_freq_scores(
+        self, network_prop_scores, network_freq_scores, raw_or_rank
+    ):
         """
         Combines propensity and frequency scores
         """
@@ -277,11 +278,13 @@ class run_ga_calcs(initialise_ga_object):
             if index == 0:
                 prop_or_freq = 'propensity'
                 if raw_or_rank == 'rank':
+                    # Have taken -ve logarithm of propensity scores, so lower
+                    # scores are more likely
                     network_score_dict = OrderedDict(sorted(
-                        network_score_dict.items(), key=itemgetter(1), reverse=False
+                        network_score_dict.items(), key=itemgetter(1), reverse=True
                     ))
             elif index == 1:
-                prop_or_freq == 'frequency'
+                prop_or_freq = 'frequency'
 
             network_num = np.array(list(network_score_dict.keys()))
             network_scores = np.array(list(network_score_dict.values()))
@@ -379,8 +382,10 @@ class run_ga_calcs(initialise_ga_object):
 
         return network_fitness_scores
 
-    def create_mat_pop_fittest(self, surface, networks_dict, network_fitness_scores,
-                               pop_size, unfit_fraction):
+    def create_mat_pop_fittest(
+        self, surface, networks_dict, network_fitness_scores, pop_size,
+        unfit_fraction, test=False, random_nums=[]
+    ):
         """
         Creates mating population from the fittest sequences plus a subset of
         less fit sequences (so as to maintain diversity in the mating
@@ -418,7 +423,10 @@ class run_ga_calcs(initialise_ga_object):
         # Adds unfit individuals (selected at random) to mating population
         count = 0
         while count < unfit_pop_size:
-            random_index = random.randint(0, (len(unfit_network_indices)-1))
+            if test is False:
+                random_index = random.randint(0, (len(unfit_network_indices)-1))
+            else:
+                random_index = random_nums[count]
             network_num = unfit_network_indices[random_index]
             mating_pop_dict[network_num] = copy.deepcopy(networks_dict[network_num])
             unfit_network_indices = [num for num in unfit_network_indices
@@ -427,8 +435,10 @@ class run_ga_calcs(initialise_ga_object):
 
         return mating_pop_dict
 
-    def create_mat_pop_roulette_wheel(self, surface, networks_dict,
-                                      network_fitness_scores, pop_size):
+    def create_mat_pop_roulette_wheel(
+        self, surface, networks_dict, network_fitness_scores, pop_size,
+        test=False, random_nums=[]
+    ):
         """
         Creates mating population from individuals, with the likelihood of
         selection of each sequence being weighted by its raw fitness score
@@ -454,10 +464,13 @@ class run_ga_calcs(initialise_ga_object):
                 np.array(list(network_fitness_scores.values()))
             )
             network_cumulative_prob = gen_cumulative_probabilities(
-                network_fitness_array
+                network_fitness_array, surface, adjust_scale=True
             )
 
-            random_number = random.uniform(0, 1)
+            if test is False:
+                random_number = random.uniform(0, 1)
+            else:
+                random_number = random_nums[count]
             nearest_index = (np.abs(network_cumulative_prob-random_number)).argmin()
 
             if network_cumulative_prob[nearest_index] < random_number:
@@ -478,7 +491,9 @@ class run_ga_calcs(initialise_ga_object):
 
         return mating_pop_dict
 
-    def uniform_crossover(self, surface, mating_pop_dict):
+    def uniform_crossover(
+        self, surface, mating_pop_dict, test=False, pairs=[], crossover_prob={}
+    ):
         """
         Selects pairs of individuals at random from mating population and
         performs uniform crossover
@@ -489,22 +504,28 @@ class run_ga_calcs(initialise_ga_object):
         # Initialises dictionary of child networks
         crossover_pop_dict = OrderedDict()
 
-        # Selects pairs of networks at random to crossover with each other
-        network_num = list(mating_pop_dict.keys())
-        random.shuffle(network_num)
-        network_num = iter(network_num)  # Do not merge with line below, and do
-        # not introduce any lines of code between them!
-        network_num = list(zip(network_num, network_num))
+        if test is False:
+            # Selects pairs of networks at random to crossover with each other
+            network_num = list(mating_pop_dict.keys())
+            random.shuffle(network_num)
+            network_num = iter(network_num)  # Do not merge with line below,
+            # and do not introduce any lines of code between them!
+            network_num = list(zip(network_num, network_num))
+        else:
+            network_num = pairs
 
         # Performs uniform crossover
-        for network_pair in network_num:
+        for index, network_pair in enumerate(network_num):
             network_num_1 = network_pair[0]
             network_num_2 = network_pair[1]
             mate_1 = copy.deepcopy(mating_pop_dict[network_num_1])
             mate_2 = copy.deepcopy(mating_pop_dict[network_num_2])
 
             for node in list(mate_1.nodes):
-                random_number = random.uniform(0, 1)
+                if test is False:
+                    random_number = random.uniform(0, 1)
+                else:
+                    random_number = crossover_prob[index][node]
                 if random_number <= self.crossover_prob:
                     # Copy to prevent these dictionaries from updating when the
                     # node attributes are updated in the code below (otherwise
@@ -513,8 +534,12 @@ class run_ga_calcs(initialise_ga_object):
                     # over)
                     mate_1_node_attributes = copy.deepcopy(mate_1.nodes[node])
                     mate_2_node_attributes = copy.deepcopy(mate_2.nodes[node])
-                    mate_1.nodes[node] = {}
-                    mate_2.nodes[node] = {}
+                    # mate_1.nodes[node] = {} does not work, get
+                    # TypeError: 'NodeView' object does not support item assignment
+                    for attribute in list(mate_1.nodes[node].keys()):
+                        del mate_1.nodes[node][attribute]
+                    for attribute in list(mate_2.nodes[node].keys()):
+                        del mate_2.nodes[node][attribute]
                     nx.set_node_attributes(mate_1, values={node: mate_2_node_attributes})
                     nx.set_node_attributes(mate_2, values={node: mate_1_node_attributes})
 
@@ -523,7 +548,9 @@ class run_ga_calcs(initialise_ga_object):
 
         return crossover_pop_dict
 
-    def segmented_crossover(self, surface, mating_pop_dict):
+    def segmented_crossover(
+        self, surface, mating_pop_dict, test=False, pairs=[], crossover_prob = {}
+    ):
         """
         Selects pairs of individuals at random from mating population and
         performs segmented crossover
@@ -534,15 +561,18 @@ class run_ga_calcs(initialise_ga_object):
         # Initialises dictionary of child networks
         crossover_pop_dict = OrderedDict()
 
-        # Selects pairs of networks at random to crossover with each other
-        network_num = list(mating_pop_dict.keys())
-        random.shuffle(network_num)
-        network_num = iter(network_num)  # Do not merge with line below, and do
-        # not introduce any lines of code between them!
-        network_num = list(zip(network_num, network_num))
+        if test is False:
+            # Selects pairs of networks at random to crossover with each other
+            network_num = list(mating_pop_dict.keys())
+            random.shuffle(network_num)
+            network_num = iter(network_num)  # Do not merge with line below,
+            # and do not introduce any lines of code between them!
+            network_num = list(zip(network_num, network_num))
+        else:
+            network_num = pairs
 
         # Performs segmented crossover
-        for network_pair in network_num:
+        for index, network_pair in enumerate(network_num):
             network_num_1 = network_pair[0]
             network_num_2 = network_pair[1]
             mate_1 = copy.deepcopy(mating_pop_dict[network_num_1])
@@ -550,7 +580,10 @@ class run_ga_calcs(initialise_ga_object):
 
             swap = False
             for node in list(mate_1.nodes):
-                random_number = random.uniform(0, 1)
+                if test is False:
+                    random_number = random.uniform(0, 1)
+                else:
+                    random_number = crossover_prob[index][node]
 
                 if swap is False:
                     if random_number <= self.swap_start_prob:
@@ -571,8 +604,12 @@ class run_ga_calcs(initialise_ga_object):
                     # over)
                     mate_1_attributes = copy.deepcopy(mate_1.nodes[node])
                     mate_2_attributes = copy.deepcopy(mate_2.nodes[node])
-                    mate_1.nodes[node] = {}
-                    mate_2.nodes[node] = {}
+                    # mate_1.nodes[node] = {} does not work, get
+                    # TypeError: 'NodeView' object does not support item assignment
+                    for attribute in list(mate_1.nodes[node].keys()):
+                        del mate_1.nodes[node][attribute]
+                    for attribute in list(mate_2.nodes[node].keys()):
+                        del mate_2.nodes[node][attribute]
                     nx.set_node_attributes(mate_1, values={node: mate_2_attributes})
                     nx.set_node_attributes(mate_2, values={node: mate_1_attributes})
 
@@ -581,7 +618,10 @@ class run_ga_calcs(initialise_ga_object):
 
         return crossover_pop_dict
 
-    def swap_mutate(self, surface, crossover_pop_dict):
+    def swap_mutate(
+        self, surface, crossover_pop_dict, test=False, mutation_prob={},
+        random_aas=''
+    ):
         """
         Performs swap mutations (= mutates randomly selected individual
         network nodes to a randomly selected (different) amino acid identity)
@@ -597,12 +637,19 @@ class run_ga_calcs(initialise_ga_object):
             G = copy.deepcopy(crossover_pop_dict[network_num])
 
             for node in list(G.nodes):
-                random_number = random.uniform(0, 1)
+                if test is False:
+                    random_number = random.uniform(0, 1)
+                else:
+                    random_number = mutation_prob[network_num][node]
                 if random_number <= self.mutation_prob:
-                    orig_aa = G.nodes[node]['aa_id']
-                    poss_aas = copy.deepcopy(self.aa_list)
-                    poss_aas.remove(orig_aa)
-                    new_aa = poss_aas[random.randint(0, (len(poss_aas)-1))]
+                    if test is False:
+                        orig_aa = G.nodes[node]['aa_id']
+                        poss_aas = copy.deepcopy(self.aa_list)
+                        poss_aas.remove(orig_aa)
+                        new_aa = poss_aas[random.randint(0, (len(poss_aas)-1))]
+                    else:
+                        new_aa = random_aas[0]
+                        random_aas = random_aas[1:]
 
                     nx.set_node_attributes(G, values={node: {'aa_id': new_aa}})
 
@@ -610,7 +657,9 @@ class run_ga_calcs(initialise_ga_object):
 
         return mutated_pop_dict
 
-    def scramble_mutate(self, surface, crossover_pop_dict):
+    def scramble_mutate(
+        self, surface, crossover_pop_dict, test=False, mutation_prob={}
+    ):
         """
         Performs scramble mutations (= scrambles the identities of a subset
         of amino acids selected at random)
@@ -628,12 +677,18 @@ class run_ga_calcs(initialise_ga_object):
             scrambled_nodes = []
             aa_ids = []
             for node in list(G.nodes):
-                random_number = random.uniform(0, 1)
+                if test is False:
+                    random_number = random.uniform(0, 1)
+                else:
+                    random_number = mutation_prob[network_num][node]
                 if random_number <= self.mutation_prob:
                     scrambled_nodes.append(node)
                     aa_ids.append(G.nodes[node]['aa_id'])
 
-            random.shuffle(aa_ids)
+            if test is False:
+                random.shuffle(aa_ids)
+            else:
+                aa_ids = aa_ids[::-1]
             attributes = OrderedDict({
                 node: {'aa_id': aa_id} for node, aa_id in zip(scrambled_nodes, aa_ids)
             })
@@ -643,8 +698,9 @@ class run_ga_calcs(initialise_ga_object):
 
         return mutated_pop_dict
 
-    def add_children_to_parents(self, surface, mutated_pop_dict,
-                                mating_pop_dict, index):
+    def add_children_to_parents(
+        self, surface, mutated_pop_dict, mating_pop_dict, index
+    ):
         """
         Combines parent and child generations
         """
@@ -655,7 +711,7 @@ class run_ga_calcs(initialise_ga_object):
         if index == 0:
             count = 0
         elif index == 1:
-            count = 2*self.propensity_pop_size  # The number of networks
+            count = int(2*self.propensity_pop_size)  # The number of networks
             # already added to sequences_dict following propensity scoring
         merged_networks_dict = OrderedDict()
 
