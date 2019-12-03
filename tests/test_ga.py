@@ -113,6 +113,24 @@ def gen_sequence_networks():
     return fit_test_dict, cross_test_dict
 
 
+def scwrl_available():
+    """
+    True if Scwrl is available.
+    ** Copied from ISAMBARD, original author = Chris Wells Wood
+    """
+
+    available = False
+    try:
+        subprocess.check_output(['Scwrl4'], stderr=subprocess.DEVNULL)
+    except subprocess.CalledProcessError:
+        available = True
+    except FileNotFoundError:
+        print('Scwrl4 has not been found on your path. If you have already '
+              'installed Scwrl but are unsure how to add it to your path, '
+              'check out this: https://stackoverflow.com/a/14638025')
+    return available
+
+
 class testGeneticAlgorithm(unittest.TestCase):
     """
     """
@@ -211,13 +229,49 @@ class testGeneticAlgorithm(unittest.TestCase):
         np.testing.assert_almost_equal(network_fitness_scores[1], 0.482352, decimal=5)
         np.testing.assert_almost_equal(network_fitness_scores[2], 0.517647, decimal=5)
 
-    def test_measure_fitness_bude_and_convert_to_probability(self):
+    def test_convert_energy_to_probability(self):
         """
-        ** Can't test since side-chain packing requires SCWRL4, and can't load
-        SCWRL4 into circleci without a license
         """
 
-        print('Testing measure_fitness_allatom()')
+        print('Testing convert_energies_to_probabilities()')
+
+        params = define_params()
+        bayes_params = {'propvsfreqweight': {'propensity': 0.5,
+                                             'frequency': 0.5},
+                        'unfitfraction': 0.75,
+                        'crossoverprob': 0.1,
+                        'mutationprob': 0.05}
+        network_energies = {1: -10,
+                            2: 25,
+                            3: 0,
+                            4: 7,
+                            5: -16}
+        expected_network_prob = {1: 0.0783821,
+                                 2: 0.0000000451189,
+                                 3: 0.00129241,
+                                 4: 0.0000730178,
+                                 5: 0.920252}
+
+        ga_calcs = run_ga_calcs({**params, **bayes_params}, test=True)
+        network_fitness_scores = ga_calcs.convert_energies_to_probabilities(
+            network_energies
+        )
+
+        np.testing.assert_almost_equal(
+            network_fitness_scores[1], expected_network_prob[1], decimal=6
+        )
+        np.testing.assert_almost_equal(
+            network_fitness_scores[2], expected_network_prob[2], decimal=12
+        )
+        np.testing.assert_almost_equal(
+            network_fitness_scores[3], expected_network_prob[3], decimal=7
+        )
+        np.testing.assert_almost_equal(
+            network_fitness_scores[4], expected_network_prob[4], decimal=9
+        )
+        np.testing.assert_almost_equal(
+            network_fitness_scores[5], expected_network_prob[5], decimal=5
+        )
 
     def test_create_mating_population(self):
         """
