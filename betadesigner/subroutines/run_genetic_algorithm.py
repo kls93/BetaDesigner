@@ -549,7 +549,7 @@ class run_ga_calcs(initialise_ga_object):
         return crossover_pop_dict
 
     def segmented_crossover(
-        self, surface, mating_pop_dict, test=False, pairs=[], crossover_prob = {}
+        self, surface, mating_pop_dict, test=False, pairs=[], crossover_prob={}
     ):
         """
         Selects pairs of individuals at random from mating population and

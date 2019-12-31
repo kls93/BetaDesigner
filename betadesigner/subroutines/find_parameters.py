@@ -895,6 +895,9 @@ def find_params(args):
 
     # Defines method used to mutate children sequences (generated in the
     # previous step from parent crossover)
+    # Commented out because mutation method has been fixed as "swap" for now
+    params['mutationmethod'] = 'swap'
+    """
     if 'mutationmethod' in params:
         if not params['mutationmethod'] in ['swap', 'scramble']:
             print('Mutation method not recognised - please select one of '
@@ -913,6 +916,7 @@ def find_params(args):
             else:
                 print('Mutation method not recognised - please select one of '
                       '"swap" or "scramble"')
+    """
 
     # Defines probability of mutation of each node in the network
     # Commented out because this parameter has been selected to be optimised
