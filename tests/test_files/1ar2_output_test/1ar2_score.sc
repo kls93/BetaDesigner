@@ -1,0 +1,3 @@
+SEQUENCE: 
+SCORE: total_score coordinate_constraint dslf_fa13    fa_atr    fa_dun   fa_elec fa_intra_rep fa_intra_sol_xover4              fa_rep              fa_sol hbond_bb_sc hbond_lr_bb    hbond_sc hbond_sr_bb lk_ball_wtd       omega     p_aa_pp pro_close rama_prepro         ref yhh_planarity description 
+SCORE:    -223.449                36.443     0.000  -585.929   131.968  -173.906        1.178              19.016              89.214             333.981     -24.156     -47.075     -17.242     -11.334      -9.976       7.135     -20.679     0.711      17.868      28.723         0.611 example_pdb_1ar2_0001

@@ -8,5 +8,7 @@ jobs:
       - checkout
       - run: pip install Cython
       - run: pip install -r requirements.txt
+      - run: python -m unittest tests.test_parameter_parsing
       - run: python -m unittest tests.test_initial_sequence_gen
       - run: python -m unittest tests.test_ga
+      - run: python -m unittest tests.test_output_structure_scoring

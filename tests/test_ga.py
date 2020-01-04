@@ -16,12 +16,12 @@ def define_params():
     prop_freq_dicts = gen_prop_and_freq_distributions()
 
     params = {'inputdataframe': '',
-              'inputpdb': '',
+              'inputpdb': 'example_pdb.pdb',
               'propensityscales': {key: val for key, val in prop_freq_dicts.items()
                                    if 'propensity' in key},
               'frequencyscales': {key: val for key, val in prop_freq_dicts.items()
                                   if 'frequency' in key},
-              'aacodes': ['A', 'B', 'C'],
+              'aacodes': ['A', 'R', 'N'],
               'scaleweights': {key: 1 for key in prop_freq_dicts.keys()},
               'dictnameindices': {'intorext': 0,
                                   'edgeorcent': 1,
@@ -53,18 +53,18 @@ def gen_prop_and_freq_distributions():
     """
 
     dicts = {'int_-_z_-_indv_cont_propensity': {'A': np.array([[-10, 0, 10], [2.5, 1.5, 0.5]]),
-                                                'B': np.array([[-10, 0, 10], [0.5, 1.5, 2.5]]),
-                                                'C': np.array([[-10, 0, 10], [0.5, 2.5, 0.5]])},
+                                                'R': np.array([[-10, 0, 10], [0.5, 1.5, 2.5]]),
+                                                'N': np.array([[-10, 0, 10], [0.5, 2.5, 0.5]])},
              'int_-_z_hb_pair_cont_propensity': {'A_A': np.array([[-10, 0, 10], [0.5, 1.0, 1.5]]),
-                                                 'A_B': np.array([[-10, 0, 10], [0.1, 2.0, 0.1]]),
-                                                 'A_C': np.array([[-10, 0, 10], [2.0, 1.2, 0.4]]),
-                                                 'B_A': np.array([[-10, 0, 10], [0.1, 2.0, 0.1]]),
-                                                 'B_B': np.array([[-10, 0, 10], [2.0, 0.5, 1.8]]),
-                                                 'B_C': np.array([[-10, 0, 10], [1.5, 1.2, 0.9]]),
-                                                 'C_A': np.array([[-10, 0, 10], [2.0, 1.2, 0.4]]),
-                                                 'C_B': np.array([[-10, 0, 10], [1.5, 1.2, 0.9]]),
-                                                 'C_C': np.array([[-10, 0, 10], [0.6, 0.3, 1.7]])},
-             'int_-_-_-_indv_disc_frequency': pd.DataFrame({'FASTA': ['A', 'B', 'C'],
+                                                 'A_R': np.array([[-10, 0, 10], [0.1, 2.0, 0.1]]),
+                                                 'A_N': np.array([[-10, 0, 10], [2.0, 1.2, 0.4]]),
+                                                 'R_A': np.array([[-10, 0, 10], [0.1, 2.0, 0.1]]),
+                                                 'R_R': np.array([[-10, 0, 10], [2.0, 0.5, 1.8]]),
+                                                 'R_N': np.array([[-10, 0, 10], [1.5, 1.2, 0.9]]),
+                                                 'N_A': np.array([[-10, 0, 10], [2.0, 1.2, 0.4]]),
+                                                 'N_R': np.array([[-10, 0, 10], [1.5, 1.2, 0.9]]),
+                                                 'N_N': np.array([[-10, 0, 10], [0.6, 0.3, 1.7]])},
+             'int_-_-_-_indv_disc_frequency': pd.DataFrame({'FASTA': ['A', 'R', 'N'],
                                                             'int': [0.8, 0.15, 0.05]})}
 
     return dicts
@@ -83,22 +83,22 @@ def gen_sequence_networks():
 
     network_2 = nx.MultiGraph()
     network_2.add_node(1, aa_id='A', int_ext='int', z=-5)
-    network_2.add_node(2, aa_id='C', int_ext='int', z=0)
-    network_2.add_node(3, aa_id='B', int_ext='int', z=7)
+    network_2.add_node(2, aa_id='N', int_ext='int', z=0)
+    network_2.add_node(3, aa_id='R', int_ext='int', z=7)
     network_2.add_edge(1, 2, interaction='hb')
     network_2.add_edge(2, 3, interaction='hb')
 
     network_3 = nx.MultiGraph()
-    network_3.add_node(1, aa_id='B', int_ext='int', z=-5)
+    network_3.add_node(1, aa_id='R', int_ext='int', z=-5)
     network_3.add_node(2, aa_id='A', int_ext='int', z=0)
-    network_3.add_node(3, aa_id='C', int_ext='int', z=7)
+    network_3.add_node(3, aa_id='N', int_ext='int', z=7)
     network_3.add_edge(1, 2, interaction='hb')
     network_3.add_edge(2, 3, interaction='hb')
 
     network_4 = nx.MultiGraph()
-    network_4.add_node(1, aa_id='C', int_ext='int', z=-5)
-    network_4.add_node(2, aa_id='B', int_ext='int', z=0)
-    network_4.add_node(3, aa_id='C', int_ext='int', z=7)
+    network_4.add_node(1, aa_id='N', int_ext='int', z=-5)
+    network_4.add_node(2, aa_id='R', int_ext='int', z=0)
+    network_4.add_node(3, aa_id='N', int_ext='int', z=7)
     network_4.add_edge(1, 2, interaction='hb')
     network_4.add_edge(2, 3, interaction='hb')
 
@@ -111,24 +111,6 @@ def gen_sequence_networks():
                                4: network_4}}
 
     return fit_test_dict, cross_test_dict
-
-
-def scwrl_available():
-    """
-    True if Scwrl is available.
-    ** Copied from ISAMBARD, original author = Chris Wells Wood
-    """
-
-    available = False
-    try:
-        subprocess.check_output(['Scwrl4'], stderr=subprocess.DEVNULL)
-    except subprocess.CalledProcessError:
-        available = True
-    except FileNotFoundError:
-        print('Scwrl4 has not been found on your path. If you have already '
-              'installed Scwrl but are unsure how to add it to your path, '
-              'check out this: https://stackoverflow.com/a/14638025')
-    return available
 
 
 class testGeneticAlgorithm(unittest.TestCase):
@@ -351,10 +333,10 @@ class testGeneticAlgorithm(unittest.TestCase):
             )
             uniform_sequences[i] = uniform_seq
 
-        np.testing.assert_equal(uniform_sequences[1], 'AAB')
-        np.testing.assert_equal(uniform_sequences[2], 'ACA')
-        np.testing.assert_equal(uniform_sequences[3], 'CBC')
-        np.testing.assert_equal(uniform_sequences[4], 'BAC')
+        np.testing.assert_equal(uniform_sequences[1], 'AAR')
+        np.testing.assert_equal(uniform_sequences[2], 'ANA')
+        np.testing.assert_equal(uniform_sequences[3], 'NRN')
+        np.testing.assert_equal(uniform_sequences[4], 'RAN')
 
         # Tests segmented crossover
         print('Testing segmented_crossover()')
@@ -381,10 +363,10 @@ class testGeneticAlgorithm(unittest.TestCase):
             )
             segmented_sequences[i] = segmented_seq
 
-        np.testing.assert_equal(segmented_sequences[1], 'ACB')
+        np.testing.assert_equal(segmented_sequences[1], 'ANR')
         np.testing.assert_equal(segmented_sequences[2], 'AAA')
-        np.testing.assert_equal(segmented_sequences[3], 'CAC')
-        np.testing.assert_equal(segmented_sequences[4], 'BBC')
+        np.testing.assert_equal(segmented_sequences[3], 'NAN')
+        np.testing.assert_equal(segmented_sequences[4], 'RRN')
 
     def test_mutation(self):
         """
@@ -409,7 +391,7 @@ class testGeneticAlgorithm(unittest.TestCase):
         # Tests swap mutation
         print('Testing swap_mutate()')
 
-        random_aas = 'DEFGHIJKLMNOPQRSTUVWXYZ'
+        random_aas = 'BCDEFGHIJKLMOPQSTUVWXYZ'
         swap_mutation_dict = ga_calcs.swap_mutate(
             'int', mut_test_dict['int'], test=True, mutation_prob=mutation_prob,
             random_aas=random_aas

@@ -1,0 +1,280 @@
+
+#file_name,x-H_type,residue,res_high_B,mc_high_B,worst_clash,src_atom,dst_atom,dst_residue,CB_dev,rotamer_score,rotamer_eval,rotamer,rama_score,rama_eval,rama_type,omega,omega_eval,omega_type,pucker_outlier_type,implied_pucker,suitename,d-1dg_bin,triage,suiteness,num_length_out,worst_length,worst_length_value,worst_length_sigma,num_angle_out,worst_angle,worst_angle_value,worst_angle_sigma,outlier_count,outlier_count_sep_geom
+example_pdb_2f1c.pdb,ecloud, A   3  ARG,114.52,114.52,,,,,,,,,,,,,,,,,,,,,0,C--O,1.238,0.4,0,C-CA-CB,110.649,0.3,0,0
+example_pdb_2f1c.pdb,ecloud, A   4  ASN,97.32,97.32,0.58, N   ,  OD1, A   4  ASN,,0,OUTLIER,OUTLIER,0.46,Allowed,General,176.26,Trans,non-Pro,,,,,,,0,CA--C,1.539,0.7,0,N-CA-C,115.97,1.8,2,2
+example_pdb_2f1c.pdb,ecloud, A   5  ASP,94.85,79,,,,,,8.8,Favored,m-30,23.47,Favored,General,-171.16,Trans,non-Pro,,,,,,,0,CA--C,1.532,0.3,0,N-CA-C,114.561,1.3,0,0
+example_pdb_2f1c.pdb,ecloud, A   6  TRP,62.31,57.54,0.41, HB3 ,  CZ , A   8  PHE,,98.9,Favored,m100,34.71,Favored,General,172.35,Trans,non-Pro,,,,,,,0,CA--C,1.501,1.1,0,O-C-N,124.231,0.8,1,1
+example_pdb_2f1c.pdb,ecloud, A   7  HIS,80.74,49.73,,,,,,90.3,Favored,m-70,52.61,Favored,General,169.12,Trans,non-Pro,,,,,,,0,CA--CB,1.548,0.9,0,N-CA-C,108.415,0.9,0,0
+example_pdb_2f1c.pdb,ecloud, A   8  PHE,47.81,37.95,0.41,  CZ , HB3 , A   6  TRP,,61.4,Favored,m-80,51.17,Favored,General,-178.94,Trans,non-Pro,,,,,,,0,CA--C,1.487,1.8,0,C-CA-CB,107.251,1.5,1,1
+example_pdb_2f1c.pdb,ecloud, A   9  ASN,38.12,37.59,0.42, HB3 , HD21, A 277  ASN,,25.4,Favored,m110,53.19,Favored,General,165.93,Trans,non-Pro,,,,,,,0,C--O,1.255,1.2,0,CA-C-O,122.366,0.9,1,1
+example_pdb_2f1c.pdb,ecloud, A  10  ILE,48.57,33.2,,,,,,22.2,Favored,pt,35.51,Favored,Ile or Val,162.59,Trans,non-Pro,,,,,,,0,C--N,1.313,1.1,0,C-CA-CB,107.421,2.1,0,0
+example_pdb_2f1c.pdb,ecloud, A  11  GLY,35.01,35.01,,,,,,,,,43.2,Favored,Glycine,-178.88,Trans,non-Pro,,,,,,,0,C--N,1.31,1.4,0,C-N-CA,118.56,1.7,0,0
+example_pdb_2f1c.pdb,ecloud, A  12  ALA,37.21,37.21,,,,,,,,,36.07,Favored,General,-174.64,Trans,non-Pro,,,,,,,0,CA--C,1.501,1.2,0,N-CA-C,105.336,2.0,0,0
+example_pdb_2f1c.pdb,ecloud, A  13  MET,81.13,38.15,0.41, HB3 ,  HE2, A  13  MET,,7.4,Favored,mtp,37.55,Favored,General,179.77,Trans,non-Pro,,,,,,,0,CA--C,1.492,1.6,0,C-CA-CB,106.277,2.0,1,1
+example_pdb_2f1c.pdb,ecloud, A  14  TYR,57.04,32.68,,,,,,43,Favored,t80,19.33,Favored,General,171.21,Trans,non-Pro,,,,,,,0,CA--CB,1.5,1.5,0,N-CA-CB,108.617,1.1,0,0
+example_pdb_2f1c.pdb,ecloud, A  15  GLU,35.32,35.32,,,,,,19.4,Favored,mt-10,40.39,Favored,General,-177.93,Trans,non-Pro,,,,,,,0,CA--CB,1.554,1.2,0,N-CA-C,108.238,1.0,0,0
+example_pdb_2f1c.pdb,ecloud, A  16  ILE,57.72,42.49,,,,,,1.7,Allowed,mm,51.76,Favored,Ile or Val,179.64,Trans,non-Pro,,,,,,,0,CG1--CD1,1.443,1.8,0,C-CA-CB,107.625,2.0,0,0
+example_pdb_2f1c.pdb,ecloud, A  17  GLU,48.33,38.52,,,,,,79.2,Favored,mt-10,51.95,Favored,General,168.48,Trans,non-Pro,,,,,,,0,CB--CG,1.483,1.2,0,N-CA-C,105.242,2.1,0,0
+example_pdb_2f1c.pdb,ecloud, A  18  ASN,64.72,43.35,,,,,,92.2,Favored,m-40,51.17,Favored,General,175.38,Trans,non-Pro,,,,,,,0,N--CA,1.496,2.0,0,C-CA-CB,106.401,1.9,0,0
+example_pdb_2f1c.pdb,ecloud, A  19  VAL,68.8,45.91,,,,,,30.3,Favored,t,37.87,Favored,Ile or Val,166.23,Trans,non-Pro,,,,,,,0,CA--C,1.512,0.6,0,C-CA-CB,106.755,2.4,0,0
+example_pdb_2f1c.pdb,ecloud, A  20  GLU,57.33,51.66,,,,,,53.1,Favored,tt0,50.69,Favored,General,170.58,Trans,non-Pro,,,,,,,0,CD--OE2,1.266,0.9,0,CA-CB-CG,112.464,0.8,0,0
+example_pdb_2f1c.pdb,ecloud, A  21  GLY,56.19,56.19,,,,,,,,,26.71,Favored,Glycine,175.15,Trans,non-Pro,,,,,,,0,C--O,1.244,0.6,0,N-CA-C,109.125,1.4,0,0
+example_pdb_2f1c.pdb,ecloud, A  22  TYR,92.95,58.23,,,,,,7.3,Favored,m-80,1.2,Allowed,General,-175.24,Trans,non-Pro,,,,,,,0,CG--CD2,1.403,0.7,0,N-CA-CB,112.629,1.3,0,0
+example_pdb_2f1c.pdb,ecloud, A  23  GLY,60.89,60.89,,,,,,,,,75.96,Favored,Glycine,166.81,Trans,non-Pro,,,,,,,0,CA--C,1.522,0.3,0,N-CA-C,116.725,1.2,0,0
+example_pdb_2f1c.pdb,ecloud, A  24  GLU,73.38,54.65,,,,,,8.4,Favored,pt0,19.14,Favored,General,178.13,Trans,non-Pro,,,,,,,0,CG--CD,1.543,1.1,0,C-N-CA,119.528,1.2,0,0
+example_pdb_2f1c.pdb,ecloud, A  25  ASP,57.2,57.2,,,,,,56.3,Favored,m-30,49.06,Favored,General,174.05,Trans,non-Pro,,,,,,,0,C--O,1.224,0.4,0,C-CA-CB,111.623,0.8,0,0
+example_pdb_2f1c.pdb,ecloud, A  26  MET,114.97,69.35,0.42, O   ,  HB3, A  27  ASP,,0,OUTLIER,OUTLIER,7.21,Favored,General,-158.68,Trans,non-Pro,,,,,,,0,CA--C,1.499,1.3,0,CB-CG-SD,106.515,2.1,2,2
+example_pdb_2f1c.pdb,ecloud, A  27  ASP,88.4,67.53,0.42,  HB3, O   , A  26  MET,,0.1,OUTLIER,OUTLIER,0.08,Allowed,General,172.46,Trans,non-Pro,,,,,,,0,CA--C,1.495,1.4,0,N-CA-C,103.92,2.5,2,2
+example_pdb_2f1c.pdb,ecloud, A  28  GLY,43.9,43.9,,,,,,,,,29.05,Favored,Glycine,-176.32,Trans,non-Pro,,,,,,,0,N--CA,1.417,2.1,0,N-CA-C,107.69,1.9,0,0
+example_pdb_2f1c.pdb,ecloud, A  29  LEU,42.84,41.48,,,,,,93.3,Favored,mt,27.21,Favored,General,176.49,Trans,non-Pro,,,,,,,0,N--CA,1.422,1.9,0,CA-CB-CG,110.961,1.5,0,0
+example_pdb_2f1c.pdb,ecloud, A  30  ALA,39.43,37.83,0.45, HB2 , HG23, A  55  VAL,,,,,52.21,Favored,General,174.41,Trans,non-Pro,,,,,,,0,CA--C,1.548,1.1,0,N-CA-C,105.927,1.8,1,1
+example_pdb_2f1c.pdb,ecloud, A  31  GLU,41.37,35.52,0.42, HA  ,  O  , A  51  GLN,,37.4,Favored,mt-10,19.03,Favored,Pre-Pro,-168.69,Trans,non-Pro,,,,,,,0,CA--C,1.485,1.9,0,C-N-CA,119.263,1.4,1,1
+example_pdb_2f1c.pdb,ecloud, A  32  PRO,31.38,31.38,,,,,,74.4,Favored,Cg_endo,42.42,Favored,Trans-Pro,172.27,Trans,Pro,,,,,,,0,CA--CB,1.553,1.1,0,N-CA-C,109.304,1.1,0,0
+example_pdb_2f1c.pdb,ecloud, A  33  SER,32.98,32.04,,,,,,59.3,Favored,p,35.33,Favored,General,164.91,Trans,non-Pro,,,,,,,0,CB--OG,1.394,1.2,0,C-N-CA,119.137,1.4,0,0
+example_pdb_2f1c.pdb,ecloud, A  34  VAL,35.93,32.31,,,,,,4,Favored,m,14.74,Favored,Ile or Val,179.71,Trans,non-Pro,,,,,,,0,C--O,1.256,1.2,0,C-CA-CB,103.82,4.0,0,0
+example_pdb_2f1c.pdb,ecloud, A  35  TYR,39.46,29.99,,,,,,45.5,Favored,p90,41.19,Favored,General,-177.83,Trans,non-Pro,,,,,,,0,CG--CD2,1.424,1.7,0,C-N-CA,117.635,2.3,0,0
+example_pdb_2f1c.pdb,ecloud, A  36  PHE,53.83,33.86,,,,,,36.3,Favored,t80,27.34,Favored,General,176.47,Trans,non-Pro,,,,,,,0,CA--C,1.506,0.9,0,C-N-CA,124.226,1.4,0,0
+example_pdb_2f1c.pdb,ecloud, A  37  ASN,52.98,36.5,,,,,,27.7,Favored,p0,40.5,Favored,General,173.53,Trans,non-Pro,,,,,,,0,C--N,1.312,1.2,0,C-N-CA,117.583,2.3,0,0
+example_pdb_2f1c.pdb,ecloud, A  38  ALA,44.04,44.04,,,,,,,,,33.46,Favored,General,-172,Trans,non-Pro,,,,,,,0,CA--C,1.494,1.5,0,N-CA-C,107.473,1.3,0,0
+example_pdb_2f1c.pdb,ecloud, A  39  ALA,45.25,45.25,,,,,,,,,51.93,Favored,General,-176.51,Trans,non-Pro,,,,,,,0,CA--CB,1.553,1.0,0,O-C-N,121.167,1.1,0,0
+example_pdb_2f1c.pdb,ecloud, A  40  ASN,65.63,65.63,,,,,,4.1,Favored,t0,0.62,Allowed,General,175.72,Trans,non-Pro,,,,,,,0,C--O,1.248,0.8,0,C-N-CA,117.195,2.5,0,0
+example_pdb_2f1c.pdb,ecloud, A  41  GLY,53.43,53.43,,,,,,,,,2.74,Favored,Glycine,175.99,Trans,non-Pro,,,,,,,0,C--N,1.318,0.8,0,N-CA-C,106.412,2.4,0,0
+example_pdb_2f1c.pdb,ecloud, A  42  PRO,50.6,50.6,0.48, HB2 ,  CE2, A  75  TYR,,1.4,Allowed,Cg_endo,17.69,Favored,Trans-Pro,174.81,Trans,Pro,,,,,,,0,CB--CG,1.568,1.5,0,O-C-N,125.021,1.3,1,1
+example_pdb_2f1c.pdb,ecloud, A  43  TRP,50.06,46.29,,,,,,94.4,Favored,m100,30.02,Favored,General,-171.53,Trans,non-Pro,,,,,,,0,C--N,1.343,1.0,0,C-N-CA,124.957,1.8,0,0
+example_pdb_2f1c.pdb,ecloud, A  44  ARG,87.5,41.3,,,,,,71.8,Favored,ttm-80,29.74,Favored,General,169.73,Trans,non-Pro,,,,,,,0,CG--CD,1.533,0.4,0,CA-C-O,122.332,0.9,0,0
+example_pdb_2f1c.pdb,ecloud, A  45  ILE,56.64,38.22,0.41,HD11 , HD21, A  71  LEU,,12.5,Favored,tt,59.02,Favored,Ile or Val,173.66,Trans,non-Pro,,,,,,,0,C--O,1.258,1.3,0,C-N-CA,119.842,1.0,1,1
+example_pdb_2f1c.pdb,ecloud, A  46  ALA,37.96,37.96,,,,,,,,,40.47,Favored,General,-173.91,Trans,non-Pro,,,,,,,0,C--O,1.24,0.5,0,C-N-CA,123.915,1.2,0,0
+example_pdb_2f1c.pdb,ecloud, A  47  LEU,53.4,33.2,,,,,,0.6,Allowed,mp,44.63,Favored,General,169.37,Trans,non-Pro,,,,,,,0,CG--CD2,1.557,1.1,0,CA-CB-CG,120.39,1.2,0,0
+example_pdb_2f1c.pdb,ecloud, A  48  ALA,30.43,30.43,,,,,,,,,30.94,Favored,General,-177,Trans,non-Pro,,,,,,,0,CA--CB,1.621,3.0,0,C-N-CA,120.628,0.6,0,0
+example_pdb_2f1c.pdb,ecloud, A  49  TYR,32.29,29.68,,,,,,70.9,Favored,t80,40.65,Favored,General,175.38,Trans,non-Pro,,,,,,,0,CD1--CE1,1.418,1.2,0,C-N-CA,119.193,1.4,0,0
+example_pdb_2f1c.pdb,ecloud, A  50  TYR,40.52,28.93,,,,,,14.4,Favored,t80,51.21,Favored,General,-173.19,Trans,non-Pro,,,,,,,0,CD1--CE1,1.459,2.6,0,C-CA-CB,112.762,1.4,0,0
+example_pdb_2f1c.pdb,ecloud, A  51  GLN,36.97,31.77,0.42,  O  , HA  , A  31  GLU,,25.6,Favored,tt0,48.77,Favored,General,173.88,Trans,non-Pro,,,,,,,0,CG--CD,1.549,1.3,0,CG-CD-NE2,117.982,1.1,1,1
+example_pdb_2f1c.pdb,ecloud, A  52  GLU,33.01,33.01,,,,,,34.3,Favored,tt0,18.18,Favored,General,173.27,Trans,non-Pro,,,,,,,0,CB--CG,1.553,1.1,0,CA-CB-CG,117.115,1.5,0,0
+example_pdb_2f1c.pdb,ecloud, A  53  GLY,40.16,40.16,,,,,,,,,35.34,Favored,Glycine,178.86,Trans,non-Pro,,,,,,,0,N--CA,1.444,0.4,0,N-CA-C,109.817,1.2,0,0
+example_pdb_2f1c.pdb,ecloud, A  54  PRO,47.01,45.17,0.75, HG2 ,  H  , A  63  GLY,,51.5,Favored,Cg_exo,59.49,Favored,Trans-Pro,177.19,Trans,Pro,,,,,,,0,C--N,1.35,0.6,0,C-N-CD,122.351,0.6,1,1
+example_pdb_2f1c.pdb,ecloud, A  55  VAL,80.52,80.52,0.73,HG12 ,  NH1, A  62  ARG,,3.3,Favored,p,80.59,Favored,Ile or Val,-173.91,Trans,non-Pro,,,,,,,0,CA--C,1.549,1.1,0,N-CA-C,114.963,1.4,1,1
+example_pdb_2f1c.pdb,ecloud, A  56  ASP,105.33,105.33,0.88, H   , HH11, A  62  ARG,,16.8,Favored,m-30,0.77,Allowed,General,178.59,Trans,non-Pro,,,,,,,0,N--CA,1.467,0.5,0,C-CA-CB,112.015,1.0,1,1
+example_pdb_2f1c.pdb,ecloud, A  57  TYR,103.57,103.57,,,,,,31.8,Favored,t80,33.81,Favored,General,-173.93,Trans,non-Pro,,,,,,,0,CE2--CZ,1.388,0.4,0,C-N-CA,124.132,1.4,0,0
+example_pdb_2f1c.pdb,ecloud, A  58  SER,109.61,109.61,,,,,,19.7,Favored,m,22.6,Favored,General,-177.08,Trans,non-Pro,,,,,,,0,CA--CB,1.537,0.3,0,C-N-CA,122.195,0.3,0,0
+example_pdb_2f1c.pdb,ecloud, A  59  ALA,129.37,129.37,,,,,,,,,1.07,Allowed,General,-178.28,Trans,non-Pro,,,,,,,0,CA--C,1.518,0.3,0,N-CA-C,108.972,0.7,0,0
+example_pdb_2f1c.pdb,ecloud, A  60  GLY,126.44,126.44,,,,,,,,,8.5,Favored,Glycine,-165.21,Trans,non-Pro,,,,,,,0,N--CA,1.445,0.4,0,N-CA-C,106.695,2.3,0,0
+example_pdb_2f1c.pdb,ecloud, A  61  LYS,120.05,120.05,0.49, O   ,  HB2, A  62  ARG,,12.7,Favored,mttt,15.77,Favored,General,-173.38,Trans,non-Pro,,,,,,,0,CA--CB,1.538,0.4,0,N-CA-C,114.935,1.4,1,1
+example_pdb_2f1c.pdb,ecloud, A  62  ARG,107.55,102.46,0.88, HH11, H   , A  56  ASP,,0.1,OUTLIER,OUTLIER,0.01,OUTLIER,General,163.57,Trans,non-Pro,,,,,,,0,CA--C,1.547,1.1,0,C-CA-CB,113.765,1.9,3,3
+example_pdb_2f1c.pdb,ecloud, A  63  GLY,76.61,76.61,0.75,  H  , HG2 , A  54  PRO,,,,,5.79,Favored,Glycine,-158.66,Trans,non-Pro,,,,,,,0,C--N,1.338,0.6,0,N-CA-C,123.257,3.4,1,1
+example_pdb_2f1c.pdb,ecloud, A  64  THR,55.82,53.19,,,,,,31.2,Favored,m,43.97,Favored,General,-174.36,Trans,non-Pro,,,,,,,0,CA--CB,1.557,0.6,0,C-CA-CB,111.261,1.0,0,0
+example_pdb_2f1c.pdb,ecloud, A  65  TRP,39.97,37.18,,,,,,52.7,Favored,p-90,23.42,Favored,General,171.77,Trans,non-Pro,,,,,,,0,CG--CD1,1.412,1.9,0,CA-CB-CG,115.304,0.9,0,0
+example_pdb_2f1c.pdb,ecloud, A  66  PHE,43.55,32.64,,,,,,56.5,Favored,p90,43.04,Favored,General,172.35,Trans,non-Pro,,,,,,,0,CD1--CE1,1.44,1.9,0,N-CA-CB,113.488,1.8,0,0
+example_pdb_2f1c.pdb,ecloud, A  67  ASP,37.62,34.51,,,,,,37,Favored,p0,12.31,Favored,General,168.29,Trans,non-Pro,,,,,,,0,CB--CG,1.497,0.7,0,C-N-CA,119.056,1.5,0,0
+example_pdb_2f1c.pdb,ecloud, A  68  ARG,38.4,36.53,0.47, HA  ,  O  , A  93  ASN,,51.7,Favored,ttp-170,7.74,Favored,Pre-Pro,-166.06,Trans,non-Pro,,,,,,,0,CA--CB,1.559,1.5,0,N-CA-CB,106.987,2.1,1,1
+example_pdb_2f1c.pdb,ecloud, A  69  PRO,33.09,33.09,,,,,,31.3,Favored,Cg_endo,67.1,Favored,Trans-Pro,174.49,Trans,Pro,,,,,,,0,CA--CB,1.543,0.6,0,C-N-CD,129.966,1.2,0,0
+example_pdb_2f1c.pdb,ecloud, A  70  GLU,54.18,32.8,,,,,,48.6,Favored,tt0,30.49,Favored,General,-175.9,Trans,non-Pro,,,,,,,0,N--CA,1.443,0.8,0,N-CA-C,115.528,1.6,0,0
+example_pdb_2f1c.pdb,ecloud, A  71  LEU,63.06,35.08,0.43, C   , HD13, A  71  LEU,,0.8,Allowed,tm,42.06,Favored,General,169.55,Trans,non-Pro,,,,,,,0,N--CA,1.48,1.2,0,CB-CG-CD2,114.578,1.3,1,1
+example_pdb_2f1c.pdb,ecloud, A  72  GLU,40.97,37.28,,,,,,43.9,Favored,mt-10,49.66,Favored,General,174.03,Trans,non-Pro,,,,,,,0,N--CA,1.488,1.6,0,C-CA-CB,107.938,1.1,0,0
+example_pdb_2f1c.pdb,ecloud, A  73  VAL,38.32,33.55,,,,,,97.6,Favored,t,69.75,Favored,Ile or Val,175.98,Trans,non-Pro,,,,,,,0,CA--CB,1.522,0.7,0,C-CA-CB,108.419,1.6,0,0
+example_pdb_2f1c.pdb,ecloud, A  74  HIS,37.99,32.57,0.49, HE1 ,  NE2, A  76  GLN,,55.2,Favored,t-90,50.18,Favored,General,-179.02,Trans,non-Pro,,,,,,,0,C--O,1.219,0.6,0,N-CA-CB,108.831,1.0,1,1
+example_pdb_2f1c.pdb,ecloud, A  75  TYR,58.01,35.63,0.48,  CE2, HB2 , A  42  PRO,,72,Favored,t80,37.85,Favored,General,175.2,Trans,non-Pro,,,,,,,0,CD2--CE2,1.427,1.5,0,CE2-CZ-OH,122.445,0.8,1,1
+example_pdb_2f1c.pdb,ecloud, A  76  GLN,48.02,33.68,0.49,  NE2, HE1 , A  74  HIS,,5.2,Favored,tp-100,15.22,Favored,General,177.47,Trans,non-Pro,,,,,,,0,CG--CD,1.55,1.4,0,CA-C-N,119.229,1.5,1,1
+example_pdb_2f1c.pdb,ecloud, A  77  PHE,51.49,47.82,,,,,,96.4,Favored,m-80,72.39,Favored,General,173.32,Trans,non-Pro,,,,,,,0,N--CA,1.483,1.3,0,C-CA-CB,106.724,1.8,0,0
+example_pdb_2f1c.pdb,ecloud, A  78  LEU,56.56,47.13,,,,,,0,OUTLIER,OUTLIER,49.49,Favored,General,-174.58,Trans,non-Pro,,,,,,,0,CA--C,1.501,1.2,0,C-CA-CB,106.643,1.8,1,1
+example_pdb_2f1c.pdb,ecloud, A  79  GLU,65,45.82,,,,,,19.7,Favored,tt0,2.43,Favored,General,168.84,Trans,non-Pro,,,,,,,0,CA--C,1.511,0.7,0,C-N-CA,116.817,2.7,0,0
+example_pdb_2f1c.pdb,ecloud, A  80  ASN,47.98,47.98,,,,,,11.9,Favored,p0,28.14,Favored,General,176.24,Trans,non-Pro,,,,,,,0,N--CA,1.433,1.3,0,CA-C-N,112.698,1.8,0,0
+example_pdb_2f1c.pdb,ecloud, A  81  ASP,57.92,54.85,,,,,,0,OUTLIER,OUTLIER,0.01,OUTLIER,General,162.68,Trans,non-Pro,,,,,,,0,CB--CG,1.568,2.1,0,N-CA-CB,106.595,2.3,2,2
+example_pdb_2f1c.pdb,ecloud, A  82  ASP,70.46,47.94,,,,,,11.1,Favored,m-30,14.4,Favored,General,-170.46,Trans,non-Pro,,,,,,,0,CG--OD1,1.263,0.7,0,N-CA-C,116.442,1.9,0,0
+example_pdb_2f1c.pdb,ecloud, A  83  PHE,52.18,38.86,,,,,,98.9,Favored,m-80,23.65,Favored,General,-178.36,Trans,non-Pro,,,,,,,0,CE2--CZ,1.419,1.2,0,C-CA-CB,106.953,1.7,0,0
+example_pdb_2f1c.pdb,ecloud, A  84  SER,47.49,41.86,,,,,,57.2,Favored,m,51.8,Favored,General,164.36,Trans,non-Pro,,,,,,,0,C--O,1.259,1.4,0,N-CA-C,104.727,2.2,0,0
+example_pdb_2f1c.pdb,ecloud, A  85  PHE,59.86,40.67,,,,,,78.6,Favored,t80,16.71,Favored,General,175.41,Trans,non-Pro,,,,,,,0,CB--CG,1.473,1.2,0,C-CA-CB,112.255,1.1,0,0
+example_pdb_2f1c.pdb,ecloud, A  86  GLY,34.36,34.36,,,,,,,,,26.01,Favored,Glycine,-175.07,Trans,non-Pro,,,,,,,0,C--O,1.215,0.8,0,N-CA-C,108.188,1.8,0,0
+example_pdb_2f1c.pdb,ecloud, A  87  LEU,42.44,34.71,,,,,,25.4,Favored,tp,19.58,Favored,General,-175.79,Trans,non-Pro,,,,,,,0,CA--CB,1.514,0.8,0,C-N-CA,120.729,0.5,0,0
+example_pdb_2f1c.pdb,ecloud, A  88  THR,37.1,35.36,,,,,,77.2,Favored,m,47,Favored,General,177.34,Trans,non-Pro,,,,,,,0,CB--CG2,1.561,1.2,0,CA-CB-CG2,112.05,0.9,0,0
+example_pdb_2f1c.pdb,ecloud, A  89  GLY,41.4,41.4,,,,,,,,,18.28,Favored,Glycine,165.26,Trans,non-Pro,,,,,,,0,CA--C,1.523,0.4,0,N-CA-C,106.373,2.4,0,0
+example_pdb_2f1c.pdb,ecloud, A  90  GLY,37.91,37.91,,,,,,,,,24.03,Favored,Glycine,-173.97,Trans,non-Pro,,,,,,,0,CA--C,1.502,0.8,0,C-N-CA,119.133,1.4,0,0
+example_pdb_2f1c.pdb,ecloud, A  91  PHE,47.47,33.07,,,,,,61.9,Favored,t80,42.7,Favored,General,174.25,Trans,non-Pro,,,,,,,0,CD2--CE2,1.408,0.9,0,N-CA-C,109.078,0.7,0,0
+example_pdb_2f1c.pdb,ecloud, A  92  ARG,38.26,34.12,,,,,,90.4,Favored,mtt180,52.61,Favored,General,171.33,Trans,non-Pro,,,,,,,0,CG--CD,1.564,1.5,0,C-CA-CB,104.881,2.7,0,0
+example_pdb_2f1c.pdb,ecloud, A  93  ASN,39.59,33.18,0.64,HD21 , HD22, A 108  ASN,,30.9,Favored,t0,46.13,Favored,General,157.12,Trans,non-Pro,,,,,,,0,CA--C,1.554,1.4,0,C-N-CA,120.203,0.8,1,1
+example_pdb_2f1c.pdb,ecloud, A  94  TYR,46.11,35.65,,,,,,37.7,Favored,m-80,18.07,Favored,General,168.85,Trans,non-Pro,,,,,,,0,CA--C,1.499,1.2,0,N-CA-C,106.872,1.5,0,0
+example_pdb_2f1c.pdb,ecloud, A  95  GLY,33.31,33.31,,,,,,,,,1.57,Allowed,Glycine,-177.93,Trans,non-Pro,,,,,,,0,N--CA,1.459,0.5,0,N-CA-C,108.198,1.8,0,0
+example_pdb_2f1c.pdb,ecloud, A  96  TYR,53.37,37.53,,,,,,7.5,Favored,m-80,30.94,Favored,General,-174.02,Trans,non-Pro,,,,,,,0,CA--C,1.502,1.1,0,C-CA-CB,106.807,1.7,0,0
+example_pdb_2f1c.pdb,ecloud, A  97  HIS,46.26,40.54,,,,,,55.4,Favored,m-70,10.61,Favored,General,171.67,Trans,non-Pro,,,,,,,0,CA--CB,1.521,0.4,0,C-CA-CB,111.51,0.7,0,0
+example_pdb_2f1c.pdb,ecloud, A  98  TYR,53.48,53.48,,,,,,87.7,Favored,m-80,35.24,Favored,General,-179.09,Trans,non-Pro,,,,,,,0,CB--CG,1.492,0.9,0,N-CA-C,115.107,1.5,0,0
+example_pdb_2f1c.pdb,ecloud, A  99  VAL,73.88,73.88,,,,,,83.3,Favored,t,3.42,Favored,Ile or Val,175.72,Trans,non-Pro,,,,,,,0,CB--CG1,1.544,0.7,0,N-CA-C,108.008,1.1,0,0
+example_pdb_2f1c.pdb,ecloud, A 100  ASP,87.64,87.64,0.45, N   ,  OD1, A 100  ASP,,0,OUTLIER,OUTLIER,12.92,Favored,General,176.34,Trans,non-Pro,,,,,,,0,CB--CG,1.541,1.0,0,CA-CB-CG,113.401,0.8,2,2
+example_pdb_2f1c.pdb,ecloud, A 101  GLU,101.75,91.51,0.66, HG2 ,  NZ , A 104  LYS,,1.9,Allowed,mp0,94.35,Favored,Pre-Pro,-161.02,Trans,non-Pro,,,,,,,0,CB--CG,1.51,0.3,0,N-CA-C,118.007,2.5,1,1
+example_pdb_2f1c.pdb,ecloud, A 102  PRO,92.28,91.04,,,,,,24.8,Favored,Cg_exo,21.7,Favored,Trans-Pro,166.21,Trans,Pro,,,,,,,0,C--N,1.335,0.4,0,N-CA-C,109.66,1.0,0,0
+example_pdb_2f1c.pdb,ecloud, A 103  GLY,89.84,89.84,,,,,,,,,49.67,Favored,Glycine,-178.27,Trans,non-Pro,,,,,,,0,CA--C,1.524,0.4,0,N-CA-C,114.782,0.5,0,0
+example_pdb_2f1c.pdb,ecloud, A 104  LYS,85.81,85.81,0.66,  NZ , HG2 , A 101  GLU,,13.1,Favored,mtpt,45.45,Favored,General,-177.1,Trans,non-Pro,,,,,,,0,CB--CG,1.531,0.4,0,C-CA-CB,112.938,1.5,1,1
+example_pdb_2f1c.pdb,ecloud, A 105  ASP,103.29,63.02,,,,,,0,OUTLIER,OUTLIER,0.31,Allowed,General,-165.79,Trans,non-Pro,,,,,,,0,CB--CG,1.551,1.4,0,N-CA-CB,106.846,2.1,1,1
+example_pdb_2f1c.pdb,ecloud, A 106  THR,63.72,45.66,,,,,,7.9,Favored,m,41.92,Favored,General,174.49,Trans,non-Pro,,,,,,,0,CA--CB,1.562,0.8,0,N-CA-C,106.946,1.4,0,0
+example_pdb_2f1c.pdb,ecloud, A 107  ALA,53.56,36.67,,,,,,,,,29.32,Favored,General,170.46,Trans,non-Pro,,,,,,,0,CA--CB,1.559,1.1,0,C-N-CA,117.465,2.4,0,0
+example_pdb_2f1c.pdb,ecloud, A 108  ASN,54.8,50.19,0.64, HD22,HD21 , A  93  ASN,,25.5,Favored,m110,15.9,Favored,General,172.18,Trans,non-Pro,,,,,,,0,CA--C,1.502,1.1,0,N-CA-C,107.635,1.2,1,1
+example_pdb_2f1c.pdb,ecloud, A 109  MET,40.49,39.03,,,,,,32.7,Favored,ttp,49.61,Favored,General,179.8,Trans,non-Pro,,,,,,,0,CA--C,1.503,1.1,0,N-CA-C,107.706,1.2,0,0
+example_pdb_2f1c.pdb,ecloud, A 110  GLN,63.1,36.09,,,,,,27.7,Favored,mp10,21.74,Favored,General,178.23,Trans,non-Pro,,,,,,,0,C--N,1.318,0.8,0,C-N-CA,119.618,1.2,0,0
+example_pdb_2f1c.pdb,ecloud, A 111  ARG,36.43,35.46,,,,,,36.3,Favored,ttp-170,52.35,Favored,General,169.97,Trans,non-Pro,,,,,,,0,CA--CB,1.517,0.7,0,C-CA-CB,108.166,1.0,0,0
+example_pdb_2f1c.pdb,ecloud, A 112  TRP,56.21,37.65,0.49, O   ,  HA , A 135  TYR,,91.1,Favored,m100,41.25,Favored,General,176.58,Trans,non-Pro,,,,,,,0,C--N,1.317,0.8,0,N-CA-C,107.614,1.2,1,1
+example_pdb_2f1c.pdb,ecloud, A 113  LYS,45.83,34.84,,,,,,6.4,Favored,tttt,49.2,Favored,General,-173.35,Trans,non-Pro,,,,,,,0,CB--CG,1.562,1.4,0,N-CA-CB,107.9,1.5,0,0
+example_pdb_2f1c.pdb,ecloud, A 114  ILE,59.52,38.81,,,,,,17.1,Favored,mm,53.85,Favored,Ile or Val,166.84,Trans,non-Pro,,,,,,,0,N--CA,1.474,0.8,0,C-CA-CB,105.44,3.1,0,0
+example_pdb_2f1c.pdb,ecloud, A 115  ALA,33.74,33.74,,,,,,,,,7.24,Favored,Pre-Pro,-174.53,Trans,non-Pro,,,,,,,0,CA--C,1.542,0.8,0,N-CA-C,115.333,1.5,0,0
+example_pdb_2f1c.pdb,ecloud, A 116  PRO,40.22,36.64,0.45, HD2 ,  O  , A 132  LEU,,3,Favored,Cg_exo,61.74,Favored,Trans-Pro,167.98,Trans,Pro,,,,,,,0,N--CA,1.476,0.7,0,N-CA-CB,104.544,1.4,1,1
+example_pdb_2f1c.pdb,ecloud, A 117  ASP,54.52,35.21,,,,,,4.1,Favored,p0,51.37,Favored,General,167.93,Trans,non-Pro,,,,,,,0,CA--C,1.541,0.7,0,C-N-CA,123.181,0.8,0,0
+example_pdb_2f1c.pdb,ecloud, A 118  TRP,42.05,39.11,,,,,,54.7,Favored,p90,43.63,Favored,General,-173.52,Trans,non-Pro,,,,,,,0,CB--CG,1.524,0.8,0,CA-C-N,114.745,0.7,0,0
+example_pdb_2f1c.pdb,ecloud, A 119  ASP,61.49,43.61,,,,,,35,Favored,t0,3.95,Favored,General,179.73,Trans,non-Pro,,,,,,,0,CB--CG,1.54,1.0,0,N-CA-C,106.25,1.7,0,0
+example_pdb_2f1c.pdb,ecloud, A 120  VAL,39.93,39.93,,,,,,75.5,Favored,t,68.69,Favored,Ile or Val,-171.26,Trans,non-Pro,,,,,,,0,C--O,1.262,1.6,0,C-CA-CB,105.477,3.1,0,0
+example_pdb_2f1c.pdb,ecloud, A 121  LYS,58.62,46.08,,,,,,1.4,Allowed,tttt,27.2,Favored,General,-179.25,Trans,non-Pro,,,,,,,0,CA--C,1.55,1.2,0,C-N-CA,119.007,1.5,0,0
+example_pdb_2f1c.pdb,ecloud, A 122  LEU,45.29,45.29,,,,,,64.2,Favored,mt,6.45,Favored,General,176.56,Trans,non-Pro,,,,,,,0,CG--CD1,1.572,1.5,0,N-CA-C,108.319,1.0,0,0
+example_pdb_2f1c.pdb,ecloud, A 123  THR,48.21,39.02,,,,,,9.8,Favored,p,5.86,Favored,General,174.28,Trans,non-Pro,,,,,,,0,CA--CB,1.573,1.2,0,N-CA-C,105.973,1.8,0,0
+example_pdb_2f1c.pdb,ecloud, A 124  ASP,57.02,52.46,,,,,,35.7,Favored,m-30,58.56,Favored,General,175.94,Trans,non-Pro,,,,,,,0,CA--C,1.545,0.9,0,N-CA-C,116.288,1.9,0,0
+example_pdb_2f1c.pdb,ecloud, A 125  ASP,76.81,48.99,,,,,,51.1,Favored,m-30,11.78,Favored,General,-176.7,Trans,non-Pro,,,,,,,0,N--CA,1.478,1.1,0,C-CA-CB,106.664,1.8,0,0
+example_pdb_2f1c.pdb,ecloud, A 126  LEU,43.34,38.03,,,,,,11.5,Favored,tp,53.39,Favored,General,-164.24,Trans,non-Pro,,,,,,,0,CG--CD1,1.557,1.1,0,CA-CB-CG,122.601,1.8,0,0
+example_pdb_2f1c.pdb,ecloud, A 127  ARG,65.6,34.75,,,,,,47.5,Favored,mtt-85,51.14,Favored,General,179.13,Trans,non-Pro,,,,,,,0,CA--CB,1.501,1.5,0,CG-CD-NE,107.431,2.1,0,0
+example_pdb_2f1c.pdb,ecloud, A 128  PHE,47.59,35.65,,,,,,20.8,Favored,t80,49.37,Favored,General,170.79,Trans,non-Pro,,,,,,,0,CB--CG,1.48,1.0,0,N-CA-C,105.688,1.9,0,0
+example_pdb_2f1c.pdb,ecloud, A 129  ASN,50.49,37.32,,,,,,16.4,Favored,p0,17.09,Favored,General,-179.35,Trans,non-Pro,,,,,,,0,CA--C,1.505,1.0,0,C-N-CA,119.266,1.4,0,0
+example_pdb_2f1c.pdb,ecloud, A 130  GLY,37.4,37.4,,,,,,,,,39.84,Favored,Glycine,-175.78,Trans,non-Pro,,,,,,,0,C--O,1.256,1.3,0,CA-C-N,114.395,0.9,0,0
+example_pdb_2f1c.pdb,ecloud, A 131  TRP,49.25,35.34,,,,,,61.5,Favored,p-90,44.52,Favored,General,170.98,Trans,non-Pro,,,,,,,0,CA--C,1.498,1.3,0,N-CA-C,104.438,2.3,0,0
+example_pdb_2f1c.pdb,ecloud, A 132  LEU,54.9,37.13,0.48, C   , HD23, A 132  LEU,,6.3,Favored,tt,33.72,Favored,General,173.68,Trans,non-Pro,,,,,,,0,N--CA,1.438,1.0,0,N-CA-C,107.828,1.1,1,1
+example_pdb_2f1c.pdb,ecloud, A 133  SER,45.62,45.62,0.45,  N  ,HD23 , A 132  LEU,,13.1,Favored,m,53.2,Favored,General,-176.9,Trans,non-Pro,,,,,,,0,N--CA,1.485,1.4,0,C-CA-CB,106.771,1.8,1,1
+example_pdb_2f1c.pdb,ecloud, A 134  MET,262.98,40.37,0.43, H   ,  HG2, A 134  MET,,0,OUTLIER,OUTLIER,51.09,Favored,General,164.81,Trans,non-Pro,,,,,,,0,CA--CB,1.513,0.9,0,CB-CG-SD,109.331,1.1,2,2
+example_pdb_2f1c.pdb,ecloud, A 135  TYR,42.53,34.85,0.49,  HA , O   , A 112  TRP,,54.7,Favored,m-80,50.5,Favored,General,-178.53,Trans,non-Pro,,,,,,,0,CA--CB,1.498,1.6,0,CA-CB-CG,116.984,1.7,1,1
+example_pdb_2f1c.pdb,ecloud, A 136  LYS,90.29,43.58,,,,,,18.2,Favored,mmtt,56.29,Favored,General,165.96,Trans,non-Pro,,,,,,,0,CA--C,1.535,0.5,0,C-N-CA,123.803,1.2,0,0
+example_pdb_2f1c.pdb,ecloud, A 137  PHE,48.76,48.76,,,,,,97.8,Favored,m-80,47.67,Favored,General,172.32,Trans,non-Pro,,,,,,,0,CD1--CE1,1.405,0.8,0,C-N-CA,123.527,1.0,0,0
+example_pdb_2f1c.pdb,ecloud, A 138  ALA,46.01,44.83,,,,,,,,,42.38,Favored,General,-174.76,Trans,non-Pro,,,,,,,0,C--O,1.241,0.5,0,O-C-N,125.417,1.5,0,0
+example_pdb_2f1c.pdb,ecloud, A 139  ASN,67.71,46.84,,,,,,76.3,Favored,m-40,0.06,Allowed,General,174.27,Trans,non-Pro,,,,,,,0,CB--CG,1.547,1.2,0,C-N-CA,125.779,2.3,0,0
+example_pdb_2f1c.pdb,ecloud, A 140  ASP,59.61,49.79,,,,,,30.7,Favored,m-30,12.21,Favored,General,176.24,Trans,non-Pro,,,,,,,0,CG--OD2,1.258,0.5,0,N-CA-C,114.659,1.3,0,0
+example_pdb_2f1c.pdb,ecloud, A 141  LEU,61.3,61.3,,,,,,71.9,Favored,mt,74.94,Favored,General,-176.24,Trans,non-Pro,,,,,,,0,N--CA,1.477,1.0,0,N-CA-C,113.197,0.8,0,0
+example_pdb_2f1c.pdb,ecloud, A 142  ASN,72.05,71.74,,,,,,85.1,Favored,m-40,65.03,Favored,General,171.66,Trans,non-Pro,,,,,,,0,C--N,1.321,0.6,0,C-N-CA,119.712,1.1,0,0
+example_pdb_2f1c.pdb,ecloud, A 143  THR,61.46,61.46,0.53, HG23, HG2 , A 104  LYS,,92.3,Favored,m,10.46,Favored,General,176.84,Trans,non-Pro,,,,,,,0,CA--CB,1.563,0.8,0,N-CA-C,112.368,0.5,1,1
+example_pdb_2f1c.pdb,ecloud, A 144  THR,46.25,44.66,,,,,,42.6,Favored,p,41.93,Favored,General,-169.59,Trans,non-Pro,,,,,,,0,CA--CB,1.57,1.1,0,C-N-CA,120.36,0.7,0,0
+example_pdb_2f1c.pdb,ecloud, A 145  GLY,51.71,51.71,,,,,,,,,84.44,Favored,Glycine,-178.62,Trans,non-Pro,,,,,,,0,CA--C,1.524,0.5,0,N-CA-C,117.38,1.4,0,0
+example_pdb_2f1c.pdb,ecloud, A 146  TYR,50.02,50.02,,,,,,4,Favored,m-80,38.01,Favored,General,178.17,Trans,non-Pro,,,,,,,0,CA--CB,1.516,0.7,0,C-CA-CB,105.363,2.5,0,0
+example_pdb_2f1c.pdb,ecloud, A 147  ALA,43.69,43.69,,,,,,,,,51.97,Favored,General,167.14,Trans,non-Pro,,,,,,,0,CA--CB,1.505,0.5,0,N-CA-C,108.328,1.0,0,0
+example_pdb_2f1c.pdb,ecloud, A 148  ASP,63.7,41.82,,,,,,28.4,Favored,p0,61.23,Favored,General,-173.27,Trans,non-Pro,,,,,,,0,N--CA,1.475,0.9,0,N-CA-C,115.16,1.5,0,0
+example_pdb_2f1c.pdb,ecloud, A 149  THR,55.31,45.42,,,,,,2.1,Favored,m,49.99,Favored,General,-176.17,Trans,non-Pro,,,,,,,0,CA--CB,1.571,1.2,0,CA-CB-CG2,111.819,0.8,0,0
+example_pdb_2f1c.pdb,ecloud, A 150  ARG,42.96,42.96,,,,,,14.4,Favored,ttm170,22.73,Favored,General,178.02,Trans,non-Pro,,,,,,,0,C--O,1.243,0.6,0,CA-CB-CG,115.587,0.7,0,0
+example_pdb_2f1c.pdb,ecloud, A 151  VAL,52.69,40.99,,,,,,65.9,Favored,t,58.82,Favored,Ile or Val,174.53,Trans,non-Pro,,,,,,,0,CA--C,1.51,0.7,0,C-CA-CB,109.192,1.2,0,0
+example_pdb_2f1c.pdb,ecloud, A 152  GLU,44.22,36.07,,,,,,66.1,Favored,tt0,32.98,Favored,General,-178.53,Trans,non-Pro,,,,,,,0,N--CA,1.444,0.8,0,C-CA-CB,111.78,0.9,0,0
+example_pdb_2f1c.pdb,ecloud, A 153  THR,42.4,39.38,,,,,,6.4,Favored,t,21.17,Favored,General,178.66,Trans,non-Pro,,,,,,,0,CA--CB,1.573,1.2,0,C-CA-CB,111.083,0.9,0,0
+example_pdb_2f1c.pdb,ecloud, A 154  GLU,40.44,34.51,,,,,,42.1,Favored,tt0,40.51,Favored,General,163.36,Trans,non-Pro,,,,,,,0,CD--OE1,1.232,0.9,0,N-CA-C,105.075,2.1,0,0
+example_pdb_2f1c.pdb,ecloud, A 155  THR,61.45,37.91,,,,,,1.5,Allowed,m,25.06,Favored,General,-176.2,Trans,non-Pro,,,,,,,0,CA--CB,1.557,0.6,0,C-CA-CB,101.859,3.3,0,0
+example_pdb_2f1c.pdb,ecloud, A 156  GLY,34.72,34.72,,,,,,,,,9.52,Favored,Glycine,170.6,Trans,non-Pro,,,,,,,0,CA--C,1.5,0.9,0,C-N-CA,119.237,1.4,0,0
+example_pdb_2f1c.pdb,ecloud, A 157  LEU,38.21,31.67,,,,,,76.3,Favored,mt,46.22,Favored,General,-171.75,Trans,non-Pro,,,,,,,0,CG--CD2,1.563,1.3,0,CA-CB-CG,111.833,1.3,0,0
+example_pdb_2f1c.pdb,ecloud, A 158  GLN,53.1,38.72,,,,,,7.7,Favored,tt0,41.53,Favored,General,174.19,Trans,non-Pro,,,,,,,0,CD--OE1,1.203,1.5,0,CB-CG-CD,109.981,1.5,0,0
+example_pdb_2f1c.pdb,ecloud, A 159  TYR,51.85,29.35,,,,,,86.5,Favored,t80,53.62,Favored,General,178.18,Trans,non-Pro,,,,,,,0,CA--C,1.501,1.1,0,N-CA-C,107.312,1.3,0,0
+example_pdb_2f1c.pdb,ecloud, A 160  THR,45.33,33.62,,,,,,92.9,Favored,m,50.98,Favored,General,-176.14,Trans,non-Pro,,,,,,,0,CA--CB,1.569,1.1,0,N-CA-C,108.704,0.8,0,0
+example_pdb_2f1c.pdb,ecloud, A 161  PHE,36.35,35.97,,,,,,31,Favored,m-80,26.04,Favored,General,-176.65,Trans,non-Pro,,,,,,,0,CG--CD2,1.42,1.7,0,C-CA-CB,107.739,1.2,0,0
+example_pdb_2f1c.pdb,ecloud, A 162  ASN,47.91,47.91,,,,,,33.1,Favored,p0,0.08,Allowed,General,-164.41,Trans,non-Pro,,,,,,,0,CB--CG,1.57,2.2,0,N-CA-C,104.802,2.2,0,0
+example_pdb_2f1c.pdb,ecloud, A 163  GLU,81.19,53.11,,,,,,1.1,Allowed,mt-10,64.42,Favored,General,-176.97,Trans,non-Pro,,,,,,,0,C--O,1.255,1.2,0,N-CA-C,114.362,1.2,0,0
+example_pdb_2f1c.pdb,ecloud, A 164  THR,57.46,51.5,0.44,HG23 ,  O  , A 200  THR,,88.4,Favored,m,13.59,Favored,General,-167.43,Trans,non-Pro,,,,,,,0,C--O,1.209,1.1,0,C-N-CA,118.058,2.0,1,1
+example_pdb_2f1c.pdb,ecloud, A 165  VAL,43.34,43.34,0.47, HB  , HD23, A 199  LEU,0.33,0.1,OUTLIER,OUTLIER,35.95,Favored,Ile or Val,-173.64,Trans,non-Pro,,,,,,,0,CA--CB,1.6,2.2,0,CA-CB-CG2,114.083,2.2,3,3
+example_pdb_2f1c.pdb,ecloud, A 166  ALA,32.56,32.56,,,,,,,,,42.98,Favored,General,-179.43,Trans,non-Pro,,,,,,,0,CA--CB,1.592,2.1,0,N-CA-C,106.336,1.7,0,0
+example_pdb_2f1c.pdb,ecloud, A 167  LEU,29.63,29.63,,,,,,21.5,Favored,tp,55.91,Favored,General,173.68,Trans,non-Pro,,,,,,,0,CG--CD2,1.592,2.2,0,C-CA-CB,107.354,1.4,0,0
+example_pdb_2f1c.pdb,ecloud, A 168  ARG,45.01,27.03,,,,,,25.4,Favored,mtp180,53.95,Favored,General,172.73,Trans,non-Pro,,,,,,,0,CA--C,1.476,2.4,0,CA-CB-CG,110.775,1.7,0,0
+example_pdb_2f1c.pdb,ecloud, A 169  VAL,40.22,31.37,,,,,0.38,0.1,OUTLIER,OUTLIER,54.35,Favored,Ile or Val,172.4,Trans,non-Pro,,,,,,,0,CA--CB,1.621,3.0,0,N-CA-CB,116.222,2.8,2,2
+example_pdb_2f1c.pdb,ecloud, A 170  ASN,38.05,28.4,,,,,,75,Favored,m-40,50.61,Favored,General,-165.08,Trans,non-Pro,,,,,,,0,CA--CB,1.566,1.8,0,CA-C-N,114.37,0.9,0,0
+example_pdb_2f1c.pdb,ecloud, A 171  TYR,56.06,35.35,,,,,,92.5,Favored,t80,33.99,Favored,General,159.37,Trans,non-Pro,,,,,,,0,CA--C,1.559,1.6,0,N-CA-CB,108.429,1.2,0,0
+example_pdb_2f1c.pdb,ecloud, A 172  TYR,41.78,37.04,,,,,,50.9,Favored,t80,52.89,Favored,General,176.65,Trans,non-Pro,,,,,,,0,C--O,1.253,1.1,0,N-CA-C,108.637,0.8,0,0
+example_pdb_2f1c.pdb,ecloud, A 173  LEU,50.33,40.09,,,,,,3.1,Favored,tp,47.1,Favored,General,172.23,Trans,non-Pro,,,,,,,0,CG--CD1,1.544,0.7,0,CB-CG-CD1,113.195,0.8,0,0
+example_pdb_2f1c.pdb,ecloud, A 174  GLU,52.32,37.61,,,,,,35.2,Favored,tt0,27.75,Favored,General,166.95,Trans,non-Pro,,,,,,,0,CG--CD,1.546,1.2,0,N-CA-C,106.107,1.7,0,0
+example_pdb_2f1c.pdb,ecloud, A 175  ARG,79.31,42.1,0.76, HD3 ,  HB2, A 189  SER,,0,OUTLIER,OUTLIER,11.93,Favored,General,-174.2,Trans,non-Pro,,,,,,,0,CG--CD,1.498,0.7,0,C-CA-CB,108.169,1.0,2,2
+example_pdb_2f1c.pdb,ecloud, A 176  GLY,42.43,42.43,,,,,,,,,10.93,Favored,Glycine,175.27,Trans,non-Pro,,,,,,,0,C--N,1.335,0.4,0,N-CA-C,108.963,1.5,0,0
+example_pdb_2f1c.pdb,ecloud, A 177  PHE,44.51,44.51,,,,,,9.2,Favored,p90,38.43,Favored,General,-178.34,Trans,non-Pro,,,,,,,0,CA--CB,1.548,0.9,0,N-CA-C,107.926,1.1,0,0
+example_pdb_2f1c.pdb,ecloud, A 178  ASN,57.01,57.01,,,,,,66.4,Favored,m-40,47.8,Favored,General,179.84,Trans,non-Pro,,,,,,,0,C--O,1.222,0.4,0,CB-CG-ND2,117.125,0.5,0,0
+example_pdb_2f1c.pdb,ecloud, A 179  MET,176.49,75.82,,,,,,24.8,Favored,mmm,51.53,Favored,General,173.29,Trans,non-Pro,,,,,,,0,CA--C,1.535,0.5,0,CB-CG-SD,110.668,0.7,0,0
+example_pdb_2f1c.pdb,ecloud, A 180  ASP,92.77,84.15,0.53, HB3 ,  HG3, A 183  ARG,,67.7,Favored,t0,20.16,Favored,General,174.88,Trans,non-Pro,,,,,,,0,CA--CB,1.538,0.4,0,N-CA-C,108.331,1.0,1,1
+example_pdb_2f1c.pdb,ecloud, A 181  ASP,124.4,101.66,,,,,,1.4,Allowed,m-30,63.29,Favored,General,-178.63,Trans,non-Pro,,,,,,,0,CB--CG,1.525,0.4,0,CA-C-N,115.522,0.3,0,0
+example_pdb_2f1c.pdb,ecloud, A 182  SER,98.56,98.52,,,,,,0.3,Allowed,t,70.57,Favored,General,-179.61,Trans,non-Pro,,,,,,,0,CA--C,1.534,0.4,0,N-CA-C,114.386,1.2,0,0
+example_pdb_2f1c.pdb,ecloud, A 183  ARG,85.94,85.94,0.53,  HG3, HB3 , A 180  ASP,,6.5,Favored,mtp85,23.32,Favored,General,-176.06,Trans,non-Pro,,,,,,,0,CD--NE,1.454,0.4,0,CG-CD-NE,109.118,1.3,1,1
+example_pdb_2f1c.pdb,ecloud, A 184  ASN,103.37,84.83,0.74, HB3 ,  HZ2, A 220  TRP,,1.4,Allowed,m110,1.66,Allowed,General,-180,Trans,non-Pro,,,,,,,0,CG--OD1,1.236,0.2,0,N-CA-C,113.422,0.9,1,1
+example_pdb_2f1c.pdb,ecloud, A 185  ASN,94.32,78.27,0.71, H   ,  ND2, A 185  ASN,,0,OUTLIER,OUTLIER,17.39,Favored,General,-176.46,Trans,non-Pro,,,,,,,0,CG--OD1,1.242,0.6,0,N-CA-C,113.454,0.9,2,2
+example_pdb_2f1c.pdb,ecloud, A 186  GLY,51.78,51.78,0.67, H   ,  HB3, A 221  ASP,,,,,79.59,Favored,Glycine,170.44,Trans,non-Pro,,,,,,,0,CA--C,1.526,0.6,0,CA-C-N,117.816,0.8,1,1
+example_pdb_2f1c.pdb,ecloud, A 187  GLU,82.63,54.72,0.62, HB2 , HD21, A 219  ASN,,30.5,Favored,mt-10,35.2,Favored,General,-174.85,Trans,non-Pro,,,,,,,0,C--O,1.244,0.6,0,CA-CB-CG,109.681,2.2,1,1
+example_pdb_2f1c.pdb,ecloud, A 188  PHE,45.36,45.36,,,,,,47.7,Favored,p90,29.5,Favored,General,-178.8,Trans,non-Pro,,,,,,,0,C--O,1.247,0.8,0,C-CA-CB,107.615,1.3,0,0
+example_pdb_2f1c.pdb,ecloud, A 189  SER,52.04,47.62,0.76,  HB2, HD3 , A 175  ARG,,44,Favored,t,25.72,Favored,General,174.26,Trans,non-Pro,,,,,,,0,CB--OG,1.41,0.4,0,CA-CB-OG,109.331,0.9,1,1
+example_pdb_2f1c.pdb,ecloud, A 190  THR,54.18,41.83,,,,,,90.8,Favored,m,24.42,Favored,General,179.16,Trans,non-Pro,,,,,,,0,CB--CG2,1.545,0.7,0,C-CA-CB,106.934,1.0,0,0
+example_pdb_2f1c.pdb,ecloud, A 191  GLN,53.37,39.18,,,,,,55.9,Favored,mt0,46.83,Favored,General,177.03,Trans,non-Pro,,,,,,,0,CA--C,1.509,0.8,0,C-CA-CB,107.587,1.3,0,0
+example_pdb_2f1c.pdb,ecloud, A 192  GLU,51.39,35.87,,,,,,85,Favored,mt-10,39.67,Favored,General,-178.1,Trans,non-Pro,,,,,,,0,N--CA,1.437,1.1,0,C-CA-CB,105.508,2.4,0,0
+example_pdb_2f1c.pdb,ecloud, A 193  ILE,36.79,31.96,0.49,HG12 , HD11, A 214  LEU,,24.4,Favored,mm,28.31,Favored,Ile or Val,158.96,Trans,non-Pro,,,,,,,0,CA--C,1.502,1.1,0,C-CA-CB,106.985,2.3,1,1
+example_pdb_2f1c.pdb,ecloud, A 194  ARG,39.54,36.45,,,,,,59.6,Favored,mtt180,51.95,Favored,General,179.82,Trans,non-Pro,,,,,,,0,CG--CD,1.571,1.7,0,CG-CD-NE,108.837,1.4,0,0
+example_pdb_2f1c.pdb,ecloud, A 195  ALA,31.78,31.78,,,,,,,,,47.15,Favored,General,-174.79,Trans,non-Pro,,,,,,,0,CA--CB,1.59,2.1,0,C-N-CA,120.083,0.9,0,0
+example_pdb_2f1c.pdb,ecloud, A 196  TYR,31.85,27.79,,,,,,10.2,Favored,m-80,43.64,Favored,General,-174.46,Trans,non-Pro,,,,,,,0,CG--CD2,1.415,1.2,0,C-CA-CB,106.399,1.9,0,0
+example_pdb_2f1c.pdb,ecloud, A 197  LEU,40.06,29.28,,,,,,7.3,Favored,tp,65.96,Favored,Pre-Pro,172.13,Trans,non-Pro,,,,,,,0,CA--C,1.555,1.4,0,CB-CG-CD2,114.362,1.2,0,0
+example_pdb_2f1c.pdb,ecloud, A 198  PRO,33.95,33.11,,,,,,0.7,Allowed,Cg_endo,15.34,Favored,Trans-Pro,-174.87,Trans,Pro,,,,,,,0,N--CA,1.486,1.3,0,C-CA-CB,107.315,1.5,0,0
+example_pdb_2f1c.pdb,ecloud, A 199  LEU,37.8,36.49,0.47, HD23, HB  , A 165  VAL,,8.1,Favored,mt,49.66,Favored,General,178.16,Trans,non-Pro,,,,,,,0,CG--CD2,1.56,1.2,0,C-CA-CB,107.917,1.1,1,1
+example_pdb_2f1c.pdb,ecloud, A 200  THR,62.69,45.53,0.44,  O  ,HG23 , A 164  THR,,43.5,Favored,m,11.36,Favored,General,179.24,Trans,non-Pro,,,,,,,0,CA--C,1.501,1.2,0,N-CA-C,106.088,1.8,1,1
+example_pdb_2f1c.pdb,ecloud, A 201  LEU,57.41,54.08,,,,,,0.1,OUTLIER,OUTLIER,1.76,Allowed,General,-178.14,Trans,non-Pro,,,,,,,0,CG--CD1,1.502,0.6,0,C-N-CA,120.241,0.8,1,1
+example_pdb_2f1c.pdb,ecloud, A 202  GLY,55.42,55.42,,,,,,,,,5.73,Favored,Glycine,-176.46,Trans,non-Pro,,,,,,,0,C--N,1.325,0.3,0,N-CA-C,108.739,1.6,0,0
+example_pdb_2f1c.pdb,ecloud, A 203  ASN,52.78,52.18,0.53, ND2 ,  OE1, A 245  GLN,,30.1,Favored,m110,37.8,Favored,General,178.94,Trans,non-Pro,,,,,,,0,C--O,1.22,0.5,0,N-CA-CB,111.808,0.8,1,1
+example_pdb_2f1c.pdb,ecloud, A 204  HIS,51.78,48.11,,,,,,8.3,Favored,m-70,32.67,Favored,General,175.4,Trans,non-Pro,,,,,,,0,CA--CB,1.508,1.1,0,C-CA-CB,107.04,1.6,0,0
+example_pdb_2f1c.pdb,ecloud, A 205  SER,50.41,38.7,,,,,,5.8,Favored,m,54.84,Favored,General,166.64,Trans,non-Pro,,,,,,,0,CA--C,1.509,0.8,0,C-CA-CB,107.668,1.3,0,0
+example_pdb_2f1c.pdb,ecloud, A 206  VAL,44.08,34.88,,,,,,31.9,Favored,t,39.94,Favored,Ile or Val,177.99,Trans,non-Pro,,,,,,,0,CA--C,1.508,0.8,0,N-CA-C,106.363,1.7,0,0
+example_pdb_2f1c.pdb,ecloud, A 207  THR,40.45,34.68,,,,,,32.4,Favored,m,31.23,Favored,Pre-Pro,175.32,Trans,non-Pro,,,,,,,0,N--CA,1.445,0.7,0,OG1-CB-CG2,107.402,0.9,0,0
+example_pdb_2f1c.pdb,ecloud, A 208  PRO,35.64,35.06,,,,,,73.4,Favored,Cg_endo,44.58,Favored,Trans-Pro,164.58,Trans,Pro,,,,,,,0,CA--CB,1.551,1.0,0,C-N-CD,130.932,1.4,0,0
+example_pdb_2f1c.pdb,ecloud, A 209  TYR,41.09,30.9,,,,,,52.8,Favored,p90,34.26,Favored,General,-177.97,Trans,non-Pro,,,,,,,0,CB--CG,1.536,1.1,0,C-N-CA,120.085,0.9,0,0
+example_pdb_2f1c.pdb,ecloud, A 210  THR,41.83,30.54,,,,,,4.4,Favored,t,35.82,Favored,General,177.74,Trans,non-Pro,,,,,,,0,C--O,1.256,1.2,0,C-CA-CB,111.126,0.9,0,0
+example_pdb_2f1c.pdb,ecloud, A 211  ARG,41.82,41.82,,,,,,59,Favored,mtt180,53.13,Favored,General,168.53,Trans,non-Pro,,,,,,,0,CA--C,1.481,2.1,0,N-CA-CB,113.164,1.6,0,0
+example_pdb_2f1c.pdb,ecloud, A 212  ILE,75.4,30.35,,,,,,18.4,Favored,mm,51.03,Favored,Ile or Val,-179.62,Trans,non-Pro,,,,,,,0,N--CA,1.442,0.8,0,N-CA-C,107.047,1.4,0,0
+example_pdb_2f1c.pdb,ecloud, A 213  GLY,43.68,43.68,,,,,,,,,45.34,Favored,Glycine,176.87,Trans,non-Pro,,,,,,,0,N--CA,1.464,0.8,0,O-C-N,122.108,0.6,0,0
+example_pdb_2f1c.pdb,ecloud, A 214  LEU,48.32,48.32,0.49, HD11,HG12 , A 193  ILE,,63.9,Favored,mt,6.77,Favored,General,178.52,Trans,non-Pro,,,,,,,0,CA--C,1.506,0.9,0,C-N-CA,119.904,1.0,1,1
+example_pdb_2f1c.pdb,ecloud, A 215  ASP,80,50.65,,,,,,25,Favored,t70,2.39,Favored,General,-178.03,Trans,non-Pro,,,,,,,0,C--N,1.31,1.3,0,N-CA-C,107.739,1.2,0,0
+example_pdb_2f1c.pdb,ecloud, A 216  ARG,104.34,62.69,0.44, HD2 ,  O  , A 231  ALA,,0.1,OUTLIER,OUTLIER,12.76,Favored,General,173.43,Trans,non-Pro,,,,,,,0,CB--CG,1.502,0.6,0,CA-C-N,114.998,0.6,2,2
+example_pdb_2f1c.pdb,ecloud, A 217  TRP,64.98,61.17,,,,,,56.4,Favored,p-90,33.66,Favored,General,175.11,Trans,non-Pro,,,,,,,0,N--CA,1.445,0.7,0,N-CA-C,105.716,1.9,0,0
+example_pdb_2f1c.pdb,ecloud, A 218  SER,80.83,80.83,0.45, O   ,  CG , A 228  ARG,,0.7,Allowed,p,44.61,Favored,General,170.32,Trans,non-Pro,,,,,,,0,CA--C,1.494,1.5,0,N-CA-C,102.74,3.0,1,1
+example_pdb_2f1c.pdb,ecloud, A 219  ASN,97.9,97.9,0.62, CA  ,  HG3, A 228  ARG,0.29,0.1,OUTLIER,OUTLIER,4.25,Favored,General,176.28,Trans,non-Pro,,,,,,,0,CB--CG,1.501,0.6,0,C-N-CA,116.591,2.8,3,3
+example_pdb_2f1c.pdb,ecloud, A 220  TRP,132.14,112.56,0.74,  HZ2, HB3 , A 184  ASN,,37.3,Favored,p-90,0.02,OUTLIER,General,-159.32,Trans,non-Pro,,,,,,,0,CA--C,1.544,0.9,0,N-CA-C,119.853,3.2,2,2
+example_pdb_2f1c.pdb,ecloud, A 221  ASP,101.32,101.32,0.67,  HB3, H   , A 186  GLY,,1.3,Allowed,t70,2.27,Favored,General,-178.38,Trans,non-Pro,,,,,,,0,CB--CG,1.53,0.5,0,C-N-CA,119.891,1.0,1,1
+example_pdb_2f1c.pdb,ecloud, A 222  TRP,93.79,93.79,0.52, CG  ,  N  , A 223  GLN,,17.5,Favored,t-100,0.07,Allowed,General,-161.11,Trans,non-Pro,,,,,,,0,CE3--CZ3,1.409,0.9,0,N-CA-C,116.401,1.9,1,1
+example_pdb_2f1c.pdb,ecloud, A 223  GLN,121.51,121.51,0.95, HB2 ,  HA , A 228  ARG,,0,OUTLIER,OUTLIER,0.01,OUTLIER,General,176.57,Trans,non-Pro,,,,,,,0,CA--C,1.517,0.4,0,C-N-CA,124.139,1.4,3,3
+example_pdb_2f1c.pdb,ecloud, A 224  ASP,138.99,138.99,0.54, O   ,  N  , A 226  ILE,,16.1,Favored,m-30,0.64,Allowed,General,-178.29,Trans,non-Pro,,,,,,,0,N--CA,1.449,0.5,0,CA-C-O,119.891,0.5,1,1
+example_pdb_2f1c.pdb,ecloud, A 225  ASP,158.77,158.77,,,,,,5.9,Favored,m-30,0.01,OUTLIER,General,-177.82,Trans,non-Pro,,,,,,,0,CA--C,1.517,0.4,0,CA-C-N,114.769,0.7,1,1
+example_pdb_2f1c.pdb,ecloud, A 226  ILE,177.92,168.2,0.76, O   , HG12, A 226  ILE,,0,OUTLIER,OUTLIER,0.01,OUTLIER,Ile or Val,172.8,Trans,non-Pro,,,,,,,0,CA--CB,1.554,0.5,0,C-N-CA,123.872,1.2,3,3
+example_pdb_2f1c.pdb,ecloud, A 227  GLU,173.21,164.77,0.88, O   ,  HB3, A 228  ARG,,0.2,OUTLIER,OUTLIER,0.02,OUTLIER,General,178.99,Trans,non-Pro,,,,,,,0,CA--C,1.53,0.3,0,N-CA-C,114.589,1.3,3,3
+example_pdb_2f1c.pdb,ecloud, A 228  ARG,148.57,148.57,0.95,  HA , HB2 , A 223  GLN,,0,OUTLIER,OUTLIER,0,OUTLIER,General,-172.38,Trans,non-Pro,,,,,,,0,CB--CG,1.499,0.7,0,C-N-CA,125.876,2.3,3,3
+example_pdb_2f1c.pdb,ecloud, A 229  GLU,142.83,140.26,0.53, HG2 ,  H  , A 230  GLY,,20.9,Favored,tt0,0.35,Allowed,General,-168.75,Trans,non-Pro,,,,,,,0,CA--C,1.541,0.7,0,N-CA-C,115.194,1.5,1,1
+example_pdb_2f1c.pdb,ecloud, A 230  GLY,130.02,130.02,0.53,  H  , HG2 , A 229  GLU,,,,,0.02,OUTLIER,Glycine,179.47,Trans,non-Pro,,,,,,,0,C--N,1.335,0.5,0,N-CA-C,118.383,1.8,2,2
+example_pdb_2f1c.pdb,ecloud, A 231  ALA,109.74,109.74,0.44,  O  , HD2 , A 216  ARG,,,,,55.2,Favored,General,172.37,Trans,non-Pro,,,,,,,0,N--CA,1.467,0.5,0,CA-C-N,118.393,1.1,1,1
+example_pdb_2f1c.pdb,ecloud, A 232  ASP,112.62,99.57,,,,,0.27,0.8,Allowed,t0,20.99,Favored,General,-168.28,Trans,non-Pro,,,,,,,0,CB--CG,1.544,1.1,0,N-CA-C,118.144,2.6,1,1
+example_pdb_2f1c.pdb,ecloud, A 233  PHE,90.73,76.91,,,,,,88.6,Favored,m-80,30.79,Favored,General,-168.48,Trans,non-Pro,,,,,,,0,C--O,1.199,1.6,0,C-CA-CB,107.01,1.6,0,0
+example_pdb_2f1c.pdb,ecloud, A 234  ASN,56.15,50.93,,,,,,63.5,Favored,m-40,18.62,Favored,General,161.36,Trans,non-Pro,,,,,,,0,CA--CB,1.488,2.1,0,CA-CB-CG,111.015,1.6,0,0
+example_pdb_2f1c.pdb,ecloud, A 235  ARG,47.89,37.92,,,,,,26.2,Favored,ttt180,19,Favored,General,-175.41,Trans,non-Pro,,,,,,,0,CB--CG,1.414,3.5,1,CB-CG-CD,96.031,6.6,1,1
+example_pdb_2f1c.pdb,ecloud, A 236  VAL,54.8,35.01,,,,,,46.1,Favored,t,43.41,Favored,Ile or Val,176.03,Trans,non-Pro,,,,,,,0,CB--CG2,1.547,0.8,0,N-CA-C,106.203,1.7,0,0
+example_pdb_2f1c.pdb,ecloud, A 237  GLY,38.5,38.5,,,,,,,,,30.09,Favored,Glycine,-175.95,Trans,non-Pro,,,,,,,0,C--O,1.253,1.1,0,CA-C-O,122.859,1.0,0,0
+example_pdb_2f1c.pdb,ecloud, A 238  LEU,52.06,34.95,,,,,,47.1,Favored,tp,8.57,Favored,General,-178.05,Trans,non-Pro,,,,,,,0,N--CA,1.439,1.0,0,N-CA-C,106.279,1.7,0,0
+example_pdb_2f1c.pdb,ecloud, A 239  PHE,55.71,41.15,,,,,,16.8,Favored,t80,54.82,Favored,General,174.5,Trans,non-Pro,,,,,,,0,CG--CD2,1.394,0.5,0,N-CA-C,107.149,1.4,0,0
+example_pdb_2f1c.pdb,ecloud, A 240  TYR,55.93,38.5,,,,,,39.5,Favored,t80,54.29,Favored,General,177.9,Trans,non-Pro,,,,,,,0,CE2--CZ,1.401,0.9,0,CA-CB-CG,110.866,1.7,0,0
+example_pdb_2f1c.pdb,ecloud, A 241  GLY,40.65,40.65,,,,,,,,,16.79,Favored,Glycine,178.26,Trans,non-Pro,,,,,,,0,N--CA,1.463,0.8,0,O-C-N,121.207,1.1,0,0
+example_pdb_2f1c.pdb,ecloud, A 242  TYR,64.69,38.95,,,,,,36.3,Favored,t80,28.6,Favored,General,173.59,Trans,non-Pro,,,,,,,0,CA--C,1.492,1.6,0,N-CA-CB,113.238,1.6,0,0
+example_pdb_2f1c.pdb,ecloud, A 243  ASP,66.85,47.26,,,,,,64,Favored,t0,42.42,Favored,General,-174.61,Trans,non-Pro,,,,,,,0,CA--C,1.535,0.5,0,C-CA-CB,111.711,0.8,0,0
+example_pdb_2f1c.pdb,ecloud, A 244  PHE,51.51,51.51,,,,,,82.5,Favored,m-80,59.48,Favored,General,-174.14,Trans,non-Pro,,,,,,,0,CD1--CE1,1.409,0.9,0,N-CA-C,114.394,1.2,0,0
+example_pdb_2f1c.pdb,ecloud, A 245  GLN,75.33,61.09,0.53,  OE1, ND2 , A 203  ASN,,21.1,Favored,mm110,3.97,Favored,General,174.02,Trans,non-Pro,,,,,,,0,CA--C,1.537,0.6,0,N-CA-C,113.785,1.0,1,1
+example_pdb_2f1c.pdb,ecloud, A 246  ASN,61.44,60.41,,,,,,20.2,Favored,p0,12.47,Favored,General,175.87,Trans,non-Pro,,,,,,,0,C--O,1.216,0.7,0,C-CA-CB,109.122,0.5,0,0
+example_pdb_2f1c.pdb,ecloud, A 247  GLY,47.35,47.35,,,,,,,,,26.91,Favored,Glycine,-175.62,Trans,non-Pro,,,,,,,0,CA--C,1.525,0.5,0,CA-C-N,116.931,0.4,0,0
+example_pdb_2f1c.pdb,ecloud, A 248  LEU,43.96,43.96,,,,,,37.8,Favored,tp,35.3,Favored,General,175.89,Trans,non-Pro,,,,,,,0,CA--C,1.55,1.2,0,C-CA-CB,107.949,1.1,0,0
+example_pdb_2f1c.pdb,ecloud, A 249  SER,43.52,39.43,,,,,,81.8,Favored,p,41.14,Favored,General,168.86,Trans,non-Pro,,,,,,,0,C--O,1.25,1.0,0,C-CA-CB,112.092,1.0,0,0
+example_pdb_2f1c.pdb,ecloud, A 250  VAL,49.18,44.49,,,,,,31,Favored,m,39.88,Favored,Ile or Val,175.79,Trans,non-Pro,,,,,,,0,CB--CG2,1.479,1.3,0,C-CA-CB,107.958,1.8,0,0
+example_pdb_2f1c.pdb,ecloud, A 251  SER,42.25,41.12,,,,,,84.6,Favored,p,48.36,Favored,General,-178.38,Trans,non-Pro,,,,,,,0,CA--C,1.54,0.7,0,CA-C-O,122.164,0.8,0,0
+example_pdb_2f1c.pdb,ecloud, A 252  LEU,59.13,41.35,,,,,,93.2,Favored,mt,36.02,Favored,General,-178.92,Trans,non-Pro,,,,,,,0,N--CA,1.439,1.0,0,N-CA-C,105.069,2.1,0,0
+example_pdb_2f1c.pdb,ecloud, A 253  GLU,61.8,34.8,,,,,,79.3,Favored,tt0,46.09,Favored,General,179.63,Trans,non-Pro,,,,,,,0,N--CA,1.436,1.1,0,CA-CB-CG,110.275,1.9,0,0
+example_pdb_2f1c.pdb,ecloud, A 254  TYR,55.45,32.75,,,,,,83.6,Favored,t80,24.88,Favored,General,175.15,Trans,non-Pro,,,,,,,0,CB--CG,1.485,1.2,0,CA-CB-CG,107.957,3.3,0,0
+example_pdb_2f1c.pdb,ecloud, A 255  ALA,37.29,37.29,,,,,,,,,38.09,Favored,General,176.21,Trans,non-Pro,,,,,,,0,CA--CB,1.498,0.7,0,C-N-CA,119.918,1.0,0,0
+example_pdb_2f1c.pdb,ecloud, A 256  PHE,43.64,38.86,,,,,,74.6,Favored,t80,53.82,Favored,General,175.99,Trans,non-Pro,,,,,,,0,CD2--CE2,1.417,1.2,0,C-N-CA,122.838,0.6,0,0
+example_pdb_2f1c.pdb,ecloud, A 257  GLU,69.33,37.28,,,,,,40.3,Favored,tt0,52.22,Favored,General,-178.35,Trans,non-Pro,,,,,,,0,CA--CB,1.507,1.2,0,CB-CG-CD,109.313,1.9,0,0
+example_pdb_2f1c.pdb,ecloud, A 258  TRP,52.95,49.06,,,,,,16.2,Favored,p90,15.6,Favored,General,175.65,Trans,non-Pro,,,,,,,0,CE3--CZ3,1.409,0.9,0,CA-CB-CG,116.238,1.4,0,0
+example_pdb_2f1c.pdb,ecloud, A 259  GLN,91.65,84.61,0.78,HE21 ,  CB , A 261  ALA,,35,Favored,tt0,27.07,Favored,General,-175.82,Trans,non-Pro,,,,,,,0,CG--CD,1.539,0.9,0,N-CA-C,104.07,2.5,1,1
+example_pdb_2f1c.pdb,ecloud, A 260  ASP,110.1,110.1,,,,,,2.4,Favored,p0,4.83,Favored,General,-178.61,Trans,non-Pro,,,,,,,0,N--CA,1.473,0.8,0,N-CA-CB,113.051,1.5,0,0
+example_pdb_2f1c.pdb,ecloud, A 261  ALA,114.31,114.31,0.78,  CB ,HE21 , A 259  GLN,,,,,0.23,Allowed,General,177.31,Trans,non-Pro,,,,,,,0,C--O,1.235,0.2,0,CA-C-N,114.059,1.1,1,1
+example_pdb_2f1c.pdb,ecloud, A 262  ASP,139.6,136.52,0.77, O   ,  HB2, A 263  GLU,,0,OUTLIER,OUTLIER,42.19,Favored,General,-166.98,Trans,non-Pro,,,,,,,0,N--CA,1.45,0.4,0,N-CA-CB,107.657,1.7,2,2
+example_pdb_2f1c.pdb,ecloud, A 263  GLU,149.45,144.73,0.77,  HB2, O   , A 262  ASP,,43.1,Favored,tt0,0,OUTLIER,General,-176.53,Trans,non-Pro,,,,,,,0,CA--C,1.517,0.4,0,N-CA-C,106.968,1.4,2,2
+example_pdb_2f1c.pdb,ecloud, A 264  GLY,141.01,141.01,0.69,  H  , HG2 , A 263  GLU,,,,,3.98,Favored,Glycine,162.18,Trans,non-Pro,,,,,,,0,N--CA,1.446,0.3,0,N-CA-C,106.633,2.3,1,1
+example_pdb_2f1c.pdb,ecloud, A 265  ASP,126.67,123.02,,,,,,0.3,Allowed,m-30,7.8,Favored,General,179.17,Trans,non-Pro,,,,,,,0,N--CA,1.448,0.5,0,CA-C-N,114.919,0.6,0,0
+example_pdb_2f1c.pdb,ecloud, A 266  SER,86.24,86.24,,,,,,87.1,Favored,p,16.36,Favored,General,174.48,Trans,non-Pro,,,,,,,0,C--N,1.322,0.5,0,N-CA-C,105.726,1.9,0,0
+example_pdb_2f1c.pdb,ecloud, A 267  ASP,66.83,60.81,,,,,,68.6,Favored,m-30,58.35,Favored,General,-173.5,Trans,non-Pro,,,,,,,0,CA--C,1.539,0.7,0,N-CA-C,114.83,1.4,0,0
+example_pdb_2f1c.pdb,ecloud, A 268  LYS,61.25,52.96,,,,,,2.3,Favored,mttt,11.84,Favored,General,174.47,Trans,non-Pro,,,,,,,0,CG--CD,1.497,0.8,0,C-N-CA,123.65,1.1,0,0
+example_pdb_2f1c.pdb,ecloud, A 269  PHE,61.31,40.34,,,,,,82.3,Favored,m-80,36.98,Favored,General,-171.77,Trans,non-Pro,,,,,,,0,CA--C,1.51,0.7,0,CA-CB-CG,113.157,0.6,0,0
+example_pdb_2f1c.pdb,ecloud, A 270  HIS,42.95,36.5,,,,,,64.6,Favored,m-70,46.72,Favored,General,178.34,Trans,non-Pro,,,,,,,0,CA--C,1.505,1.0,0,N-CA-C,106.48,1.6,0,0
+example_pdb_2f1c.pdb,ecloud, A 271  TYR,56.51,33.38,,,,,,87.8,Favored,m-80,43.54,Favored,General,179.22,Trans,non-Pro,,,,,,,0,CD1--CE1,1.414,1.1,0,N-CA-C,104.717,2.2,0,0
+example_pdb_2f1c.pdb,ecloud, A 272  ALA,39.48,39.48,,,,,,,,,45.42,Favored,General,176.62,Trans,non-Pro,,,,,,,0,CA--CB,1.489,1.0,0,N-CA-C,107.062,1.4,0,0
+example_pdb_2f1c.pdb,ecloud, A 273  GLY,37.8,37.8,,,,,,,,,8.8,Favored,Glycine,-174.78,Trans,non-Pro,,,,,,,0,CA--C,1.506,0.5,0,N-CA-C,108.503,1.7,0,0
+example_pdb_2f1c.pdb,ecloud, A 274  VAL,46.24,36.8,,,,,,90.5,Favored,t,60.65,Favored,Ile or Val,171.69,Trans,non-Pro,,,,,,,0,CA--CB,1.513,1.0,0,N-CA-C,107.38,1.3,0,0
+example_pdb_2f1c.pdb,ecloud, A 275  GLY,37.7,37.7,,,,,,,,,21.04,Favored,Glycine,-174.11,Trans,non-Pro,,,,,,,0,CA--C,1.501,0.8,0,N-CA-C,111.108,0.8,0,0
+example_pdb_2f1c.pdb,ecloud, A 276  VAL,41.61,35.18,,,,,,7.9,Favored,p,48.4,Favored,Ile or Val,171.75,Trans,non-Pro,,,,,,,0,CB--CG1,1.567,1.4,0,CA-CB-CG1,112.561,1.3,0,0
+example_pdb_2f1c.pdb,ecloud, A 277  ASN,40.64,40.64,0.42, HD21, HB3 , A   9  ASN,,28.7,Favored,t0,47.41,Favored,General,176.93,Trans,non-Pro,,,,,,,0,CB--CG,1.559,1.7,0,O-C-N,120.715,1.4,1,1
+example_pdb_2f1c.pdb,ecloud, A 278  TYR,48.06,37.02,,,,,,66.4,Favored,t80,54.31,Favored,General,170.83,Trans,non-Pro,,,,,,,0,C--O,1.25,0.9,0,C-N-CA,118.748,1.6,0,0
+example_pdb_2f1c.pdb,ecloud, A 279  SER,52.95,48.85,,,,,,2.7,Favored,t,50.58,Favored,General,-175.9,Trans,non-Pro,,,,,,,0,CA--C,1.507,0.8,0,CA-CB-OG,109.043,1.0,0,0
+example_pdb_2f1c.pdb,ecloud, A 280  PHE,58.82,54.18,,,,,,1.2,Allowed,p90,,,,177.27,Trans,non-Pro,,,,,,,0,C--OXT,1.25,1.0,0,C-N-CA,119.853,1.0,0,0

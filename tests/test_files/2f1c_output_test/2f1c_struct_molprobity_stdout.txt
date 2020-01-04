@@ -1,0 +1,4 @@
+
+#INPUT  : /home/ks17361/Rosetta/2f1c/molprobity
+#pdbFileName:x-H_type:chains:residues:nucacids:resolution:rvalue:rfree:clashscore:clashscoreB<40:minresol:maxresol:n_samples:pct_rank:pct_rank40:cbeta>0.25:numCbeta:rota<1%:numRota:ramaOutlier:ramaAllowed:ramaFavored:numRama:numbadbonds:numbonds:pct_badbonds:pct_resbadbonds:numbadangles:numangles:pct_badangles:pct_resbadangles:MolProbityScore:Mol_pct_rank
+example_pdb_2f1c.pdb:ecloud:1:278:0::::18.24:4.35:0:9999:1784:37:88:4:251:21:233:10:16:250:276:0:2366:0.00:0.00:1:3219:0.03:0.36:3.017:22

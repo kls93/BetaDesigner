@@ -45,3 +45,49 @@ elif aa_propensity_scale.shape[0] == 3:
                     aa_propensity_scale[0][0][-1], node_val_2,
                     aa_propensity_scale[1][0][0], aa_propensity_scale[1][-1][0]
               ))
+
+
+
+
+
+# Test for writing output PDB files. But can't test for this with circleci
+# because needs SCWRL4 to pack side chains...
+def test_write_output_pdb(self):
+    """
+    """
+
+    structures_dict, bude_energies_dict = self.gen_structures_dict()
+
+    exp_model_info = pd.DataFrame({
+        'structure': ['int_1', 'int_2', 'int_3', 'int_4'],
+        'sequence': ['AAA', 'ANR', 'RAN', 'NRN'],
+        'energy': [-1.5490, -4.4122, -2.3936, -3.8846],
+        'res_id': [{'1': 'ALA', '2': 'ALA', '3': 'ALA'},
+                   {'1': 'ALA', '2': 'ASN', '3': 'ARG'},
+                   {'1': 'ARG', '2': 'ALA', '3': 'ASN'},
+                   {'1': 'ASN', '2': 'ARG', '3': 'ASN'}]
+    })
+
+    # Checks expected files have been written
+    assert os.path.isdir('Program_output/')
+    for model in exp_model_info['structure']:
+        assert os.path.isdir('Program_output/{}'.format(model))
+        assert os.path.isfile('Program_output/{}/{}.pdb'.format(model, model))
+        assert os.path.isfile('Program_output/{}/{}.fasta'.format(model, model))
+
+    # Checks energies calculated by BUDE.
+    with open('Program_output/Model_energies.txt', 'r') as f:
+        model_energies = f.readlines()
+    for line in model_energies:
+        model = line.split(':')
+        energy = round(float(line.split(':')), 4)
+        model_index = exp_model_info['structure'].tolist().index(model)
+        self.assertEqual(energy, exp_model_info['energy'][model_index])
+
+    # Checks output FASTA files. Assumes that ISAMBARD is writing output
+    # PDB file correctly (since there are tests for this within ISAMBARD)
+    for model_index, model in enumerate(exp_model_info['structure'].tolist()):
+        with open('Program_output/{}/{}.fasta'.format(model, model), 'r') as f:
+            fasta_lines = f.readlines()
+        self.assertEqual(fasta_lines[0], '>{}'.format(model))
+        self.assertEqual(fasta_lines[1], exp_model_info['sequence'][model_index])

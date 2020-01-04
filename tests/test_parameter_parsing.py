@@ -10,4 +10,4 @@ class testParameterParsing(unittest.TestCase):
         """
         """
 
-        return
+        pass
