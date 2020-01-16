@@ -33,12 +33,14 @@ def main():
     # Defines program params from input file / user input
     params = find_params(args)
 
-    # Deletes parameters to be optimised with hyperopt
-    del params['unfitfraction']
-    del params['crossoverprob']
-    del params['mutationprob']
-    del params['propvsfreqweight']
-    del params['jobid']
+    # Checks none of the hyperparameters to be optimised with hyperopt have
+    # been defined as fixed values
+    if any(
+        x in params.keys() for x in ['unfitfraction', 'crossoverprob',
+        'mutationprob', 'propensityweight']
+    ):
+        raise Exception('Parameter set aside for Bayesian optimisation has '
+                        'been defined in the program input')
 
     # Checks that only one structure is listed in the input dataframe
     if len(set(params['inputdataframe']['domain_ids'].tolist())) != 1:
@@ -81,12 +83,20 @@ def main():
         # propensity_weights to uniform ranges between 0 and 1 for optimisation
         # via a tree parzen estimator with hyperopt
         bayes_params = {}
+        """
         bayes_params['unfitfraction'] = hp.uniform('unfitfraction', 0, 1)
         bayes_params['crossoverprob'] = hp.uniform('crossoverprob', 0, 1)
         bayes_params['mutationprob'] = hp.uniform('mutationprob', 0, 1)
-        bayes_params['propvsfreqweight'] = hp.uniform('propvsfreqweight', 0, 1)
+        bayes_params['propensityweight'] = hp.uniform('propensityweight', 0, 1)
+        """
+        bayes_params['unfitfraction'] = 0.3
+        bayes_params['crossoverprob'] = 0.4
+        bayes_params['mutationprob'] = 0.2
+        bayes_params['propensityweight'] = 0.5
         bayes_params['sequencesdict'] = orig_sequences_dict
         bayes_params = {**copy.deepcopy(params), **bayes_params}
+
+        summed_fitness = run_genetic_algorithm(bayes_params)
 
         while run_opt is True:
             best_params = fmin(fn=run_genetic_algorithm, space=bayes_params,
@@ -98,7 +108,7 @@ def main():
                 # If best values are within 1% of previous OR number of trials > 1000000
                 similarity_dict = {}
                 for key in list(best_params.keys()):
-                    if key in ['unfitfraction', 'crossoverprob', 'mutationprob', 'propvsfreqweight']:
+                    if key in ['unfitfraction', 'crossoverprob', 'mutationprob', 'propensityweight']:
                         if (
                                ((0.99*current_best[key]) <= best_params[key] <= (1.01*current_best[key]))
                             or max_evals >= 1000000
@@ -138,7 +148,7 @@ def main():
     best_bayes_params = {'unfitfraction': best_params['unfitfraction'],
                          'crossoverprob': best_params['crossoverprob'],
                          'mutationprob': best_params['mutationprob'],
-                         'propvsfreqweight': best_params['propvsfreqweight'],
+                         'propensityweight': best_params['propensityweight'],
                          'sequencesdict': sequences_dict}
     output = gen_output(params, best_bayes_params)
     structures_dict, bude_struct_energies_dict = output.write_pdb(sequences_dict)

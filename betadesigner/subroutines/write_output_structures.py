@@ -213,7 +213,7 @@ class gen_output(initialise_ga_object):
         self.unfit_fraction = best_bayes_params['unfitfraction']
         self.crossover_prob = best_bayes_params['crossoverprob']
         self.mutation_prob = best_bayes_params['mutationprob']
-        self.propensity_weight = best_bayes_params['propvsfreqweight']
+        self.propensity_weight = best_bayes_params['propensityweight']
 
     def write_pdb(self, sequences_dict):
         """

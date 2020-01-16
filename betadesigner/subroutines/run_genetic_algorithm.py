@@ -7,6 +7,7 @@
 import budeff
 import copy
 import isambard
+import pickle
 import random
 import isambard.modelling as modelling
 import networkx as nx
@@ -83,7 +84,7 @@ class run_ga_calcs(initialise_ga_object):
 
     def __init__(self, params, test=False):
         initialise_ga_object.__init__(self, params, test)
-        self.propensity_weight = params['propvsfreqweight']
+        self.propensity_weight = params['propensityweight']
         self.unfit_fraction = params['unfitfraction']
         self.crossover_prob = params['crossoverprob']
         self.mutation_prob = params['mutationprob']
@@ -323,8 +324,8 @@ class run_ga_calcs(initialise_ga_object):
             propensity = propensity_array[1][index_prop]
             frequency = frequency_array[1][index_freq]
 
-            probability = (  (self.propensity_weight['propensity']*propensity)
-                           + (self.propensity_weight['frequency']*frequency))
+            probability = (  (self.propensity_weight*propensity)
+                           + ((1-self.propensity_weight)*frequency))
             network_fitness_scores[network_num] = probability
 
         return network_fitness_scores
@@ -732,6 +733,7 @@ def run_genetic_algorithm(params):
 
     print('Running genetic algorithm')
 
+    """
     # Unpacks parameters (unfortunately hyperopt can only feed a single
     # parameter into the objective function, so can't use class inheritance to
     # avoid this issue, and am instead using pickling)
@@ -740,6 +742,7 @@ def run_genetic_algorithm(params):
         params = pickle.load(f)
     if type(params) != dict:
         raise TypeError('Data in {} is not a pickled dictionary'.format(input_params_file))
+    """
 
     # Records sequences and their fitnesses after each generation
     with open('{}/Program_output/Sequence_track.txt'.format(
@@ -757,9 +760,9 @@ def run_genetic_algorithm(params):
     while gen < params['maxnumgenerations']:
         gen += 1
         print('Generation {}'.format(gen))
-        with open('Program_output/Sequence_track.txt'.format(
-            params['workingdirectory']), 'w') as f:
-            f.write('\n\n\n\n\nGeneration {}\n'.format(count))
+        with open('{}/Program_output/Sequence_track.txt'.format(
+            params['workingdirectory']), 'a') as f:
+            f.write('\n\n\n\n\nGeneration {}\n'.format(gen))
 
         for surface in list(params['sequencesdict'].keys()):
             all_networks_dict = params['sequencesdict'][surface]
@@ -787,7 +790,9 @@ def run_genetic_algorithm(params):
                 pop_sizes = [params['populationsize']]
 
             for index, networks_dict in enumerate(all_networks_list):
-                # Measures fitness of sequences in starting population
+                # Measures fitness of sequences in starting population. N.B. If
+                # params['fitnessscoremethod'] == 'split', propensity scoring
+                # MUST be done first (i.e. index = 0)
                 if (
                     (params['fitnessscoremethod'] == 'propensity')
                     or
@@ -811,6 +816,18 @@ def run_genetic_algorithm(params):
                     ) = ga_calcs.measure_fitness_allatom(surface, networks_dict)
                     (network_fitness_scores
                     ) = ga_calcs.convert_energies_to_probabilities(network_energies)
+
+                # Records sequences output from this generation and their
+                # associated fitnesses. Doesn't record network number to avoid
+                # confusion (since is randomly reassigned in the next generation)
+                with open('{}/Program_output/Sequence_track.txt'.format(
+                    params['workingdirectory']), 'a') as f:
+                    f.write('{}\n'.format(surface))
+                    for network, G in networks_dict.items():
+                        sequence = ''.join([G.nodes[node]['aa_id'] for node in G.nodes])
+                        probability = network_fitness_scores[network]
+                        f.write('{}, {}\n'.format(sequence, probability))
+                    f.write('\n')
 
                 # Selects subpopulation for mating
                 if params['matingpopmethod'] == 'fittest':
@@ -840,7 +857,7 @@ def run_genetic_algorithm(params):
                     surface, mutated_pop_dict, mating_pop_dict, index
                 )
 
-                # Shuffles metworks dictionary so that in the case of a split
+                # Shuffles networks dictionary so that in the case of a split
                 # optimisation a mixture of parent and child networks are
                 # combined into the sub-classes whose fitnesses are measured by
                 # different methods in the following round of optimisation
@@ -858,21 +875,15 @@ def run_genetic_algorithm(params):
                 )
                 params['sequencesdict'][surface] = shuffled_merged_networks_dict
 
-                # Records sequences output from this generation and their
-                # associated fitnesses
-                with open('Program_output/Sequence_track.txt'.format(
-                    params['workingdirectory']), 'w') as f:
-                    f.write('{}\n'.format(surface))
-                    for network, G in params['sequencesdict'][surface].items():
-                        sequence = ''.join([G.nodes[node]['aa_id'] for node in G.nodes])
-                        probability = network_fitness_scores[network]
-                        f.write('{}, {}, {}\n'.format(network, sequence, probability))
-                    f.write('\n')
-
     # Calculates fitness of output sequences and filters population to maintain
     # the fittest 50%, plus sums the probabilities of the retained sequences and
     # returns this value (to be minimised with hyperopt)
     summed_fitness = 0
+
+    with open('{}/Program_output/Sequence_track.txt'.format(
+        params['workingdirectory']), 'a') as f:
+        f.write('\n\n\n\n\nOutput generation\n')
+
     for surface in list(params['sequencesdict'].keys()):
         networks_dict = params['sequencesdict'][surface]
 
@@ -887,6 +898,17 @@ def run_genetic_algorithm(params):
             (network_fitness_scores
             ) = ga_calcs.convert_energies_to_probabilities(network_energies)
 
+        # Records sequences output from this generation and their
+        # associated fitnesses. Records network number in this final generation.
+        with open('{}/Program_output/Sequence_track.txt'.format(
+            params['workingdirectory']), 'a') as f:
+            f.write('{}\n'.format(surface))
+            for network, G in networks_dict.items():
+                sequence = ''.join([G.nodes[node]['aa_id'] for node in G.nodes])
+                probability = network_fitness_scores[network]
+                f.write('{}, {}, {}\n'.format(network, sequence, probability))
+            f.write('\n')
+
         mating_pop_dict = ga_calcs.create_mat_pop_fittest(
             surface, networks_dict, network_fitness_scores,
             params['populationsize'], unfit_fraction=0
@@ -896,8 +918,11 @@ def run_genetic_algorithm(params):
         for network in params['sequencesdict'][surface].keys():
             summed_fitness += network_fitness_scores[network]
 
-    with open('Program_output/GA_output_sequences_dict.pkl'.format(
+    with open('{}/Program_output/GA_output_sequences_dict.pkl'.format(
         params['workingdirectory']), 'wb') as f:
         pickle.dump(params['sequencesdict'], f)
+
+    print(summed_fitness)
+    print(-summed_fitness)
 
     return -summed_fitness

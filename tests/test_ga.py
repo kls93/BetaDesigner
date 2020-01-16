@@ -42,6 +42,7 @@ def define_params():
               'swapstopprob': '',
               'mutationmethod': '',
               'populationsize': 2,
+              'propensitypopsize': 2*0.5,
               'maxnumgenerations': 10}
 
     return params
@@ -122,8 +123,7 @@ class testGeneticAlgorithm(unittest.TestCase):
         """
 
         params = define_params()
-        bayes_params = {'propvsfreqweight': {'propensity': 0.5,
-                                             'frequency': 0.5},
+        bayes_params = {'propensityweight': 0.5,
                         'unfitfraction': 0.2,
                         'crossoverprob': 0.1,
                         'mutationprob': 0.05}
@@ -159,8 +159,7 @@ class testGeneticAlgorithm(unittest.TestCase):
         network_propensities, network_frequencies = self.gen_network_prop_and_freq()
 
         # Test 1
-        bayes_params = {'propvsfreqweight': {'propensity': 0.5,
-                                             'frequency': 0.5},
+        bayes_params = {'propensityweight': 0.5,
                         'unfitfraction': 0.2,
                         'crossoverprob': 0.1,
                         'mutationprob': 0.05}
@@ -173,8 +172,7 @@ class testGeneticAlgorithm(unittest.TestCase):
         np.testing.assert_almost_equal(network_fitness_scores[2], 0.602910, decimal=5)
 
         # Test 2
-        bayes_params = {'propvsfreqweight': {'propensity': 0.8,
-                                             'frequency': 0.2},
+        bayes_params = {'propensityweight': 0.8,
                         'unfitfraction': 0.2,
                         'crossoverprob': 0.1,
                         'mutationprob': 0.05}
@@ -186,8 +184,7 @@ class testGeneticAlgorithm(unittest.TestCase):
         np.testing.assert_almost_equal(network_fitness_scores[2], 0.788185, decimal=5)
 
         # Test 3
-        bayes_params = {'propvsfreqweight': {'propensity': 1,
-                                             'frequency': 0},
+        bayes_params = {'propensityweight': 1,
                         'unfitfraction': 0.2,
                         'crossoverprob': 0.1,
                         'mutationprob': 0.05}
@@ -199,8 +196,7 @@ class testGeneticAlgorithm(unittest.TestCase):
         np.testing.assert_almost_equal(network_fitness_scores[2], 0.911702, decimal=5)
 
         # Test 4
-        bayes_params = {'propvsfreqweight': {'propensity': 0.6,
-                                             'frequency': 0.4},
+        bayes_params = {'propensityweight': 0.6,
                         'unfitfraction': 0.2,
                         'crossoverprob': 0.1,
                         'mutationprob': 0.05}
@@ -218,8 +214,7 @@ class testGeneticAlgorithm(unittest.TestCase):
         print('Testing convert_energies_to_probabilities()')
 
         params = define_params()
-        bayes_params = {'propvsfreqweight': {'propensity': 0.5,
-                                             'frequency': 0.5},
+        bayes_params = {'propensityweight': 0.5,
                         'unfitfraction': 0.75,
                         'crossoverprob': 0.1,
                         'mutationprob': 0.05}
@@ -260,8 +255,7 @@ class testGeneticAlgorithm(unittest.TestCase):
         """
 
         params = define_params()
-        bayes_params = {'propvsfreqweight': {'propensity': 0.5,
-                                             'frequency': 0.5},
+        bayes_params = {'propensityweight': 0.5,
                         'unfitfraction': 0.75,
                         'crossoverprob': 0.1,
                         'mutationprob': 0.05}
@@ -305,8 +299,7 @@ class testGeneticAlgorithm(unittest.TestCase):
         fit_test_dict, cross_test_dict = gen_sequence_networks()
 
         params = define_params()
-        bayes_params = {'propvsfreqweight': {'propensity': 0.5,
-                                             'frequency': 0.5},
+        bayes_params = {'propensityweight': 0.5,
                         'unfitfraction': 0.75,
                         'crossoverprob': 0.1,
                         'mutationprob': 0.05}
@@ -375,8 +368,7 @@ class testGeneticAlgorithm(unittest.TestCase):
         fit_test_dict, mut_test_dict = gen_sequence_networks()
 
         params = define_params()
-        bayes_params = {'propvsfreqweight': {'propensity': 0.5,
-                                             'frequency': 0.5},
+        bayes_params = {'propensityweight': 0.5,
                         'unfitfraction': 0.75,
                         'crossoverprob': 0.1,
                         'mutationprob': 0.2}
@@ -444,8 +436,7 @@ class testGeneticAlgorithm(unittest.TestCase):
         print('Testing add_children_to_parents()')
 
         params = define_params()
-        bayes_params = {'propvsfreqweight': {'propensity': 0.5,
-                                             'frequency': 0.5},
+        bayes_params = {'propensityweight': 0.5,
                         'unfitfraction': 0.75,
                         'crossoverprob': 0.1,
                         'mutationprob': 0.2}
