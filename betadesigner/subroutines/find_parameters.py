@@ -50,30 +50,56 @@ def calc_parent_voronoi_cluster(input_df, cluster_coords):
     return input_df
 
 
-def def_input_df_path(params):
+def def_input_df_path(params, test=False):
     """
     Defines absolute file path to input dataframe
     """
 
     try:
-        input_df = params['inputdataframepath']
-        if not os.path.isfile(input_df) or not input_df.endswith('.pkl'):
+        df_path = params['inputdataframepath']
+        if not os.path.isfile(df_path) or not df_path.endswith('.pkl'):
             print('File path to pickled input dataframe not recognised')
-            input_df = ''
+            df_path = ''
+        else:
+            input_df = pd.read_pickle(df_path)
+            if type(input_df) != pd.DataFrame:
+                print('Input file is not a dataframe')
+                df_path = ''
     except KeyError:
-        input_df = ''
+        df_path = ''
 
-    if input_df == '':
-        while not os.path.isfile(input_df) or not input_df.endswith('.pkl'):
-            print('Specify absolute file path of pickled input dataframe:')
-            input_df = '/' + input(prompt).replace('\\', '/').strip('/')
+    if df_path == '':
+        while not os.path.isfile(df_path) or not df_path.endswith('.pkl'):
+            stdout = 'Specify absolute file path of pickled input dataframe:'
+            print(stdout)
 
-            if os.path.isfile(input_df) and input_df.endswith('.pkl'):
-                break
+            if test is False:
+                df_path = '/' + input(prompt).replace('\\', '/').lstrip('/')
+            elif test is True:
+                try:
+                    df_path = params['inputdataframepath']
+                except KeyError:
+                    df_path = ''
+
+            if os.path.isfile(df_path) and df_path.endswith('.pkl'):
+                input_df = pd.read_pickle(df_path)
+                if type(input_df) == pd.DataFrame:
+                    stdout = 'Input dataframe recognised'
+                    print(stdout)
+                    break
+                else:
+                    stdout = 'Input file is not a dataframe'
+                    print(stdout)
+                    df_path = ''
             else:
-                print('File path to pickled input dataframe not recognised')
+                stdout = 'File path to pickled input dataframe not recognised'
+                print(stdout)
+                df_path = ''
 
-    return input_df
+            if test is True:
+                return stdout
+
+    return df_path
 
 
 def def_input_df(params):
@@ -91,7 +117,7 @@ def def_input_df(params):
     return input_df
 
 
-def def_input_pdb(params):
+def def_input_pdb(params, test=False):
     """
     Defines absolute file path to input PDB file (the file fed into DataGen)
     """
@@ -106,18 +132,32 @@ def def_input_pdb(params):
 
     if input_pdb == '':
         while not os.path.isfile(input_pdb) or not input_pdb.endswith('.pdb'):
-            print('Specify absolute file path of input PDB file:')
-            input_pdb = '/' + input(prompt).replace('\\', '/').strip('/')
+            stdout = 'Specify absolute file path of input PDB file:'
+            print(stdout)
+
+            if test is False:
+                input_pdb = '/' + input(prompt).replace('\\', '/').strip('/')
+            elif test is True:
+                try:
+                    input_pdb = params['inputpdb']
+                except KeyError:
+                    input_pdb = ''
 
             if os.path.isfile(input_pdb) and input_pdb.endswith('.pdb'):
+                stdout = 'Input PDB file recognised'
+                print(stdout)
                 break
             else:
-                print('File path to input PDB file not recognised')
+                stdout = 'File path to input PDB file not recognised'
+                print(stdout)
+
+            if test is True:
+                return stdout
 
     return input_pdb
 
 
-def def_propensity_scales(params):
+def def_propensity_scales(params, test=False):
     """
     Defines absolute file path to pickle file listing propensity scales
     """
@@ -141,8 +181,16 @@ def def_propensity_scales(params):
     if prop_scales == '':
         scales_provided = False
         while scales_provided is False:
-            print('Specify absolute file path of pickled propensity scales:')
-            prop_scales = '/' + input(prompt).replace('\\', '/').strip('/')
+            stdout = 'Specify absolute file path of pickled propensity scales:'
+            print(stdout)
+
+            if test is False:
+                prop_scales = '/' + input(prompt).replace('\\', '/').strip('/')
+            elif test is True:
+                try:
+                    prop_scales = params['propensityscales']
+                except KeyError:
+                    prop_scales = ''
 
             if os.path.isfile(prop_scales) and prop_scales.endswith('.pkl'):
                 with open(prop_scales, 'rb') as pickle_file:
@@ -150,16 +198,23 @@ def def_propensity_scales(params):
                 if any(type(prop_scales_dict) == x for x in [dict, OrderedDict]):
                     prop_scales = prop_scales_dict
                     scales_provided = True
+                    stdout = 'Input dictionary of propensity scales loaded'
+                    print(stdout)
                     break
                 else:
-                    print('Data in {} is not a pickled dictionary'.format(prop_scales))
+                    stdout = 'Data in {} is not a pickled dictionary'.format(prop_scales)
+                    print(stdout)
             else:
-                print('File path to pickled propensity scales not recognised')
+                stdout = 'File path to pickled propensity scales not recognised'
+                print(stdout)
+
+            if test is True:
+                return stdout
 
     return prop_scales
 
 
-def def_frequency_scales(params):
+def def_frequency_scales(params, test=False):
     """
     Defines absolute file path to pickle file listing frequency scales
     """
@@ -173,7 +228,7 @@ def def_frequency_scales(params):
             with open(freq_scales, 'rb') as pickle_file:
                 freq_scales_dict = pickle.load(pickle_file)
             if any(type(freq_scales_dict) == x for x in [dict, OrderedDict]):
-                freq_scales = frequency_scales_dict
+                freq_scales = freq_scales_dict
             else:
                 print('Data in {} is not a pickled dictionary'.format(freq_scales))
                 freq_scales = ''
@@ -182,7 +237,11 @@ def def_frequency_scales(params):
 
     if freq_scales == '':
         print('Include frequency scales?')
-        freq_input = input(prompt)
+        if test is False:
+            freq_input = input(prompt)
+        elif test is True:
+            freq_input = params['includefrequencyscales']
+        freq_input = freq_input.lower()
 
         while not freq_input in ['yes', 'no', 'y', 'n']:
             print('User input not recognised - please specify ("yes" or "no") '
@@ -191,11 +250,19 @@ def def_frequency_scales(params):
 
         if freq_input in ['yes', 'y']:
             freq_scales = ''
-
             scales_provided = False
+
             while scales_provided is False:
-                print('Specify absolute file path of pickled frequency scales:')
-                freq_scales = '/' + input(prompt).replace('\\', '/').strip('/')
+                stdout = 'Specify absolute file path of pickled frequency scales:'
+                print(stdout)
+
+                if test is False:
+                    freq_scales = '/' + input(prompt).replace('\\', '/').strip('/')
+                elif test is True:
+                    try:
+                        freq_scales = params['frequencyscales']
+                    except KeyError:
+                        freq_scales = ''
 
                 if os.path.isfile(freq_scales) and freq_scales.endswith('.pkl'):
                     with open(freq_scales, 'rb') as pickle_file:
@@ -203,18 +270,25 @@ def def_frequency_scales(params):
                     if any(type(freq_scales_dict) == x for x in [dict, OrderedDict]):
                         freq_scales = freq_scales_dict
                         scales_provided = True
+                        stdout = 'Input dictionary of frequency scales loaded'
+                        print(stdout)
                         break
                     else:
-                        print('Data in {} is not a pickled dictionary'.format(freq_scales))
+                        stdout = 'Data in {} is not a pickled dictionary'.format(freq_scales)
+                        print(stdout)
                 else:
-                    print('File path to pickled frequency scales not recognised')
+                    stdout = 'File path to pickled frequency scales not recognised'
+                    print(stdout)
+
+                if test is True:
+                    return stdout
         else:
             freq_scales = {}
 
     return freq_scales
 
 
-def convert_str_to_dict(dict_string, dict_id, int_or_float):
+def convert_str_to_dict(dict_string, dict_id, int_or_float, test=False):
     """
     Parses a dictionary input in string format to a Python dictionary
     """
@@ -242,6 +316,7 @@ def convert_str_to_dict(dict_string, dict_id, int_or_float):
                         num_val = int(val)
                     except ValueError:
                         val_error = True
+                        num_val = 42  # if val == 42, will not raise ValueError
                     if str(num_val) != val:
                         val_error = True
                 elif int_or_float == float:
@@ -249,26 +324,32 @@ def convert_str_to_dict(dict_string, dict_id, int_or_float):
                         num_val = float(val)
                     except ValueError:
                         val_error = True
+                        num_val = 4.2  # if val == 4.2, will not raise ValueError
                 else:
-                    raise Exception(
+                    raise TypeError(
                         'Unrecognised number format {} - please specify as int'
                         ' or float'.format(int_or_float)
                     )
 
                 if val_error is True:
-                    print('Non-{} value provided for key {} in {} dictionary '
-                          'describing {}'.format(int_or_float, key, dict_id))
+                    print('Non-{} value provided for key {} val {} pair in dictionary '
+                          'describing {}'.format(int_or_float, key, val, dict_id))
                     parsed_dict = {}
                     break
                 else:
                     parsed_dict[key] = num_val
 
         else:
-            print('Dictionary describing {} not recognised'.format(dict_id))
+            stdout = 'Dictionary describing {} not recognised'.format(dict_id)
+            print(stdout)
+            if test is True:
+                return stdout
 
     else:
-        print('Dictionary describing propensity / frequency scale naming '
-              'convention not recognised')
+        stdout = 'Dictionary describing {} not recognised'.format(dict_id)
+        print(stdout)
+        if test is True:
+            return stdout
 
     return parsed_dict
 
@@ -308,10 +389,11 @@ def def_dict_naming_scheme(params):
     return indices_dict
 
 
-def def_prop_freq_scale_weights(params):
+def def_prop_freq_scale_weights(params, test=False):
     """
-    Defines propensity scale weights. Must be run AFTER "propensityscales",
-    "frequencyscales" and "dictnameindices" have been defined.
+    Defines propensity and frequency scale weights.
+    N.B. Must be run AFTER "propensityscales", "frequencyscales" and
+    "dictnameindices" have been defined.
     N.B. Have left this hyperparameter in for now in case I want to use it in
     the future, but in general, and certainly in the case of my initial
     design run, I think this is "an optimisation too far". Will keep all the
@@ -352,10 +434,14 @@ def def_prop_freq_scale_weights(params):
             print('Propensity scale weights dictionary not recognised')
             scale_weights = {}
 
-    elif scale_weights[0] == '{' and scale_weights[-1] == '}' and ':' in scale_weights:
-        scale_weights = convert_str_to_dict(
-            scale_weights, 'propensity scale weights', float
-        )
+    elif len(scale_weights) > 3:
+        if scale_weights[0] == '{' and scale_weights[-1] == '}' and ':' in scale_weights:
+            scale_weights = convert_str_to_dict(
+                scale_weights, 'propensity scale weights', float
+            )
+        else:
+            print('Propensity scale weights not provided')
+            scale_weights = {}
 
     else:
         print('Propensity scale weights not provided')
@@ -382,21 +468,21 @@ def def_prop_freq_scale_weights(params):
 
     for scale in list(scale_weights.keys()):
         if not scale in scales:
-            raise Exception(
+            raise NameError(
                 'Scale {} is not included amongst the input propensity and/or '
                 'frequency dictionaries provided'.format(scale))
 
     return scale_weights
 
 
-def def_propensity_weight(params):
+def def_propensity_weight(params, test=False):
     """
     Defines weighting between propensity and frequency scales. Must be
     run AFTER "propensityscales" and "frequencyscales" have been defined.
     """
 
-    if params['frequencyscales'] == {} and prop_weight != '':  # This works for
-    # both unordered and ordered dictionaries
+    # This works for both unordered and ordered dictionaries
+    if params['frequencyscales'] == {} and params['propensityweight'] != '':
         raise ValueError('Value provided for "propensityweight", but no input '
                          'frequency scales have been defined.')
 
@@ -419,26 +505,36 @@ def def_propensity_weight(params):
 
         else:
             while not type(prop_weight) == float:
-                print('Specify weight for propensity scales:')
-                prop_weight = input(prompt)
+                stdout = 'Specify weight for propensity scales:'
+                print(stdout)
+
+                if test is False:
+                    prop_weight = input(prompt)
+                elif test is True:
+                    prop_weight = params['propensityweight']
 
                 try:
                     prop_weight = float(prop_weight)
                     if 0 <= prop_weight <= 1:
                         break
                     else:
-                        print('Weighting for propensity scales not recognised '
-                              '- please enter a value between 0 and 1')
+                        stdout = ('Weighting for propensity scales not recognised '
+                                  '- please enter a value between 0 and 1')
+                        print(stdout)
                         prop_weight = ''
                 except ValueError:
-                    print('Weighting for propensity scales not recognised - '
-                          'please enter a value between 0 and 1')
+                    stdout = ('Weighting for propensity scales not recognised - '
+                              'please enter a value between 0 and 1')
+                    print(stdout)
                     prop_weight = ''
+
+                if test is True:
+                    return stdout
 
     return prop_weight
 
 
-def def_phipsi_cluster_coords(params):
+def def_phipsi_cluster_coords(params, test=False):
     """
     Calculates phi and psi classes if discrete phi / psi dict is input. Must be
     run AFTER "propensityscales", "frequencyscales" and "dictnameindices" have
@@ -478,7 +574,12 @@ def def_phipsi_cluster_coords(params):
                     phipsi_coords = ''
                 else:
                     with open(phipsi_coords, 'rb') as pickle_file:
-                        phipsi_coords = pickle.load(pickle_file)
+                        phipsi_coords_dict = pickle.load(pickle_file)
+                    if any(type(phipsi_coords_dict) == x for x in [dict, OrderedDict]):
+                        phipsi_coords = phipsi_coords_dict
+                    else:
+                        print('Data in {} is not a pickled dictionary'.format(freq_scales))
+                        phipsi_coords = ''
             except KeyError:
                 phipsi_coords = ''
 
@@ -491,7 +592,11 @@ def def_phipsi_cluster_coords(params):
                     if os.path.isfile(phipsi_coords) and phipsi_coords.endswith('.pkl'):
                         with open(phipsi_coords, 'rb') as pickle_file:
                             phipsi_coords = pickle.load(pickle_file)
-                        break
+                        if any(type(phipsi_coords) == x for x in [dict, OrderedDict]):
+                            break
+                        else:
+                            print('Data in {} is not a pickled dictionary'.format(freq_scales))
+                            phipsi_coords = ''
                     else:
                         print('File path to pickled phi / psi voronoi point '
                               'coordinates not recognised')
@@ -501,7 +606,7 @@ def def_phipsi_cluster_coords(params):
     return phipsi_coords
 
 
-def def_working_directory(params):
+def def_working_directory(params, test=False):
     """
     Defines working directory. Note that unlike the file paths to propensity
     dictionaries etc., users can provide a relative rather than an absolute
@@ -511,31 +616,45 @@ def def_working_directory(params):
     try:
         wd = params['workingdirectory']
         if not os.path.isdir(wd):
-            print('File path to working directory not recognised')
+            print('Path to working directory not recognised')
             wd = ''
     except KeyError:
         wd = ''
 
     while not os.path.isdir(wd):
-        print('Specify absolute path of working directory')
-        wd = input(prompt).replace('\\', '/').rstrip('/') + '/'
+        stdout = 'Specify absolute path of working directory:'
+        print(stdout)
+
+        if test is False:
+            wd = input(prompt).replace('\\', '/').rstrip('/') + '/'
+        elif test is True:
+            try:
+                wd = params['workingdirectory']
+            except KeyError:
+                wd = ''
 
         if os.path.isdir(wd):
+            stdout = 'Path to working directory recognised'
+            print(stdout)
             break
         else:
-            print('File path to working directory not recognised')
+            stdout = 'Path to working directory not recognised'
+            print(stdout)
+
+        if test is True:
+            return stdout
 
     return wd
 
 
-def def_barrel_or_sandwich(params):
+def def_barrel_or_sandwich(params, test=False):
     """
     Defines whether the input structure is a beta-sandwich or a beta-barrel
     backbone
     """
 
     try:
-        barrel = params['barrelorsandwich']
+        barrel = params['barrelorsandwich'].lower()
         if barrel == 'barrel':
             barrel = '2.40'
         elif barrel == 'sandwich':
@@ -548,8 +667,16 @@ def def_barrel_or_sandwich(params):
 
     if barrel == '':
         while not barrel in ['barrel', '2.40', 'sandwich', '2.60']:
-            print('Specify structure type - please enter "barrel" or "sandwich":')
-            barrel = input(prompt).lower().replace(' ', '')
+            stdout = 'Specify structure type - please enter "barrel" or "sandwich":'
+            print(stdout)
+
+            if test is False:
+                barrel = input(prompt).lower().replace(' ', '')
+            elif test is True:
+                try:
+                    barrel = params['barrelorsandwich']
+                except KeyError:
+                    barrel = ''
 
             if barrel in ['2.40', '2.60']:
                 break
@@ -560,12 +687,16 @@ def def_barrel_or_sandwich(params):
                     barrel = '2.60'
                 break
             else:
-                print('Structure type not recognised')
+                stdout = 'Backbone structure not recognised'
+                print(stdout)
+
+            if test is True:
+                return stdout
 
     return barrel
 
 
-def def_jobid(params):
+def def_jobid(params, test=False):
     """
     Assigns unique identification code to job
     """
@@ -573,20 +704,25 @@ def def_jobid(params):
     try:
         job_id = params['job_id']
     except KeyError:
-        job_id = None
+        job_id = ''
 
-    if job_id is None:
+    if job_id == '':
         print('Specify unique ID (without spaces) for input structure (if you '
               'would like BetaDesigner to assign a random ID, enter "random")):')
-        job_id = input(prompt)
-        if job_id.lower().replace(' ', '') == 'random':
-            job_id = ''.join([random.choice(string.ascii_letters + string.digits)
-                              for i in range(6)])
+
+        if test is False:
+            job_id = input(prompt)
+        elif test is True:
+            job_id = params['jobid']
+
+    if job_id.lower().replace(' ', '') == 'random':
+        job_id = ''.join([random.choice(string.ascii_letters + string.digits)
+                          for i in range(6)])
 
     return job_id
 
 
-def def_method_initial_seq(params):
+def def_method_initial_seq(params, test=False):
     """
     Defines method used to generate initial sequences for backbone structure.
     """
@@ -615,7 +751,7 @@ def def_method_initial_seq(params):
     return initial_method
 
 
-def def_method_fitness_scoring(params):
+def def_method_fitness_scoring(params, test=False):
     """
     Defines method used to measure sequence fitness
     """
@@ -644,7 +780,7 @@ def def_method_fitness_scoring(params):
     return fit_method
 
 
-def def_split_fraction(params):
+def def_split_fraction(params, test=False):
     """
     Defines fraction of samples to be optimised against propensity in each
     generation of the genetic algorithm.
@@ -697,7 +833,7 @@ def def_split_fraction(params):
     return split_frac
 
 
-def def_method_select_mating_pop(params):
+def def_method_select_mating_pop(params, test=False):
     """
     Defines method used to select a population of individuals for mating
     """
@@ -726,7 +862,7 @@ def def_method_select_mating_pop(params):
     return mate_method
 
 
-def def_unfit_fraction(params):
+def def_unfit_fraction(params, test=False):
     """
     Defines fraction of unfit sequences to be included in the mating
     population at each generation of the genetic algorithm.
@@ -778,7 +914,7 @@ def def_unfit_fraction(params):
     return unfit_frac
 
 
-def def_method_crossover(params):
+def def_method_crossover(params, test=False):
     """
     Defines method used to crossover parent sequences to generate children
     """
@@ -805,7 +941,7 @@ def def_method_crossover(params):
     return cross_method
 
 
-def def_crossover_prob(params):
+def def_crossover_prob(params, test=False):
     """
     Defines probability of exchanging amino acid identities for each node in
     the network as part of a uniform crossover.
@@ -852,7 +988,7 @@ def def_crossover_prob(params):
     return cross_prob
 
 
-def def_swap_start_prob(params):
+def def_swap_start_prob(params, test=False):
     """
     Defines probability of starting a (segmented) crossover.
     N.B. Must be run AFTER "crossovermethod" has been defined.
@@ -899,7 +1035,7 @@ def def_swap_start_prob(params):
     return start_prob
 
 
-def def_swap_stop_prob(params):
+def def_swap_stop_prob(params, test=False):
     """
     Defines probability of stopping a (segmented) crossover.
     N.B. Must be run AFTER "crossovermethod" has been defined.
@@ -946,7 +1082,7 @@ def def_swap_stop_prob(params):
     return stop_prob
 
 
-def def_method_mutation(params):
+def def_method_mutation(params, test=False):
     """
     Defines method used to mutate children sequences (generated in the
     previous step from parent crossover)
@@ -974,7 +1110,7 @@ def def_method_mutation(params):
     return mut_method
 
 
-def def_mutation_prob(params):
+def def_mutation_prob(params, test=False):
     """
     Defines probability of mutation of each node in the network
     """
@@ -1017,7 +1153,7 @@ def def_mutation_prob(params):
     return mut_prob
 
 
-def def_pop_size(params):
+def def_pop_size(params, test=False):
     """
     Defines the size of the population of sequences to be optimised by the
     genetic algorithm. The population size should be an even number, in order
@@ -1097,7 +1233,7 @@ def def_pop_size(params):
     return pop_size
 
 
-def def_num_gens(params):
+def def_num_gens(params, test=False):
     """
     Defines the number of generations for which to run the genetic algorithm
     """
@@ -1138,6 +1274,7 @@ def def_num_gens(params):
                 num_gens = ''
 
     return num_gens
+
 
 def find_params(args):
     """
@@ -1268,7 +1405,7 @@ def setup_input_output(params):
                 shutil.rmtree(params['workingdirectory'])
                 break
             elif delete_dir in ['no', 'n']:
-                raise Exception(
+                raise OSError(
                     'Exiting BetaDesigner - please provide a jobid that is not '
                     'already a directory in {}/ for future '
                     'runs'.format('/'.join(params['workingdirectory'].split('/')[:-1]))

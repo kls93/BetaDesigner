@@ -255,8 +255,8 @@ def gen_cumulative_probabilities(node_probabilities, node, adjust_scale=False):
         node_cumulative_probabilities[index] = cumulative_probability
 
     if round(node_cumulative_probabilities[-1], 4) != 1.0:
-        raise Exception('ERROR: Cumulative probability = {}'.format(
-            node_cumulative_probabilities[-1])
+        raise OSError.errno(
+            'ERROR: Cumulative probability = {}'.format(node_cumulative_probabilities[-1])
         )
 
     return node_cumulative_probabilities
