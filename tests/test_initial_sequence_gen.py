@@ -1,5 +1,5 @@
 
-
+# python -m tests/test_initial_sequence_gen.py
 # Tests code for adding initial sequences by propensity
 
 import copy

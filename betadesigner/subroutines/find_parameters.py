@@ -626,7 +626,7 @@ def def_working_directory(params, test=False):
         print(stdout)
 
         if test is False:
-            wd = input(prompt).replace('\\', '/').rstrip('/') + '/'
+            wd = input(prompt).replace('\\', '/')
         elif test is True:
             try:
                 wd = params['workingdirectory']
@@ -643,6 +643,8 @@ def def_working_directory(params, test=False):
 
         if test is True:
             return stdout
+
+    wd = wd.rstrip('/') + '/'
 
     return wd
 
@@ -702,7 +704,7 @@ def def_jobid(params, test=False):
     """
 
     try:
-        job_id = params['job_id']
+        job_id = params['jobid']
     except KeyError:
         job_id = ''
 
@@ -739,14 +741,29 @@ def def_method_initial_seq(params, test=False):
 
     if initial_method == '':
         while not initial_method in ['random', 'rawpropensity', 'rankpropensity']:
-            print('Specify method for determining initial side chain assignments:')
-            initial_method = input(prompt).lower().replace(' ', '')
+            stdout = 'Specify method for determining initial side chain assignments:'
+            print(stdout)
+
+            if test is False:
+                initial_method = input(prompt).lower().replace(' ', '')
+            elif test is True:
+                try:
+                    initial_method = params['initialseqmethod']
+                except KeyError:
+                    initial_method = ''
 
             if initial_method in ['random', 'rawpropensity', 'rankpropensity']:
+                stdout = ('Method for determining initial side chain '
+                          'assignments recognised')
+                print(stdout)
                 break
             else:
-                print('Method not recognised - please select one of "random", '
-                      '"rawpropensity" or "rankpropensity"')
+                stdout = ('Method not recognised - please select one of '
+                          '"random", "rawpropensity" or "rankpropensity"')
+                print(stdout)
+
+            if test is True:
+                return stdout
 
     return initial_method
 
@@ -768,14 +785,27 @@ def def_method_fitness_scoring(params, test=False):
 
     if fit_method == '':
         while not fit_method in ['propensity', 'allatom', 'alternate', 'split']:
-            print('Specify method for measuring sequence fitnesses:')
-            fit_method = input(prompt).lower().replace(' ', '')
+            stdout = 'Specify method for measuring sequence fitnesses:'
+            print(stdout)
+
+            if test is False:
+                fit_method = input(prompt).lower().replace(' ', '')
+            elif test is True:
+                try:
+                    fit_method = params['fitnessscoremethod']
+                except KeyError:
+                    fit_method = ''
 
             if fit_method in ['propensity', 'allatom', 'alternate', 'split']:
+                stdout = 'Method for measuring sequence fitnesses  recognised'
+                print(stdout)
                 break
             else:
-                print('Method not recognised - please select one of '
-                      '"propensity", "allatom", "alternate", "split"')
+                stdout = ('Method not recognised - please select one of '
+                          '"propensity", "allatom", "alternate", "split"')
+
+            if test is True:
+                return stdout
 
     return fit_method
 
@@ -850,14 +880,28 @@ def def_method_select_mating_pop(params, test=False):
 
     if mate_method == '':
         while not mate_method in ['fittest', 'roulettewheel', 'rankroulettewheel']:
-            print('Specify method for generating mating population:')
-            mate_method = input(prompt).lower().replace(' ', '')
+            stdout = 'Specify method for generating mating population:'
+            print(stdout)
+
+            if test is False:
+                mate_method = input(prompt).lower().replace(' ', '')
+            elif test is True:
+                try:
+                    mate_method = params['matingpopmethod']
+                except KeyError:
+                    mate_method = ''
 
             if mate_method in ['fittest', 'roulettewheel', 'rankroulettewheel']:
+                stdout = 'Method for generating mating population recognised'
+                print(stdout)
                 break
             else:
-                print('Method not recognised - please select one of "fittest", '
-                      '"roulettewheel" or "rankroulettewheel"')
+                stdout = ('Method not recognised - please select one of '
+                          '"fittest", "roulettewheel" or "rankroulettewheel"')
+                print(stdout)
+
+            if test is True:
+                return stdout
 
     return mate_method
 
@@ -930,14 +974,29 @@ def def_method_crossover(params, test=False):
 
     if cross_method == '':
         while not cross_method in ['uniform', 'segmented']:
-            print('Specify crossover method:')
-            cross_method = input(prompt).lower().replace(' ', '')
+            stdout = 'Specify crossover method:'
+            print(stdout)
+
+            if test is False:
+                cross_method = input(prompt).lower().replace(' ', '')
+            elif test is True:
+                try:
+                    cross_method = params['crossovermethod']
+                except KeyError:
+                    cross_method = ''
 
             if cross_method in ['uniform', 'segmented']:
+                stdout = 'Crossover method recognised'
+                print(stdout)
                 break
             else:
-                print('Crossover method not recognised - please select one of '
-                      '"uniform" or "segmented"')
+                stdout = ('Crossover method not recognised - please select one'
+                          ' of "uniform" or "segmented"')
+                print(stdout)
+
+            if test is True:
+                return stdout
+
     return cross_method
 
 
@@ -1099,14 +1158,29 @@ def def_method_mutation(params, test=False):
 
     if mut_method == '':
         while not mut_method in ['swap', 'scramble']:
-            print('Specify mutation method:')
-            mut_method = input(prompt).lower().replace(' ', '')
+            stdout = 'Specify mutation method:'
+            print(stdout)
+
+            if test is False:
+                mut_method = input(prompt).lower().replace(' ', '')
+            elif test is True:
+                try:
+                    mut_method = params['mutationmethod']
+                except KeyError:
+                    mut_method = ''
 
             if mut_method in ['swap', 'scramble']:
+                stdout = 'Mutation method recognised'
+                print(stdout)
                 break
             else:
-                print('Mutation method not recognised - please select one of '
-                      '"swap" or "scramble"')
+                stdout = ('Mutation method not recognised - please select one '
+                          'of "swap" or "scramble"')
+                print(stdout)
+
+            if test is True:
+                return stdout
+
     return mut_method
 
 
@@ -1177,6 +1251,7 @@ def def_pop_size(params, test=False):
         ):
             error = True
         else:
+            pop_size = pop_size_int
             if params['fitnessscoremethod'] == 'split':
                 pop_frac = pop_size_int * 0.5 * params['splitfraction']
                 if not float(pop_frac).is_integer():
@@ -1330,8 +1405,10 @@ def find_params(args):
                                  'pairorindv': 4,
                                  'discorcont': 5,
                                  'proporfreq': 6}
-    # params['scaleweights'] = def_prop_freq_scale_weights(params)
     params['scaleweights'] = 'equal'  # Currently set to equal weighting by default
+    params['scaleweights'] = def_prop_freq_scale_weights(params)  # Not commented
+    # out because 'equal' needs to be converted into numerical values by
+    # def_prop_freq_scale_weights function
     # params['propensityweight'] = def_propensity_weight(params)  # Commented out
     # because this hyperparameter has been selected fo optimisation with hyperopt
     if 'propensityweight' in params.keys():
@@ -1344,7 +1421,7 @@ def find_params(args):
     # params['initialseqmethod'] = def_method_initial_seq(params)
     params['initialseqmethod'] = 'random'  # Currently set to "random" by default
     # params['fitnessscoremethod'] = def_method_fitness_scoring(params)
-    params['fitnessscoremethod'] = 'split'  # Currently set to "split" by default
+    params['fitnessscoremethod'] = 'allatom'  # Currently set to "split" by default
     # params['splitfraction'] = def_split_fraction(params)
     params['splitfraction'] = 0.5  # Currently set as 50:50 by default (in my
     # opinion variation of this hyperparameter is probably an "optimisation too far")
@@ -1381,7 +1458,7 @@ def find_params(args):
     return params
 
 
-def setup_input_output(params):
+def setup_input_output(params, cycle):
     """
     Changes directory to user-specified "working directory", creates directories
     for the input and output data, and copies across necessary input files in
@@ -1389,9 +1466,10 @@ def setup_input_output(params):
     """
 
     # Creates working directory
-    params['workingdirectory'] = '{}BetaDesigner_results/{}'.format(
-        params['workingdirectory'], params['jobid']
-    )
+    params['workingdirectory'] = (
+        '{}/BetaDesigner_results/{}/Optimisation_cycle_{}'.format(
+        params['workingdirectory'], params['jobid'], cycle
+    ))
 
     if os.path.isdir(params['workingdirectory']):
         print('Directory {} already exists'.format(params['workingdirectory']))

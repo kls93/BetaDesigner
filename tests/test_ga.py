@@ -1,4 +1,6 @@
 
+# python -m tests/test_ga.py
+
 import copy
 import networkx as nx
 import numpy as np

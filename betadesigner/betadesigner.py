@@ -62,7 +62,7 @@ def main():
 
     run_ga = True
     run_opt = True
-    max_evals = 100
+    max_evals = 4
     total_gen = 10
     max_gen = copy.copy(params['maxnumgenerations'])
     params['maxnumgenerations'] = total_gen
@@ -70,10 +70,7 @@ def main():
     count = 0
     while run_ga is True:
         count += 1
-        params['workingdirectory'] = '{}/Optimisation_cycle_{}'.format(
-            params['workingdirectory'], count
-        )
-        setup_input_output(params)
+        setup_input_output(params, count)
 
         orig_sequences_dict = copy.deepcopy(new_sequences_dict)
         trials = Trials()
@@ -83,7 +80,6 @@ def main():
         # propensity_weights to uniform ranges between 0 and 1 for optimisation
         # via a tree parzen estimator with hyperopt
         bayes_params = {}
-        """
         bayes_params['unfitfraction'] = hp.uniform('unfitfraction', 0, 1)
         bayes_params['crossoverprob'] = hp.uniform('crossoverprob', 0, 1)
         bayes_params['mutationprob'] = hp.uniform('mutationprob', 0, 1)
@@ -93,17 +89,25 @@ def main():
         bayes_params['crossoverprob'] = 0.4
         bayes_params['mutationprob'] = 0.2
         bayes_params['propensityweight'] = 0.5
-        bayes_params['sequencesdict'] = orig_sequences_dict
-        bayes_params = {**copy.deepcopy(params), **bayes_params}
-
-        summed_fitness = run_genetic_algorithm(bayes_params)
+        """
+        # Pickles parameters not being optimised with hyperopt (unfortunately
+        # can't feed dataframe (or series or array) data into a function with
+        # hyperopt, so am having to pickle the parameters not being optimised
+        # with hyperopt
+        bayes_params['workingdirectory'] = params['workingdirectory']
+        bayes_params['optimisationcycle'] = count
+        params['sequencesdict'] = orig_sequences_dict
+        with open('{}/Program_input/Optimisation_cycle_{}_params.pkl'.format(
+            params['workingdirectory'], count), 'wb'
+        ) as f:
+            pickle.dump(params, f)
 
         while run_opt is True:
             best_params = fmin(fn=run_genetic_algorithm, space=bayes_params,
                                algo=tpe.suggest, trials=trials, max_evals=max_evals)
-            if max_evals == 100:
+            if max_evals == 4:
                 current_best = copy.deepcopy(best_params)
-                max_evals = int(max_evals * math.sqrt(10))
+                max_evals = int(max_evals * math.sqrt(4))
             else:
                 # If best values are within 1% of previous OR number of trials > 1000000
                 similarity_dict = {}
@@ -111,15 +115,17 @@ def main():
                     if key in ['unfitfraction', 'crossoverprob', 'mutationprob', 'propensityweight']:
                         if (
                                ((0.99*current_best[key]) <= best_params[key] <= (1.01*current_best[key]))
-                            or max_evals >= 1000000
+                            or max_evals >= 16
                         ):
                             similarity_dict[key] = True
                 if all(x is True for x in similarity_dict.values()):
                     run_opt = False
                 else:
                     current_best = copy.deepcopy(best_params)
-                    max_evals = int(max_evals * math.sqrt(10))
+                    max_evals = int(max_evals * math.sqrt(4))
 
+        best_params['workingdirectory'] = params['workingdirectory']
+        best_params['optimisationcycle'] = count
         fitness = run_genetic_algorithm(best_params)
         with open('{}/Program_output/GA_output_sequences_dict.pkl'.format(
             params['workingdirectory']), 'rb') as f:

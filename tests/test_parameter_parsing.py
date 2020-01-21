@@ -1,14 +1,19 @@
 
+# python -m tests/test_parameter_parsing.py
+
 import pandas as pd
 import unittest
 from collections import OrderedDict
 
 from betadesigner.subroutines.find_parameters import (
-    def_input_df_path, def_input_pdb, def_propensity_scales, def_frequency_scales,
-    convert_str_to_dict, def_prop_freq_scale_weights, def_propensity_weight,
-    def_phipsi_cluster_coords, def_working_directory, def_barrel_or_sandwich,
-    def_jobid
-
+    def_input_df_path, def_input_pdb, def_propensity_scales,
+    def_frequency_scales, convert_str_to_dict, def_prop_freq_scale_weights,
+    def_propensity_weight, def_phipsi_cluster_coords, def_working_directory,
+    def_barrel_or_sandwich, def_jobid, def_method_initial_seq,
+    def_method_fitness_scoring, def_split_fraction,
+    def_method_select_mating_pop, def_unfit_fraction, def_method_crossover,
+    def_crossover_prob, def_swap_start_prob, def_swap_stop_prob,
+    def_method_mutation, def_mutation_prob, def_pop_size, def_num_gens
 )
 
 
@@ -154,6 +159,8 @@ class testParameterParsing(unittest.TestCase):
 
     def test_prop_freq_dict_weights(self):
         """
+        Tests relative weighting of propensity and frequency dictionaries is
+        parsed correctly
         """
 
         params = {}
@@ -294,15 +301,53 @@ class testParameterParsing(unittest.TestCase):
 
     def test_method_initial_side_chains(self):
         """
+        Tests method of generating starting sequences is parsed correctly
         """
 
-        pass
+        expected_vals = [
+            [{},
+             ('Method not recognised - please select one of "random", '
+              '"rawpropensity" or "rankpropensity"')],
+            [{'initialseqmethod': 'mistake'},
+             ('Method not recognised - please select one of "random", '
+              '"rawpropensity" or "rankpropensity"')],
+            [{'initialseqmethod': 'random'}, 'random'],
+            [{'initialseqmethod': 'rawpropensity'}, 'rawpropensity'],
+            [{'initialseqmethod': 'rankpropensity'}, 'rankpropensity']
+
+        ]
+
+        for index, pair in enumerate(expected_vals):
+            params = pair[0]
+            exp_output = pair[1]
+            self.assertEqual(
+                def_method_initial_seq(params, test=True), exp_output
+            )
 
     def test_method_fitness_score(self):
         """
+        Test method of measuring sequence fitness is parsed correctly
         """
 
-        pass
+        expected_vals = [
+            [{},
+             ('Method not recognised - please select one of "propensity", '
+              '"allatom", "alternate", "split"')],
+            [{'fitnessscoremethod': 'mistake'},
+             ('Method not recognised - please select one of "propensity", '
+              '"allatom", "alternate", "split"')],
+            [{'fitnessscoremethod': 'propensity'}, 'propensity'],
+            [{'fitnessscoremethod': 'allatom'}, 'allatom'],
+            [{'fitnessscoremethod': 'alternate'}, 'alternate'],
+            [{'fitnessscoremethod': 'split'}, 'split']
+        ]
+
+        for index, pair in enumerate(expected_vals):
+            params = pair[0]
+            exp_output = pair[1]
+            self.assertEqual(
+                def_method_fitness_scoring(params, test=True), exp_output
+            )
 
     def test_split_fraction(self):
         """
@@ -312,9 +357,28 @@ class testParameterParsing(unittest.TestCase):
 
     def test_method_select_mating_pop(self):
         """
+        Tests that method of selecting sequences to form the mating population
+        is parsed correctly
         """
 
-        pass
+        expected_vals = [
+            [{},
+             ('Method not recognised - please select one of "fittest", '
+              '"roulettewheel" or "rankroulettewheel"')],
+            [{'matingpopmethod': 'mistake'},
+             ('Method not recognised - please select one of "fittest", '
+              '"roulettewheel" or "rankroulettewheel"')],
+            [{'matingpopmethod': 'fittest'}, 'fittest'],
+            [{'matingpopmethod': 'roulettewheel'}, 'roulettewheel'],
+            [{'matingpopmethod': 'rankroulettewheel'}, 'rankroulettewheel']
+        ]
+
+        for index, pair in enumerate(expected_vals):
+            params = pair[0]
+            exp_output = pair[1]
+            self.assertEqual(
+                def_method_select_mating_pop(params, test=True), exp_output
+            )
 
     def test_unfit_fraction(self):
         """
@@ -324,9 +388,26 @@ class testParameterParsing(unittest.TestCase):
 
     def test_method_crossover(self):
         """
+        Tests method of sequence crossover is parsed correctly
         """
 
-        pass
+        expected_vals = [
+            [{},
+             ('Crossover method not recognised - please select one of '
+              '"uniform" or "segmented"')],
+            [{'crossovermethod': 'mistake'},
+             ('Crossover method not recognised - please select one of '
+              '"uniform" or "segmented"')],
+            [{'crossovermethod': 'uniform'}, 'uniform'],
+            [{'crossovermethod': 'segmented'}, 'segmented']
+        ]
+
+        for index, pair in enumerate(expected_vals):
+            params = pair[0]
+            exp_output = pair[1]
+            self.assertEqual(
+                def_method_crossover(params, test=True), exp_output
+            )
 
     def test_crossover_prob(self):
         """
@@ -348,9 +429,26 @@ class testParameterParsing(unittest.TestCase):
 
     def test_method_mutation(self):
         """
+        Tests method of sequence mutation is parsed correctly
         """
 
-        pass
+        expected_vals = [
+            [{},
+             ('Mutation method not recognised - please select one of "swap" or '
+              '"scramble"')],
+            [{'mutationmethod': 'mistake'},
+             ('Mutation method not recognised - please select one of "swap" or'
+              ' "scramble"')],
+            [{'mutationmethod': 'swap'}, 'swap'],
+            [{'mutationmethod': 'scramble'}, 'scramble']
+        ]
+
+        for index, pair in enumerate(expected_vals):
+            params = pair[0]
+            exp_output = pair[1]
+            self.assertEqual(
+                def_method_mutation(params, test=True), exp_output
+            )
 
     def test_mutation_prob(self):
         """

@@ -10,6 +10,7 @@ import isambard
 import pickle
 import random
 import isambard.modelling as modelling
+import multiprocessing as mp
 import networkx as nx
 import numpy as np
 from collections import OrderedDict
@@ -330,26 +331,37 @@ class run_ga_calcs(initialise_ga_object):
 
         return network_fitness_scores
 
-    def measure_fitness_allatom(self, surface, networks_dict):
+    def measure_fitness_allatom(self, pdb, G):
         """
         Measures fitness of sequences using an all-atom scoring function
         within BUDE
         """
 
-        print('Measuring {} network fitness'.format(surface))
+        # Packs network side chains onto the model with SCWRL4 and measures
+        # the total model energy within BUDE
+        new_pdb, energy = pack_side_chains(pdb, G, True)
 
-        # Initialises dictionary of fitness scores
-        network_energies = OrderedDict()
+        return energy
+
+    def measure_fitness_allatom_parallel(self, surface, networks_dict):
+        """
+        """
+
+        print('Measuring {} network fitness'.format(surface))
 
         # Loads backbone model into ISAMBARD. NOTE must have been pre-processed
         # to remove ligands etc. so that only backbone coordinates remain.
         pdb = isambard.ampal.load_pdb(self.input_pdb)
 
-        for num, G in networks_dict.items():
-            # Packs network side chains onto the model with SCWRL4 and measures
-            # the total model energy within BUDE
-            new_pdb, energy = pack_side_chains(pdb, G, True)
-            network_energies[num] = energy
+        pool = mp.Pool(48)
+        network_energies = OrderedDict({
+            list(networks_dict.keys())[n]:
+            pool.apply(
+                self.measure_fitness_allatom,
+                args=(pdb, list(networks_dict.values())[n])
+            ) for n in range(len(networks_dict))
+            })
+        pool.close()
 
         return network_energies
 
@@ -726,23 +738,24 @@ class run_ga_calcs(initialise_ga_object):
         return merged_networks_dict
 
 
-def run_genetic_algorithm(params):
+def run_genetic_algorithm(bayes_params):
     """
     Pipeline function to run genetic algorithm
     """
 
     print('Running genetic algorithm')
 
-    """
-    # Unpacks parameters (unfortunately hyperopt can only feed a single
-    # parameter into the objective function, so can't use class inheritance to
-    # avoid this issue, and am instead using pickling)
-    input_params_file = '{}/Program_input/Input_parameters.pkl'.format(params['workingdirectory'])
-    with open(input_params_file, 'rb') as f:
-        params = pickle.load(f)
-    if type(params) != dict:
-        raise TypeError('Data in {} is not a pickled dictionary'.format(input_params_file))
-    """
+    # Unpacks parameters (unfortunately can't feed dataframe (or series or
+    # array) data into a function with hyperopt, so am having to pickle the
+    # parameters not being optimised with hyperopt
+    params_file = '{}/Program_input/Optimisation_cycle_{}_params.pkl'.format(
+        bayes_params['workingdirectory'], bayes_params['optimisationcycle']
+    )
+    with open(params_file, 'rb') as f:
+        fixed_params = pickle.load(f)
+    if not type(fixed_params) in [dict, OrderedDict]:
+        raise TypeError('Data in {} is not a pickled dictionary'.format(params_file))
+    params = {**bayes_params, **fixed_params}
 
     # Records sequences and their fitnesses after each generation
     with open('{}/Program_output/Sequence_track.txt'.format(
@@ -812,8 +825,15 @@ def run_genetic_algorithm(params):
                     or
                     (params['fitnessscoremethod'] == 'split' and index == 1)
                 ):
-                    (network_energies
-                    ) = ga_calcs.measure_fitness_allatom(surface, networks_dict)
+                    # Runs BUDE energy scoring on parallel processors
+                    import time
+                    import math
+                    start = time.time()
+                    network_energies = ga_calcs.measure_fitness_allatom_parallel(
+                        surface, networks_dict
+                    )
+                    end = time.time()
+                    print(math.fmod((end-start), 60))
                     (network_fitness_scores
                     ) = ga_calcs.convert_energies_to_probabilities(network_energies)
 
@@ -894,7 +914,7 @@ def run_genetic_algorithm(params):
                 network_propensity_scores, network_frequency_scores, raw_or_rank
             )
         elif params['fitnessscoremethod'] == 'allatom':
-            network_energies = ga_calcs.measure_fitness_allatom(surface, networks_dict)
+            network_energies = ga_calcs.measure_fitness_allatom_parallel(surface, networks_dict)
             (network_fitness_scores
             ) = ga_calcs.convert_energies_to_probabilities(network_energies)
 
