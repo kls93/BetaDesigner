@@ -1,12 +1,14 @@
 
-# python -m tests/test_parameter_parsing.py
+# python -m unittest tests/test_parameter_parsing.py
 
+import numpy as np
 import pandas as pd
+import pickle
 import unittest
 from collections import OrderedDict
 
 from betadesigner.subroutines.find_parameters import (
-    def_input_df_path, def_input_pdb, def_propensity_scales,
+    calc_parent_voronoi_cluster, def_input_df_path, def_propensity_scales,
     def_frequency_scales, convert_str_to_dict, def_prop_freq_scale_weights,
     def_propensity_weight, def_phipsi_cluster_coords, def_working_directory,
     def_barrel_or_sandwich, def_jobid, def_method_initial_seq,
@@ -19,12 +21,36 @@ from betadesigner.subroutines.find_parameters import (
 
 class testParameterParsing(unittest.TestCase):
     """
+    Tests parsing of input parameters
     """
+
+    def test_calc_phi_psi_voronoi_cluster(self):
+        """
+        Tests that input dataframe is corretly updated to classify residues
+        according to the voronoi cluster of their phi and psi angles
+        """
+
+        input_df = pd.DataFrame({
+            'int_ext': ['int', 'ext', 'int', 'int', 'ext', 'int'],
+            'phi': [-10, 0, -9, 1, -12, 2],
+            'psi': [-10, 2, -7, 0, -7, 1]
+        })
+        cluster_coords = {'int': np.array([[-11, -9], [1, 1]]),
+                          'ext': np.array([[-11, -10], [0, 1]])}
+
+        exp_output = pd.DataFrame({
+            'int_ext': ['int', 'ext', 'int', 'int', 'ext', 'int'],
+            'phi': [-10, 0, -9, 1, -12, 2],
+            'psi': [-10, 2, -7, 0, -7, 1],
+            'phi_psi_class': [0, 1, 0, 1, 0, 1]
+        })
+        act_output = calc_parent_voronoi_cluster(input_df, cluster_coords)
+
+        pd.testing.assert_frame_equal(exp_output, act_output)
 
     def test_input_df(self):
         """
-        Tests that input dataframe path is parsed correctly, and that the
-        dataframe is unpickled
+        Tests that input dataframe path is parsed correctly
         """
 
         expected_vals = [
@@ -88,7 +114,8 @@ class testParameterParsing(unittest.TestCase):
             [{'propensityscales': 'tests/test_files/example_input_df.pkl'},
              'Data in tests/test_files/example_input_df.pkl is not a pickled dictionary'],
             [{'propensityscales': 'tests/test_files/example_prop_freq_scales.pkl'},
-             OrderedDict({'scale_1': [1, 2, 3, 4, 5], 'scale_2': [6, 7, 8, 9, 10]})]
+             OrderedDict({'scale_1': [1, 2, 3, 4, 5], 'scale_2': [6, 7, 8, 9, 10],
+                          'phipsi_disc': [11, 12, 13, 14, 15]})]
         ]
 
         for pair in expected_vals:
@@ -120,7 +147,8 @@ class testParameterParsing(unittest.TestCase):
              'includefrequencyscales': 'No'},
              {}],
             [{'frequencyscales': 'tests/test_files/example_prop_freq_scales.pkl'},
-             OrderedDict({'scale_1': [1, 2, 3, 4, 5], 'scale_2': [6, 7, 8, 9, 10]})]
+             OrderedDict({'scale_1': [1, 2, 3, 4, 5], 'scale_2': [6, 7, 8, 9, 10],
+                          'phipsi_disc': [11, 12, 13, 14, 15]})]
         ]
 
         for pair in expected_vals:
@@ -210,9 +238,14 @@ class testParameterParsing(unittest.TestCase):
             [{'propensityweight': '', 'frequencyscales': {}},
              1],
             [{'propensityweight': 'mistake'},
-             'Weighting for propensity scales not recognised - please enter a value between 0 and 1'],
+             ('Weighting for propensity scales not recognised - please enter a '
+              'value between 0 and 1')],
             [{'propensityweight': '2'},
-             'Weighting for propensity scales not recognised - please enter a value between 0 and 1'],
+             ('Weighting for propensity scales not recognised - please enter a '
+              'value between 0 and 1')],
+            [{'propensityweight': '-1'},
+             ('Weighting for propensity scales not recognised - please enter a '
+              'value between 0 and 1')],
             [{'propensityweight': '1'},
              1.0],
             [{'propensityweight': '0'},
@@ -235,9 +268,48 @@ class testParameterParsing(unittest.TestCase):
         """
         """
 
+        sub1_params = {}
+        with open('tests/test_files/example_prop_freq_scales.pkl', 'rb') as f:
+            comb_dict = pickle.load(f)
+            sub1_params['propensityscales'] = {
+                key: val for key, val in list(comb_dict.items())
+                if key in ['scale_1', 'scale_2']
+            }
+            sub1_params['frequencyscales'] = {
+                key: val for key, val in list(comb_dict.items())
+                if key in ['phipsi_disc']
+            }
+        sub1_params['dictnameindices'] = {'prop1': 0,
+                                          'discorcont': 1}
+
         expected_vals = [
-            []
+            [{},
+             ('File path to pickled phi / psi voronoi point coordinates not '
+              'recognised')],
+            [{'phipsiclustercoords': 'mistake'},
+             ('File path to pickled phi / psi voronoi point coordinates not '
+              'recognised')],
+            [{'phipsiclustercoords': 'tests/test_files/mistake.pkl'},
+             ('File path to pickled phi / psi voronoi point coordinates not '
+              'recognised')],
+            [{'phipsiclustercoords': 'example_pdb_253L.pdb'},
+             ('File path to pickled phi / psi voronoi point coordinates not '
+              'recognised')],
+            [{'phipsiclustercoords': 'tests/test_files/example_input_df.pkl'},
+             ('Data in tests/test_files/example_input_df.pkl is not a '
+              'pickled dictionary')],
+            [{'phipsiclustercoords': 'tests/test_files/example_prop_freq_scales.pkl'},
+             OrderedDict({'scale_1': [1, 2, 3, 4, 5], 'scale_2': [6, 7, 8, 9, 10],
+                          'phipsi_disc': [11, 12, 13, 14, 15]})]
         ]
+
+        for pair in expected_vals:
+            sub2_params = pair[0]
+            all_params = {**sub1_params, **sub2_params}
+            exp_output = pair[1]
+            self.assertEqual(
+                def_phipsi_cluster_coords(all_params, test=True), exp_output
+            )
 
     def test_working_directory(self):
         """
@@ -258,7 +330,9 @@ class testParameterParsing(unittest.TestCase):
         for pair in expected_vals:
             params = pair[0]
             exp_output = pair[1]
-            self.assertEqual(def_working_directory(params, test=True), exp_output)
+            self.assertEqual(
+                def_working_directory(params, test=True), exp_output
+            )
 
     def test_barrel_or_sandwich(self):
         """
@@ -277,7 +351,9 @@ class testParameterParsing(unittest.TestCase):
         for pair in expected_vals:
             params = pair[0]
             exp_output = pair[1]
-            self.assertEqual(def_barrel_or_sandwich(params, test=True), exp_output)
+            self.assertEqual(
+                def_barrel_or_sandwich(params, test=True), exp_output
+            )
 
     def test_job_id(self):
         """
@@ -351,9 +427,40 @@ class testParameterParsing(unittest.TestCase):
 
     def test_split_fraction(self):
         """
+        Tests that fraction of samples to have their fitness scored using
+        propensity scales is parsed correctly
         """
 
-        pass
+        sub1_params = {'fitnessscoremethod': 'split'}
+
+        expected_vals = [
+            [{},
+             ('Fraction of samples to be optimised against propensity not '
+              'recognised - please enter a value between 0 and 1')],
+            [{'splitfraction': 'mistake'},
+             ('Fraction of samples to be optimised against propensity not '
+              'recognised - please enter a value between 0 and 1')],
+            [{'splitfraction': '2'},
+             ('Fraction of samples to be optimised against propensity not '
+              'recognised - please enter a value between 0 and 1')],
+            [{'splitfraction': '-1'},
+             ('Fraction of samples to be optimised against propensity not '
+              'recognised - please enter a value between 0 and 1')],
+            [{'splitfraction': '1'},
+             1.0],
+            [{'splitfraction': '0'},
+             0.0],
+            [{'splitfraction': '0.42'},
+             0.42]
+        ]
+
+        for pair in expected_vals:
+            sub2_params = pair[0]
+            all_params = {**sub1_params, **sub2_params}
+            exp_output = pair[1]
+            self.assertEqual(
+                def_split_fraction(all_params, test=True), exp_output
+            )
 
     def test_method_select_mating_pop(self):
         """
@@ -382,9 +489,40 @@ class testParameterParsing(unittest.TestCase):
 
     def test_unfit_fraction(self):
         """
+        Tests that fraction of samples to have their fitness scored using
+        propensity scales is parsed correctly
         """
 
-        pass
+        sub1_params = {'matingpopmethod': 'fittest'}
+
+        expected_vals = [
+            [{},
+             ('Fraction of mating population to be comprised of unfit samples '
+              'not recognised - please enter a value between 0 and 1')],
+            [{'unfitfraction': 'mistake'},
+             ('Fraction of mating population to be comprised of unfit samples '
+              'not recognised - please enter a value between 0 and 1')],
+            [{'unfitfraction': '2'},
+             ('Fraction of mating population to be comprised of unfit samples '
+              'not recognised - please enter a value between 0 and 1')],
+            [{'unfitfraction': '-1'},
+             ('Fraction of mating population to be comprised of unfit samples '
+              'not recognised - please enter a value between 0 and 1')],
+            [{'unfitfraction': '1'},
+             1.0],
+            [{'unfitfraction': '0'},
+             0.0],
+            [{'unfitfraction': '0.42'},
+             0.42]
+        ]
+
+        for pair in expected_vals:
+            sub2_params = pair[0]
+            all_params = {**sub1_params, **sub2_params}
+            exp_output = pair[1]
+            self.assertEqual(
+                def_unfit_fraction(all_params, test=True), exp_output
+            )
 
     def test_method_crossover(self):
         """
@@ -411,21 +549,114 @@ class testParameterParsing(unittest.TestCase):
 
     def test_crossover_prob(self):
         """
+        Tests probability of (uniform) crossing over between sequence pairs
+        (chromosomes) is parsed correctly
         """
 
-        pass
+        sub1_params = {'crossovermethod': 'uniform'}
+
+        expected_vals = [
+            [{},
+             ('Probability of uniform crossover not recognised - please enter '
+              'a value between 0 and 1')],
+            [{'crossoverprob': 'mistake'},
+             ('Probability of uniform crossover not recognised - please enter '
+              'a value between 0 and 1')],
+            [{'crossoverprob': '2'},
+             ('Probability of uniform crossover not recognised - please enter '
+              'a value between 0 and 1')],
+            [{'crossoverprob': '-1'},
+             ('Probability of uniform crossover not recognised - please enter '
+              'a value between 0 and 1')],
+            [{'crossoverprob': '1'},
+             1.0],
+            [{'crossoverprob': '0'},
+             0.0],
+            [{'crossoverprob': '0.42'},
+             0.42]
+        ]
+
+        for pair in expected_vals:
+            sub2_params = pair[0]
+            all_params = {**sub1_params, **sub2_params}
+            exp_output = pair[1]
+            self.assertEqual(
+                def_crossover_prob(all_params, test=True), exp_output
+            )
 
     def test_swap_start_prob(self):
         """
+        Tests probability of initiating a (segmented) crossover between
+        sequence pairs (chromosomes) is parsed correctly
         """
 
-        pass
+        sub1_params = {'crossovermethod': 'segmented'}
+
+        expected_vals = [
+            [{},
+             ('Probability of initiating segmented crossover not recognised - '
+              'please enter a value between 0 and 1')],
+            [{'swapstartprob': 'mistake'},
+             ('Probability of initiating segmented crossover not recognised - '
+              'please enter a value between 0 and 1')],
+            [{'swapstartprob': '2'},
+             ('Probability of initiating segmented crossover not recognised - '
+              'please enter a value between 0 and 1')],
+            [{'swapstartprob': '-1'},
+             ('Probability of initiating segmented crossover not recognised - '
+              'please enter a value between 0 and 1')],
+            [{'swapstartprob': '1'},
+             1.0],
+            [{'swapstartprob': '0'},
+             0.0],
+            [{'swapstartprob': '0.42'},
+             0.42]
+        ]
+
+        for pair in expected_vals:
+            sub2_params = pair[0]
+            all_params = {**sub1_params, **sub2_params}
+            exp_output = pair[1]
+            self.assertEqual(
+                def_swap_start_prob(all_params, test=True), exp_output
+            )
 
     def test_swap_stop_prob(self):
         """
+        Tests probability of ending a (segmented) crossover between sequence
+        pairs (chromosomes) is parsed correctly
         """
 
-        pass
+        sub1_params = {'crossovermethod': 'segmented'}
+
+        expected_vals = [
+            [{},
+             ('Probability of ending segmented crossover not recognised - '
+              'please enter a value between 0 and 1')],
+            [{'swapstopprob': 'mistake'},
+             ('Probability of ending segmented crossover not recognised - '
+              'please enter a value between 0 and 1')],
+            [{'swapstopprob': '2'},
+             ('Probability of ending segmented crossover not recognised - '
+              'please enter a value between 0 and 1')],
+            [{'swapstopprob': '-1'},
+             ('Probability of ending segmented crossover not recognised - '
+              'please enter a value between 0 and 1')],
+            [{'swapstopprob': '1'},
+             1.0],
+            [{'swapstopprob': '0'},
+             0.0],
+            [{'swapstopprob': '0.42'},
+             0.42]
+        ]
+
+        for pair in expected_vals:
+            sub2_params = pair[0]
+            all_params = {**sub1_params, **sub2_params}
+            exp_output = pair[1]
+            self.assertEqual(
+                def_swap_stop_prob(all_params, test=True), exp_output
+            )
 
     def test_method_mutation(self):
         """
@@ -446,24 +677,131 @@ class testParameterParsing(unittest.TestCase):
         for index, pair in enumerate(expected_vals):
             params = pair[0]
             exp_output = pair[1]
-            self.assertEqual(
-                def_method_mutation(params, test=True), exp_output
-            )
+            self.assertEqual(def_method_mutation(params, test=True), exp_output)
 
     def test_mutation_prob(self):
         """
+        Tests probability of sequence mutation is parsed correctly
         """
 
-        pass
+        expected_vals = [
+            [{},
+             ('Probability of mutation not recognised - please enter a value '
+              'between 0 and 1')],
+            [{'mutationprob': 'mistake'},
+             ('Probability of mutation not recognised - please enter a value '
+              'between 0 and 1')],
+            [{'mutationprob': '2'},
+             ('Probability of mutation not recognised - please enter a value '
+              'between 0 and 1')],
+            [{'mutationprob': '-1'},
+             ('Probability of mutation not recognised - please enter a value '
+              'between 0 and 1')],
+            [{'mutationprob': '1'},
+             1.0],
+            [{'mutationprob': '0'},
+             0.0],
+            [{'mutationprob': '0.42'},
+             0.42]
+        ]
+
+        for pair in expected_vals:
+            params = pair[0]
+            exp_output = pair[1]
+            self.assertEqual(def_mutation_prob(params, test=True), exp_output)
 
     def test_pop_size(self):
         """
+        Tests that population size is parsed correctly
         """
 
-        pass
+        expected_vals = [
+            [{'fitnessscoremethod': 'propensity',
+              'splitfraction': ''},
+             ('Population size not recognised - please enter a positive even '
+              'integer')],
+            [{'fitnessscoremethod': 'propensity',
+              'splitfraction': '',
+              'populationsize': 'mistake'},
+             ('Population size not recognised - please enter a positive even '
+              'integer')],
+            [{'fitnessscoremethod': 'propensity',
+              'splitfraction': '',
+              'populationsize': '4.2'},
+             ('Population size not recognised - please enter a positive even '
+              'integer')],
+            [{'fitnessscoremethod': 'propensity',
+              'splitfraction': '',
+              'populationsize': '0'},
+             ('Population size not recognised - please enter a positive even '
+              'integer')],
+            [{'fitnessscoremethod': 'propensity',
+              'splitfraction': '',
+              'populationsize': '-10'},
+             ('Population size not recognised - please enter a positive even '
+              'integer')],
+            [{'fitnessscoremethod': 'propensity',
+              'splitfraction': '',
+              'populationsize': '13'},
+             ('Population size not recognised - please enter a positive even '
+              'integer')],
+            [{'fitnessscoremethod': 'propensity',
+              'splitfraction': '',
+              'populationsize': '42'},
+             (42)],
+            [{'fitnessscoremethod': 'split',
+              'splitfraction': 0.5,
+              'populationsize': '0'},
+             ('Population size not recognised - please enter a positive integer'
+              ' that when multiplied by 0.5x the fraction of samples to be '
+              'optimised against propensity gives an integer value')],
+            [{'fitnessscoremethod': 'split',
+              'splitfraction': 0.5,
+              'populationsize': '42'},
+             ('Population size not recognised - please enter a positive integer'
+              ' that when multiplied by 0.5x the fraction of samples to be '
+              'optimised against propensity gives an integer value')],
+            [{'fitnessscoremethod': 'split',
+              'splitfraction': 0.7,
+              'populationsize': '20'},
+             (20)],
+        ]
+
+        for pair in expected_vals:
+            params = pair[0]
+            exp_output = pair[1]
+            self.assertEqual(def_pop_size(params, test=True), exp_output)
 
     def test_num_gens(self):
         """
+        Tests that number of generations for which to run the genetic algorithm
+        is parsed correctly
         """
 
-        pass
+        expected_vals = [
+            [{},
+             ('Maximum number of generations not recognised - please enter a '
+              'positive integer')],
+            [{'maxnumgenerations': 'mistake'},
+             ('Maximum number of generations not recognised - please enter a '
+              'positive integer')],
+            [{'maxnumgenerations': '0'},
+             ('Maximum number of generations not recognised - please enter a '
+              'positive integer')],
+            [{'maxnumgenerations': '-10'},
+             ('Maximum number of generations not recognised - please enter a '
+              'positive integer')],
+            [{'maxnumgenerations': '1.5'},
+             ('Maximum number of generations not recognised - please enter a '
+              'positive integer')],
+            [{'maxnumgenerations': '42.0'},
+             ('Maximum number of generations not recognised - please enter a '
+              'positive integer')],
+            [{'maxnumgenerations': '42'},
+             42]
+        ]
+
+        for pair in expected_vals:
+            params = pair[0]
+            exp_output = pair[1]
+            self.assertEqual(def_num_gens(params, test=True), exp_output)

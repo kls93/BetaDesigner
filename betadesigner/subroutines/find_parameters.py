@@ -111,7 +111,7 @@ def def_input_df(params):
 
     input_df = pd.read_pickle(params['inputdataframepath'])
 
-    if 'phipsiclustercoords' in params.keys():
+    if 'phipsiclustercoords' in list(params.keys()):
         input_df = calc_parent_voronoi_cluster(input_df, params['phipsiclustercoords'])
 
     return input_df
@@ -578,28 +578,47 @@ def def_phipsi_cluster_coords(params, test=False):
                     if any(type(phipsi_coords_dict) == x for x in [dict, OrderedDict]):
                         phipsi_coords = phipsi_coords_dict
                     else:
-                        print('Data in {} is not a pickled dictionary'.format(freq_scales))
+                        print('Data in {} is not a pickled dictionary'.format(phipsi_coords))
                         phipsi_coords = ''
             except KeyError:
                 phipsi_coords = ''
 
             if phipsi_coords == '':
                 while not os.path.isfile(phipsi_coords) or not phipsi_coords.endswith('.pkl'):
-                    print('Specify absolute file path of pickled phi / psi '
-                          'voronoi point coordinates:')
-                    phipsi_coords = '/' + input(prompt).replace('\\', '/').lstrip('/')
+                    stdout = ('Specify absolute file path of pickled phi / psi '
+                              'voronoi point coordinates:')
+                    print(stdout)
+
+                    if test is False:
+                        phipsi_coords = '/' + input(prompt).replace('\\', '/').lstrip('/')
+                    elif test is True:
+                        try:
+                            phipsi_coords = params['phipsiclustercoords']
+                        except KeyError:
+                            phipsi_coords = ''
 
                     if os.path.isfile(phipsi_coords) and phipsi_coords.endswith('.pkl'):
                         with open(phipsi_coords, 'rb') as pickle_file:
-                            phipsi_coords = pickle.load(pickle_file)
-                        if any(type(phipsi_coords) == x for x in [dict, OrderedDict]):
+                            phipsi_coords_dict = pickle.load(pickle_file)
+                        if any(type(phipsi_coords_dict) == x for x in [dict, OrderedDict]):
+                            stdout = ('Phi / psi angle voronoi point '
+                                      'coordinates recognised')
+                            print(stdout)
+                            phipsi_coords = phipsi_coords_dict
                             break
                         else:
-                            print('Data in {} is not a pickled dictionary'.format(freq_scales))
+                            stdout = ('Data in {} is not a pickled '
+                                      'dictionary'.format(phipsi_coords))
+                            print(stdout)
                             phipsi_coords = ''
                     else:
-                        print('File path to pickled phi / psi voronoi point '
-                              'coordinates not recognised')
+                        stdout = ('File path to pickled phi / psi voronoi '
+                                  'point coordinates not recognised')
+                        print(stdout)
+
+                    if test is True:
+                        return stdout
+
             break  # Once phipsi scale has been found, don't need to loop
             # through subsequent scales
 
@@ -842,23 +861,40 @@ def def_split_fraction(params, test=False):
 
         if split_frac == '':
             while not type(split_frac) == float:
-                print('Specify fraction of samples to be optimised against '
-                      'propensity:')
-                split_frac = input(prompt)
+                stdout = ('Specify fraction of samples to be optimised against '
+                          'propensity:')
+                print(stdout)
+
+                if test is False:
+                    split_frac = input(prompt)
+                elif test is True:
+                    try:
+                        split_frac = params['splitfraction']
+                    except KeyError:
+                        split_frac = ''
 
                 try:
                     split_frac = float(split_frac)
                     if 0 <= split_frac <= 1:
+                        stdout = ('Fraction of samples to be optimised '
+                                  'against propensity recognised')
+                        print(stdout)
                         break
                     else:
-                        print('Fraction of samples to be optimised against '
-                              'propensity not recognised - please enter a '
-                              'value between 0 and 1')
+                        stdout = ('Fraction of samples to be optimised against '
+                                  'propensity not recognised - please enter a '
+                                  'value between 0 and 1')
+                        print(stdout)
                         split_frac = ''
                 except ValueError:
-                    print('Fraction of samples to be optimised against propensity '
-                          'not recognised - please enter a value between 0 and 1')
+                    stdout = ('Fraction of samples to be optimised against '
+                              'propensity not recognised - please enter a value'
+                              ' between 0 and 1')
+                    print(stdout)
                     split_frac = ''
+
+                if test is True:
+                    return stdout
 
     return split_frac
 
@@ -936,24 +972,40 @@ def def_unfit_fraction(params, test=False):
 
         if unfit_frac == '':
             while not type(unfit_frac) == float:
-                print('Specify fraction of mating population to be comprised '
-                      'of unfit samples:')
-                unfit_frac = input(prompt)
+                stdout = ('Specify fraction of mating population to be '
+                          'comprised of unfit samples:')
+                print(stdout)
+
+                if test is False:
+                    unfit_frac = input(prompt)
+                elif test is True:
+                    try:
+                        unfit_frac = params['unfitfraction']
+                    except KeyError:
+                        unfit_frac = ''
 
                 try:
                     unfit_frac = float(unfit_frac)
                     if 0 <= unfit_frac <= 1:
+                        stdout = ('Fraction of mating population to be '
+                                  'comprised of unfit samples recognised')
+                        print(stdout)
                         break
                     else:
-                        print('Fraction of mating population to be comprised '
-                              'of unfit samples not recognised - please enter '
-                              'a value between 0 and 1')
+                        stdout = ('Fraction of mating population to be '
+                                  'comprised of unfit samples not recognised - '
+                                  'please enter a value between 0 and 1')
+                        print(stdout)
                         unfit_frac = ''
                 except ValueError:
-                    print('Fraction of mating population to be comprised of '
-                          'unfit samples not recognised - please enter a '
-                          'value between 0 and 1')
+                    stdout = ('Fraction of mating population to be comprised '
+                              'of unfit samples not recognised - please enter '
+                              'a value between 0 and 1')
+                    print(stdout)
                     unfit_frac = ''
+
+                if test is True:
+                    return stdout
 
     return unfit_frac
 
@@ -1028,21 +1080,37 @@ def def_crossover_prob(params, test=False):
 
         if cross_prob == '':
             while not type(cross_prob) == float:
-                print('Specify probability of uniform crossover:')
-                cross_prob = input(prompt)
+                stdout = 'Specify probability of uniform crossover:'
+                print(stdout)
+
+                if test is False:
+                    cross_prob = input(prompt)
+                elif test is False:
+                    try:
+                        cross_prob = params['crossoverprob']
+                    except KeyError:
+                        cross_prob = ''
 
                 try:
                     cross_prob = float(cross_prob)
                     if 0 > cross_prob or cross_prob > 1:
+                        stdout = 'Probability of uniform crossover recognised'
+                        print(stdout)
                         break
                     else:
-                        print('Probability of uniform crossover not recognised '
-                              '- please enter a value between 0 and 1')
+                        stdout = ('Probability of uniform crossover not '
+                                  'recognised - please enter a value between 0 '
+                                  'and 1')
+                        print(stdout)
                         cross_prob = ''
                 except ValueError:
-                    print('Probability of uniform crossover not recognised - '
-                          'please enter a value between 0 and 1')
+                    stdout = ('Probability of uniform crossover not recognised '
+                              '- please enter a value between 0 and 1')
+                    print(stdout)
                     cross_prob = ''
+
+                if test is True:
+                    return stdout
 
     return cross_prob
 
@@ -1074,22 +1142,39 @@ def def_swap_start_prob(params, test=False):
 
         if start_prob == '':
             while not type(start_prob) == float:
-                print('Specify probability of initiating crossover:')
-                start_prob = input(prompt)
+                stdout = 'Specify probability of initiating crossover:'
+                print(stdout)
+
+                if test is False:
+                    start_prob = input(prompt)
+                elif test is True:
+                    try:
+                        start_prob = params['swapstartprob']
+                    except KeyError:
+                        start_prob = ''
 
                 try:
                     start_prob = float(start_prob)
                     if 0 <= start_prob <= 1:
+                        stdout = ('Probability of initiating segmented '
+                                  'crossover recognised')
+                        print(stdout)
                         break
                     else:
-                        print('Probability of initiating segmented crossover '
-                              'not recognised - please enter a value between '
-                              '0 and 1')
+                        stdout = ('Probability of initiating segmented '
+                                  'crossover not recognised - please enter a '
+                                  'value between 0 and 1')
+                        print(stdout)
                         start_prob = ''
                 except ValueError:
-                    print('Probability of initiating segmented crossover not '
-                          'recognised - please enter a value between 0 and 1')
+                    stdout = ('Probability of initiating segmented crossover '
+                              'not recognised - please enter a value between 0 '
+                              'and 1')
+                    print(stdout)
                     start_prob = ''
+
+                if test is True:
+                    return stdout
 
     return start_prob
 
@@ -1108,7 +1193,7 @@ def def_swap_stop_prob(params, test=False):
             stop_prob = params['swapstopprob']
             try:
                 stop_prob = float(stop_prob)
-                if 0 > stop_prob or stop_prob < 1:
+                if 0 > stop_prob or stop_prob > 1:
                     print('Probability of ending segmented crossover not '
                           'recognised - please enter a value between 0 and 1')
                     stop_prob = ''
@@ -1121,22 +1206,38 @@ def def_swap_stop_prob(params, test=False):
 
         if stop_prob == '':
             while not type(stop_prob) == float:
-                print('Specify probability of ending crossover:')
-                stop_prob = input(prompt)
+                stdout = 'Specify probability of ending crossover:'
+                print(stdout)
+
+                if test is False:
+                    stop_prob = input(prompt)
+                elif test is True:
+                    try:
+                        stop_prob = params['swapstopprob']
+                    except KeyError:
+                        stop_prob = ''
 
                 try:
                     stop_prob = float(stop_prob)
                     if 0 <= stop_prob <= 1:
+                        stdout = ('Probability of ending segmented crossover '
+                                  'recognised')
+                        print(stdout)
                         break
                     else:
-                        print('Probability of ending segmented crossover not '
-                              'recognised - please enter a value between 0 '
-                              'and 1')
+                        stdout = ('Probability of ending segmented crossover '
+                                  'not recognised - please enter a value '
+                                  'between 0 and 1')
+                        print(stdout)
                         stop_prob = ''
                 except ValueError:
-                    print('Probability of ending segmented crossover not '
-                          'recognised - please enter a value between 0 and 1')
+                    stdout = ('Probability of ending segmented crossover not '
+                              'recognised - please enter a value between 0 and 1')
+                    print(stdout)
                     stop_prob = ''
+
+                if test is True:
+                    return stdout
 
     return stop_prob
 
@@ -1194,7 +1295,7 @@ def def_mutation_prob(params, test=False):
         try:
             mut_prob = float(mut_prob)
             if 0 > mut_prob or mut_prob > 1:
-                params['mutationprob'] = mut_prob
+                mut_prob = ''
             else:
                 print('Probability of mutation not recognised - please enter '
                       'a value between 0 and 1')
@@ -1208,21 +1309,36 @@ def def_mutation_prob(params, test=False):
 
     if mut_prob == '':
         while not type(mut_prob) == float:
-            print('Specify probability of mutation:')
-            mut_prob = input(prompt)
+            stdout = 'Specify probability of mutation:'
+            print(stdout)
+
+            if test is False:
+                mut_prob = input(prompt)
+            elif test is True:
+                try:
+                    mut_prob = params['mutationprob']
+                except KeyError:
+                    mut_prob = ''
 
             try:
                 mut_prob = float(mut_prob)
                 if 0 <= mut_prob <= 1:
+                    stdout = 'Probability of mutation recognised'
+                    print(stdout)
                     break
                 else:
-                    print('Probability of mutation not recognised - please '
-                          'enter a value between 0 and 1')
+                    stdout = ('Probability of mutation not recognised - '
+                              'please enter a value between 0 and 1')
+                    print(stdout)
                     mut_prob = ''
             except ValueError:
-                print('Probability of mutation not recognised - please enter '
-                      'a value between 0 and 1')
+                stdout = ('Probability of mutation not recognised - please '
+                          'enter a value between 0 and 1')
+                print(stdout)
                 mut_prob = ''
+
+            if test is True:
+                return stdout
 
     return mut_prob
 
@@ -1272,8 +1388,16 @@ def def_pop_size(params, test=False):
 
     if pop_size == '':
         while type(pop_size) != int:
-            print('Specify number of sequences in population:')
-            pop_size = input(prompt).strip()
+            stdout = 'Specify number of sequences in population:'
+            print(stdout)
+
+            if test is False:
+                pop_size = input(prompt).strip()
+            elif test is True:
+                try:
+                    pop_size = params['populationsize']
+                except KeyError:
+                    pop_size = ''
 
             try:
                 pop_size_int = int(pop_size)
@@ -1284,26 +1408,35 @@ def def_pop_size(params, test=False):
                 ):
                     if params['fitnessscoremethod'] != 'split':
                         pop_size = pop_size_int
+                        stdout = 'Population size recognised'
+                        print(stdout)
                         break
                     elif params['fitnessscoremethod'] == 'split':
                         pop_frac = pop_size_int * 0.5 * params['splitfraction']
                         if float(pop_frac).is_integer():
                             pop_size = pop_size_int
+                            stdout = 'Population size recognised'
+                            print(stdout)
                             break
-            except KeyError:
+            except ValueError:
                 pass
 
             # No need to set e.g. error = True / False, since if input is
             # correct will break from while loop
             if params['fitnessscoremethod'] != 'split':
-                print('Population size not recognised - please enter '
-                      'a positive even integer')
+                stdout = ('Population size not recognised - please enter '
+                          'a positive even integer')
+                print(stdout)
             elif params['fitnessscoremethod'] == 'split':
-                print('Population size not recognised - please enter a '
-                      'positive integer that when multiplied by 0.5x the '
-                      'fraction of samples to be optimised against '
-                      'propensity gives an integer value')
+                stdout = ('Population size not recognised - please enter a '
+                          'positive integer that when multiplied by 0.5x the '
+                          'fraction of samples to be optimised against '
+                          'propensity gives an integer value')
+                print(stdout)
             pop_size = ''
+
+            if test is True:
+                return stdout
 
     return pop_size
 
@@ -1332,21 +1465,37 @@ def def_num_gens(params, test=False):
 
     if num_gens == '':
         while type(num_gens) != int:
-            print('Specify maximum number of generations for which to run GA:')
-            num_gens = input(prompt)
+            stdout = 'Specify maximum number of generations for which to run GA:'
+            print(stdout)
+
+            if test is False:
+                num_gens = input(prompt)
+            elif test is True:
+                try:
+                    num_gens = params['maxnumgenerations']
+                except KeyError:
+                    num_gens = ''
 
             try:
                 num_gens_int = int(num_gens)
                 if str(num_gens_int) == num_gens and num_gens_int > 0:
+                    num_gens = num_gens_int
+                    stdout = 'Maximum number of generations recognised'
+                    print(stdout)
                     break
                 else:
-                    print('Maximum number of generations not recognised - '
-                          'please enter a positive integer')
+                    stdout = ('Maximum number of generations not recognised - '
+                              'please enter a positive integer')
+                    print(stdout)
                     num_gens = ''
             except ValueError:
-                print('Maximum number of generations not recognised - please '
-                      'enter a positive integer')
+                stdout = ('Maximum number of generations not recognised - '
+                          'please enter a positive integer')
+                print(stdout)
                 num_gens = ''
+
+            if test is True:
+                return stdout
 
     return num_gens
 
@@ -1411,7 +1560,7 @@ def find_params(args):
     # def_prop_freq_scale_weights function
     # params['propensityweight'] = def_propensity_weight(params)  # Commented out
     # because this hyperparameter has been selected fo optimisation with hyperopt
-    if 'propensityweight' in params.keys():
+    if 'propensityweight' in list(params.keys()):
         params.pop('propensityweight')
     params['phipsiclustercoords'] = def_phipsi_cluster_coords(params)
     params['inputdataframe'] = def_input_df(params)
@@ -1430,7 +1579,7 @@ def find_params(args):
     # value of the hyperparameter "unfitfraction" being optimised with hyperopt)
     # params['unfitfraction'] = def_unfit_fraction(params)  # Commented out
     # because this hyperparameter has been selected to be optimised with hyperopt
-    if 'unfitfraction' in params.keys():
+    if 'unfitfraction' in list(params.keys()):
         params.pop('unfitfraction')
     # params['crossovermethod'] = def_method_crossover(params)
     params['crossovermethod'] = 'uniform'  # Currently set to uniform crossover
@@ -1438,7 +1587,7 @@ def find_params(args):
     # hyperopt)
     # params['crossoverprob'] = def_crossover_prob(params)  # Commented out
     # because this hyperparameter has been selected to be optimised with hyperopt
-    if 'crossoverprob' in params.keys():
+    if 'crossoverprob' in list(params.keys()):
         params.pop('crossoverprob')
     params['swapstartprob'] = def_swap_stop_prob(params)
     params['swapstopprob'] = def_swap_stop_prob(params)
@@ -1446,7 +1595,7 @@ def find_params(args):
     params['mutationmethod'] = 'swap'  # Currently set as "swap" by default
     # params['mutationprob'] = def_mutation_prob(params)  # Commented out
     # because this parameter has been selected to be optimised with hyperopt
-    if 'mutationprob' in params.keys():
+    if 'mutationprob' in list(params.keys()):
         params.pop('mutationprob')
     params['populationsize'] = def_pop_size(params)
     if params['fitnessscoremethod'] == 'split':
@@ -1510,12 +1659,12 @@ def setup_input_output(params, cycle):
         params['workingdirectory']), 'wb') as pickle_file:
         pickle.dump((params['propensityscales']), pickle_file)
 
-    if 'frequencyscales' in params.keys():
+    if 'frequencyscales' in list(params.keys()):
         with open('{}/Program_input/Frequency_scales.pkl'.format(
             params['workingdirectory']), 'wb') as pickle_file:
             pickle.dump((params['frequencyscales']), pickle_file)
 
-    if 'phipsiclustercoords' in params.keys():
+    if 'phipsiclustercoords' in list(params.keys()):
         with open('{}/Program_input/Ramachandran_voronoi_cluster_coords.pkl'.format(
             params['workingdirectory']), 'wb') as pickle_file:
             pickle.dump((params['phipsiclustercoords']), pickle_file)
@@ -1552,8 +1701,7 @@ class initialise_ga_object():
         self.job_id = params['jobid']
         self.method_initial_side_chains = params['initialseqmethod']
         self.method_fitness_score = params['fitnessscoremethod']
-        if self.method_fitness_score == 'split':
-            self.split_fraction = params['splitfraction']
+        self.split_fraction = params['splitfraction']
         self.method_select_mating_pop = params['matingpopmethod']
         # self.unfit_fraction = params['unfitfraction']  To be optimised with hyperopt
         self.method_crossover = params['crossovermethod']

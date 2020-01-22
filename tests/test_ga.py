@@ -1,5 +1,5 @@
 
-# python -m tests/test_ga.py
+# python -m unittest tests/test_ga.py
 
 import copy
 import networkx as nx

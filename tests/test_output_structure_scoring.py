@@ -1,5 +1,5 @@
 
-# python -m tests/test_output_structure_scoring.py
+# python -m unittest tests/test_output_structure_scoring.py
 # Tests code for scoring output structures with BUDE, PyRosetta and MolProbity
 
 import os
