@@ -8,14 +8,15 @@ import unittest
 from collections import OrderedDict
 
 from betadesigner.subroutines.find_parameters import (
-    calc_parent_voronoi_cluster, def_input_df_path, def_propensity_scales,
-    def_frequency_scales, convert_str_to_dict, def_prop_freq_scale_weights,
-    def_propensity_weight, def_phipsi_cluster_coords, def_working_directory,
-    def_barrel_or_sandwich, def_jobid, def_method_initial_seq,
-    def_method_fitness_scoring, def_split_fraction,
-    def_method_select_mating_pop, def_unfit_fraction, def_method_crossover,
-    def_crossover_prob, def_swap_start_prob, def_swap_stop_prob,
-    def_method_mutation, def_mutation_prob, def_pop_size, def_num_gens
+    calc_parent_voronoi_cluster, def_input_df_path, def_input_pdb,
+    def_propensity_scales, def_frequency_scales, convert_str_to_dict,
+    def_prop_freq_scale_weights, def_propensity_weight,
+    def_phipsi_cluster_coords, def_working_directory, def_barrel_or_sandwich,
+    def_jobid, def_method_initial_seq, def_method_fitness_scoring,
+    def_split_fraction, def_method_select_mating_pop, def_unfit_fraction,
+    def_method_crossover, def_crossover_prob, def_swap_start_prob,
+    def_swap_stop_prob, def_method_mutation, def_mutation_prob, def_pop_size,
+    def_num_gens
 )
 
 
