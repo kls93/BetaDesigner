@@ -9,10 +9,10 @@ from collections import OrderedDict
 
 if __name__ == 'subroutines.write_output_structures':
     from subroutines.find_parameters import initialise_ga_object
-    from subroutines.run_genetic_algorithm import pack_side_chains
+    from subroutines.calc_bude_energy_in_parallel import pack_side_chains
 else:
     from betadesigner.subroutines.find_parameters import initialise_ga_object
-    from betadesigner.subroutines.run_genetic_algorithm import pack_side_chains
+    from betadesigner.subroutines.calc_bude_energy_in_parallel import pack_side_chains
 
 
 def parse_rosetta_score_file(score_file_lines):

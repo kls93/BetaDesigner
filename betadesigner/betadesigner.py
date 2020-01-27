@@ -9,6 +9,8 @@ from hyperopt import fmin, hp, tpe, Trials
 # PDB file of backbone coordinates. The program optimises an initial dataset of
 # possible sequences to fit the structural features of the backbone coordinates
 # using a genetic algorithm.
+# N.B. INPUT BETA-BARREL STRUCTURES MUST BE ORIENTED SUCH THAT THEIR Z-AXIS IS
+# ALIGNED WITH THE MEMBRANE NORMAL
 
 
 def main():
@@ -62,12 +64,18 @@ def main():
 
     run_ga = True
     run_opt = True
-    max_evals = 4
-    total_gen = 10
-    max_gen = copy.copy(params['maxnumgenerations'])
-    params['maxnumgenerations'] = total_gen
+    max_evals = 10  # Number of hyperparameter combinations for hyperopt to try
+    sub_gen = 4  # Number of generations to run the GA with a particular
+    # combination of hyperparameters
+    # max_gen = copy.copy(params['maxnumgenerations'])  # Total number of generations
+    # GA can be run for (changing hyperparameters every sub_gen generations)
+    max_gen = 4
+    params['maxnumgenerations'] = sub_gen
 
     count = 0
+    # Runs GA in subsets of sub_gen generations, until either the output fitness
+    # score has converged (to within 1%) or the number of generations exceeds
+    # the user-defined threshold
     while run_ga is True:
         count += 1
         setup_input_output(params, count)
@@ -102,27 +110,34 @@ def main():
         ) as f:
             pickle.dump(params, f)
 
+        # Runs hyperparameter optimisation in increments of sqrt(10) evaluations,
+        # until either the selected hyperparameter values have converged (to
+        # within 1%) or the number of combinations of hyperparameters tested
+        # exceeds 1000000
         while run_opt is True:
             best_params = fmin(fn=run_genetic_algorithm, space=bayes_params,
                                algo=tpe.suggest, trials=trials, max_evals=max_evals)
-            if max_evals == 4:
+
+            if max_evals == 10:
                 current_best = copy.deepcopy(best_params)
-                max_evals = int(max_evals * math.sqrt(4))
+                max_evals = int(max_evals * math.sqrt(10))
             else:
-                # If best values are within 1% of previous OR number of trials > 1000000
+                # If best values are within 1% of previous OR number of trials >= 1000000
                 similarity_dict = {}
                 for key in list(best_params.keys()):
                     if key in ['unfitfraction', 'crossoverprob', 'mutationprob', 'propensityweight']:
                         if (
                                ((0.99*current_best[key]) <= best_params[key] <= (1.01*current_best[key]))
-                            or max_evals >= 16
+                            or max_evals >= 100
                         ):
                             similarity_dict[key] = True
+                        else:
+                            similarity_dict[key] = False
                 if all(x is True for x in similarity_dict.values()):
                     run_opt = False
                 else:
                     current_best = copy.deepcopy(best_params)
-                    max_evals = int(max_evals * math.sqrt(4))
+                    max_evals = int(max_evals * math.sqrt(10))
 
         best_params['workingdirectory'] = params['workingdirectory']
         best_params['optimisationcycle'] = count
@@ -131,19 +146,23 @@ def main():
             params['workingdirectory']), 'rb') as f:
             new_sequences_dict = pickle.load(f)
 
-        if total_gen == 10:
+        if max_gen == sub_gen:
+            break
+
+        if sub_gen == 10:
             current_fitness = copy.deepcopy(fitness)
         else:
             # If updated fitness is within 1% of previous fitness score OR
             # number of generations > user-defined limit
             if (
                    ((0.99*current_fitness) <= fitness <= (1.01*current_fitness))
-                or total_gen >= max_gen
+                or sub_gen >= max_gen
             ):
                 run_ga = False
+                break
             else:
                 current_fitness = copy.deepcopy(fitness)
-                total_gen += 10
+                sub_gen *= 2
 
     # Uses SCWRL4 within ISAMBARD to pack the output sequences onto the
     # backbone model, and writes the resulting model to a PDB file. Also

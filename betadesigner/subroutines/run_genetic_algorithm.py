@@ -4,12 +4,10 @@
 # the optimisation technique on something which can be overfit, e.g. for
 # hyperpameter selection for an ML algorithm, but this is not the case here.
 
-import budeff
 import copy
-import isambard
+import os
 import pickle
 import random
-import isambard.modelling as modelling
 import multiprocessing as mp
 import networkx as nx
 import numpy as np
@@ -33,48 +31,6 @@ else:
 
 aa_code_dict = gen_amino_acids_dict()
 
-def pack_side_chains(ampal_object, G, rigid_rotamers):
-    """
-    Uses SCWRL4 to pack network side chains onto a backbone structure and
-    measures the total energy of the model within BUDE
-    """
-
-    # Makes FASTA sequence to feed into SCWRL4. BEWARE: if FASTA sequence is
-    # shorter than AMPAL object, SCWRL4 will add random amino acids to the end
-    # of the sequence until it is the same length.
-    fasta_seq = ''
-    for res in ampal_object.get_monomers():
-        res_id = '{}{}{}{}'.format(
-            res.parent.parent.id, res.parent.id, res.id, res.insertion_code
-        )  # structure id, chain id, residue number, insertion code e.g. 4pnbD24
-
-        if res_id in list(G.nodes):
-            fasta_seq += G.nodes[res_id]['aa_id']
-        else:
-            fasta_seq += res.mol_letter  # Retains original ids of residues
-            # outside of sequence to be mutated, e.g. in loop regions
-
-    if len(fasta_seq) != len(list(ampal_object.get_monomers())):
-        raise Exception('FASTA sequence and AMPAL object contain different '
-                        'numbers of amino acids')
-
-    # Packs side chains with SCWRL4. NOTE that fasta sequence must be provided
-    # as a list. NOTE: Setting rigid_rotamers to True increases the speed of
-    # side-chain but results in a concomitant decrease in accuracy.
-    new_ampal_object = modelling.pack_side_chains_scwrl(
-        ampal_object, [fasta_seq], rigid_rotamer_model=rigid_rotamers,
-        hydrogens=False
-    )
-
-    # Calculates total energy of the AMPAL object within BUDE (note that this
-    # does not include the interaction of the object with its surrounding
-    # environment, hence hydrophobic side chains will not be penalised on the
-    # surface of a globular protein and vice versa for membrane proteins).
-    # Hence this is just a rough measure of side-chain clashes.
-    energy = budeff.get_internal_energy(new_ampal_object).total_energy
-
-    return new_ampal_object, energy
-
 
 class run_ga_calcs(initialise_ga_object):
     """
@@ -97,175 +53,6 @@ class run_ga_calcs(initialise_ga_object):
         """
 
         print('Measuring {} network fitness'.format(surface))
-
-        # Initialises dictionaries of network propensity and frequency scores
-        network_propensity_scores = OrderedDict()
-        network_frequency_scores = OrderedDict()
-
-        # Extracts propensity and frequency scales for the surface (both
-        # individual and pairwise)
-        intext_index = self.dict_name_indices['intorext']
-        eoc_index = self.dict_name_indices['edgeorcent']
-        prop_index = self.dict_name_indices['prop1']
-        interaction_index = self.dict_name_indices['interactiontype']
-        pairindv_index = self.dict_name_indices['pairorindv']
-        discorcont_index = self.dict_name_indices['discorcont']
-        proporfreq_index = self.dict_name_indices['proporfreq']
-
-        sub_indv_dicts = OrderedDict({
-            dict_label: aa_dict for dict_label, aa_dict in
-            {**self.propensity_dicts, **self.frequency_dicts}.items() if
-             (    (dict_label.split('_')[intext_index] in [surface[0:3], '-'])
-              and (dict_label.split('_')[pairindv_index] == 'indv'))
-        })
-        sub_pair_dicts = OrderedDict({
-            dict_label: aa_dict for dict_label, aa_dict in
-            {**self.propensity_dicts, **self.frequency_dicts}.items() if
-             (    (dict_label.split('_')[intext_index] in [surface[0:3], '-'])
-              and (dict_label.split('_')[pairindv_index] == 'pair'))
-        })
-
-        for num in list(networks_dict.keys()):
-            G = networks_dict[num]
-            # Total propensity count (across all nodes in network)
-            propensity_count = 0
-            frequency_count = 0
-
-            for node_1 in list(G.nodes):
-                # Filters propensity and / or frequency scales depending upon
-                # whether the node is in an edge or a central strand
-                if self.barrel_or_sandwich == '2.60':
-                    eoc_1 = G.nodes[node_1]['eoc']
-
-                    sub_indv_dicts = OrderedDict({
-                        dict_label: aa_dict for dict_label, aa_dict
-                        in sub_indv_dicts.items()
-                        if dict_label.split('_')[eoc_index] in [eoc_1, '-']
-                    })
-                    sub_pair_dicts = OrderedDict({
-                        dict_label: aa_dict for dict_label, aa_dict
-                        in sub_pair_dicts.items()
-                        if dict_label.split('_')[eoc_index] in [eoc_1, '-']
-                    })
-
-                # Calculates interpolated propensity of each node for all
-                # individual structural features considered
-                aa_1 = G.nodes[node_1]['aa_id']
-                for dict_label, scale_dict in sub_indv_dicts.items():
-                    weight = self.dict_weights[dict_label]
-
-                    node_prop = dict_label.split('_')[prop_index]
-                    node_val = np.nan
-
-                    if node_prop != '-':
-                        try:
-                            node_val = G.nodes[node_1][node_prop]
-                        except KeyError:
-                            raise KeyError('{} not defined for node {}'.format(
-                                node_prop, node_1
-                            ))
-
-                    # Converts non-float values into np.nan
-                    if node_val in ['', 'nan', 'NaN', np.nan]:
-                        node_val = np.nan
-
-                    value = np.nan
-                    if (    dict_label.split('_')[discorcont_index] == 'cont'
-                        and not np.isnan(node_val)
-                    ):
-                        # Interpolate dictionary
-                        value = linear_interpolation(node_val, scale_dict[aa_1], dict_label)
-
-                    elif dict_label.split('_')[discorcont_index] == 'disc':
-                        # Filter dataframe
-                        scale_dict_copy = copy.deepcopy(scale_dict).set_index('FASTA', drop=True)
-                        if node_prop == '-':
-                            try:
-                                value = scale_dict_copy.iloc[:,0][aa_1]
-                            except KeyError:
-                                raise Exception('{} not defined in {}'.format(aa_1, dict_label))
-                        elif node_prop == 'phipsi':
-                            if not np.isnan(node_val):
-                                try:
-                                    value = scale_dict_copy[node_val][aa_1]
-                                except KeyError:
-                                    raise Exception('{} not defined in {}'.format(aa_1, dict_label))
-
-                    if not np.isnan(value):
-                        if dict_label.split('_')[proporfreq_index] == 'propensity':
-                            # NOTE: Must take -ve logarithm of each
-                            # individual propensity score before summing
-                            # (rather than taking the -ve logarithm of the
-                            # summed propensities)
-                            value = weight*np.negative(np.log(value))
-                            propensity_count += value
-                        elif dict_label.split('_')[proporfreq_index] == 'frequency':
-                            value *= weight
-                            frequency_count += value
-
-                # Loops through each node pair to sum pairwise propensity values
-                for node_pair in G.edges(node_1):
-                    # No need to randomly order pair since each will be counted
-                    # twice in this analysis (once for node 1 and once for node 2)
-                    # (and so which node's value will be used
-                    node_2 = node_pair[1]
-                    aa_1 = G.nodes[node_1]['aa_id']
-                    aa_2 = G.nodes[node_2]['aa_id']
-                    aa_pair = '{}_{}'.format(aa_1, aa_2)
-
-                    # Loops through each interaction between a pair of nodes
-                    for edge in G[node_1][node_2]:
-                        edge_label = G[node_1][node_2][edge]['interaction']
-
-                        for dict_label, scale_dict in sub_pair_dicts.items():
-                            if dict_label.split('_')[interaction_index] == edge_label:
-                                weight = self.dict_weights[dict_label]
-
-                                node_prop = dict_label.split('_')[prop_index]
-                                node_val = np.nan
-
-                                if node_prop != '-':
-                                    try:
-                                        node_val = G.nodes[node_1][node_prop]
-                                    except KeyError:
-                                        raise KeyError('{} not defined for node {}'.format(
-                                            node_prop, node_1
-                                        ))
-
-                                # Converts non-float values into np.nan
-                                if node_val in ['', 'nan', 'NaN', np.nan]:
-                                    node_val = np.nan
-
-                                value = np.nan
-                                if (    dict_label.split('_')[discorcont_index] == 'cont'
-                                    and not np.isnan(node_val)
-                                ):
-                                    aa_scale = scale_dict[aa_pair]
-                                    value = linear_interpolation(node_val, aa_scale, dict_label)
-
-                                elif dict_label.split('_')[discorcont_index] == 'disc':
-                                    # Filter dataframe
-                                    scale_dict_copy = scale_dict.set_index('FASTA', drop=True)
-                                    value = scale_dict_copy[aa_1][aa_2]
-
-                                if not np.isnan(value):
-                                    if dict_label.split('_')[proporfreq_index] == 'propensity':
-                                        # NOTE: Must take -ve logarithm of each
-                                        # individual propensity score before
-                                        # summing (rather than taking the -ve
-                                        # logarithm of the summed propensities)
-                                        value = weight*np.negative(np.log(value))
-                                        propensity_count += value
-                                    elif dict_label.split('_')[proporfreq_index] == 'frequency':
-                                        value *= weight
-                                        frequency_count += value
-
-            if propensity_count == 0:
-                print('WARNING: propensity for network {} is 0'.format(num))
-            network_propensity_scores[num] = propensity_count
-            network_frequency_scores[num] = frequency_count
-
-        return network_propensity_scores, network_frequency_scores
 
     def combine_prop_and_freq_scores(
         self, network_prop_scores, network_freq_scores, raw_or_rank
@@ -331,37 +118,25 @@ class run_ga_calcs(initialise_ga_object):
 
         return network_fitness_scores
 
-    def measure_fitness_allatom(self, pdb, G):
+    def measure_fitness_allatom(self, surface, networks_dict):
         """
         Measures fitness of sequences using an all-atom scoring function
-        within BUDE
-        """
-
-        # Packs network side chains onto the model with SCWRL4 and measures
-        # the total model energy within BUDE
-        new_pdb, energy = pack_side_chains(pdb, G, True)
-
-        return energy
-
-    def measure_fitness_allatom_parallel(self, surface, networks_dict):
-        """
+        within BUDE. Calls function in separate script in order that these
+        calculations can be parallelised using scoop
         """
 
         print('Measuring {} network fitness'.format(surface))
 
-        # Loads backbone model into ISAMBARD. NOTE must have been pre-processed
-        # to remove ligands etc. so that only backbone coordinates remain.
-        pdb = isambard.ampal.load_pdb(self.input_pdb)
-
-        pool = mp.Pool(48)
-        network_energies = OrderedDict({
-            list(networks_dict.keys())[n]:
-            pool.apply(
-                self.measure_fitness_allatom,
-                args=(pdb, list(networks_dict.values())[n])
-            ) for n in range(len(networks_dict))
-            })
-        pool.close()
+        with open('{}/Networks_dict.pkl'.format(self.working_directory), 'wb') as f:
+            pickle.dump(networks_dict, f)
+        os.system('python -m scoop {}/calc_bude_energy_in_parallel.py -pdb {} '
+                  '-net {}/Networks_dict.pkl -o {}'.format(
+                  os.path.dirname(os.path.abspath(__file__)), self.input_pdb,
+                  self.working_directory, self.working_directory))
+        os.remove('{}/Networks_dict.pkl'.format(self.working_directory))
+        with open('{}/Network_energies.pkl'.format(self.working_directory), 'rb') as f:
+            network_energies = pickle.load(f)
+        os.remove('{}/Network_energies.pkl'.format(self.working_directory))
 
         return network_energies
 
@@ -829,7 +604,7 @@ def run_genetic_algorithm(bayes_params):
                     import time
                     import math
                     start = time.time()
-                    network_energies = ga_calcs.measure_fitness_allatom_parallel(
+                    network_energies = ga_calcs.measure_fitness_allatom(
                         surface, networks_dict
                     )
                     end = time.time()
@@ -914,7 +689,7 @@ def run_genetic_algorithm(bayes_params):
                 network_propensity_scores, network_frequency_scores, raw_or_rank
             )
         elif params['fitnessscoremethod'] == 'allatom':
-            network_energies = ga_calcs.measure_fitness_allatom_parallel(surface, networks_dict)
+            network_energies = ga_calcs.measure_fitness_allatom(surface, networks_dict)
             (network_fitness_scores
             ) = ga_calcs.convert_energies_to_probabilities(network_energies)
 
