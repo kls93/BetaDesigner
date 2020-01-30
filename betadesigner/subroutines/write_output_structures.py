@@ -364,7 +364,7 @@ class gen_output(initialise_ga_object):
                                  if line.strip() != '']
 
                 res_energies_dict = parse_rosetta_pdb_file(
-                    res_energies_dict, surface, pdb_path, rosetta_lines
+                    res_energies_dict, surface, pdb_path, rosetta_lines, pdb_lines
                 )
 
         return struct_energies_dict, res_energies_dict
@@ -494,7 +494,7 @@ class gen_output(initialise_ga_object):
                 # an input directory rather than an input pdb file, hence the
                 # input pdb file is temporarily copied to a separate directory
                 os.mkdir('{}/temporary/'.format(wd))
-                shutil.copy('{} {}/temporary/'.format(pdb_path, wd))
+                shutil.copy(pdb_path, '{}/temporary/'.format(wd))
                 os.system(
                     'oneline-analysis {}/temporary/ > {}/{}_struct_molprobity_'
                     'stdout.txt'.format(wd, wd, pdb)
@@ -504,7 +504,7 @@ class gen_output(initialise_ga_object):
 
                 molp_stdout_struct = []
                 stdout_struct_header = []
-                with open('{}/molprobity_struct_stdout.txt'.format(wd), 'r') as f:
+                with open('{}/{}_struct_molprobity_stdout.txt'.format(wd, pdb), 'r') as f:
                     for index, line in enumerate(f.readlines()):
                         if line.startswith(pdb):
                             molp_stdout_struct = line.split(':')
@@ -531,7 +531,7 @@ class gen_output(initialise_ga_object):
 
                 molp_stdout_res = []
                 stdout_res_header = []
-                with open('{}/molprobity_res_stdout.txt'.format(wd), 'r') as f:
+                with open('{}/{}_res_molprobity_stdout.txt'.format(wd, pdb), 'r') as f:
                     for line in f.readlines():
                         if line.startswith('#file_name'):
                             stdout_res_header = line.split(',')

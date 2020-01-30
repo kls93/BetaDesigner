@@ -8,8 +8,10 @@ from collections import OrderedDict
 
 if __name__ == 'subroutines.generate_initial_sequences':
     from subroutines.find_parameters import initialise_ga_object
+    from subroutines.calc_propensity_in_parallel import linear_interpolation
 else:
     from betadesigner.subroutines.find_parameters import initialise_ga_object
+    from betadesigner.subroutines.calc_propensity_in_parallel import linear_interpolation
 
 # Initially, I should exclude contacts outside of the beta-strands of interest.
 # All propensity / frequency dict names should be of the format:
@@ -33,61 +35,6 @@ def nansum_axis_1(input_array):
     output_array = np.array(output_array)
 
     return output_array
-
-
-def find_indices(index_1, prop_val_1, node_val, scale):
-    """
-    Finds indices of propensity values in continuous scale for use in
-    interpolation calculation
-    """
-
-    if index_1 < (scale.shape[0] - 1):
-        if prop_val_1 <= node_val:
-            index_2 = index_1 + 1
-        elif prop_val_1 > node_val:
-            index_2 = index_1 - 1
-    else:
-        index_2 = index_1 - 1
-
-    return index_2
-
-
-def linear_interpolation(node_val, aa_propensity_scale, dict_label):
-    """
-    Interpolates propensity value for node property value
-    """
-
-    if type(aa_propensity_scale) != np.ndarray:
-        propensity = np.nan
-
-    else:
-        node_val_scale = aa_propensity_scale[0]
-        propensity_scale = aa_propensity_scale[1]
-        if node_val_scale[0] <= node_val <= node_val_scale[-1]:
-            index_1 = (np.abs(node_val_scale-node_val)).argmin()
-            prop_val_1 = node_val_scale[index_1]
-            propensity_1 = propensity_scale[index_1]
-
-            index_2 = find_indices(index_1, prop_val_1, node_val, node_val_scale)
-            prop_val_2 = node_val_scale[index_2]
-            propensity_2 = propensity_scale[index_2]
-
-            # Linear interpolation
-            weight_1 = abs(prop_val_2 - node_val) / abs(prop_val_2 - prop_val_1)
-            weight_2 = abs(prop_val_1 - node_val) / abs(prop_val_2 - prop_val_1)
-            propensity = (propensity_1*weight_1) + (propensity_2*weight_2)
-
-        else:
-            propensity = np.nan
-            print('Parameter values of input backbone coordinate model '
-                  'structural features ({}) are outside of the range of '
-                  'parameter values used to construct propensity scales - node '
-                  'value = {}, parameter range = ({}, {})'.format(
-                      dict_label, node_val, aa_propensity_scale[0][0],
-                      aa_propensity_scale[0][-1]
-                ))
-
-    return propensity
 
 
 def combine_propensities(node_indv_propensities, node_indv_frequencies,
@@ -335,15 +282,15 @@ class gen_ga_input_calcs(initialise_ga_object):
             if self.barrel_or_sandwich == '2.40':
                 for num in range(sub_df.shape[0]):
                     node = sub_df['domain_ids'][num] + sub_df['res_ids'][num]
-                    int_or_ext = sub_df['int_ext'][num]
+                    int_or_ext = sub_df['int_ext'][num][0:3]
                     z_coord = sub_df['z_coords'][num]
                     phi_psi_class = sub_df['phi_psi_class'][num]
-                    G.add_node(node, aa_id='UNK', int_ext=int_or_ext,
+                    G.add_node(node, aa_id='UNK', int_ext=int_or_ext, eoc='-',
                                z=z_coord, phipsi=phi_psi_class)
             elif self.barrel_or_sandwich == '2.60':
                 for num in range(sub_df.shape[0]):
                     node = sub_df['domain_ids'][num] + sub_df['res_ids'][num]
-                    int_or_ext = sub_df['int_ext'][num]
+                    int_or_ext = sub_df['int_ext'][num][0:3]
                     z_sandwich_coord = sub_df['sandwich_z_coords'][num]
                     z_strand_coord = sub_df['strand_z_coords'][num]
                     buried_surface_area = sub_df['buried_surface_area'][num]

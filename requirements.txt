@@ -5,6 +5,7 @@ networkx==2.2
 numpy
 pandas
 scipy
+scoop
 
 budeff
 isambard

@@ -8,8 +8,9 @@ import numpy as np
 import pandas as pd
 import unittest
 from itertools import combinations
+from betadesigner.subroutines.calc_propensity_in_parallel import linear_interpolation
 from betadesigner.subroutines.generate_initial_sequences import (
-    linear_interpolation, combine_propensities, calc_probability_distribution,
+    combine_propensities, calc_probability_distribution,
     gen_cumulative_probabilities, gen_ga_input_calcs
 )
 

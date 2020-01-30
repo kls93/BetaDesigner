@@ -15,16 +15,18 @@ from collections import OrderedDict
 from operator import itemgetter
 
 if __name__ == 'subroutines.run_genetic_algorithm':
+    from subroutines.calc_propensity_in_parallel import linear_interpolation
     from subroutines.find_parameters import initialise_ga_object
     from subroutines.generate_initial_sequences import (
-        linear_interpolation, random_shuffle, propensity_to_probability_distribution,
+        random_shuffle, propensity_to_probability_distribution,
         frequency_to_probability_distribution, gen_cumulative_probabilities
     )
     from subroutines.variables import gen_amino_acids_dict
 else:
+    from betadesigner.subroutines.calc_propensity_in_parallel import linear_interpolation
     from betadesigner.subroutines.find_parameters import initialise_ga_object
     from betadesigner.subroutines.generate_initial_sequences import (
-        linear_interpolation, random_shuffle, propensity_to_probability_distribution,
+        random_shuffle, propensity_to_probability_distribution,
         frequency_to_probability_distribution, gen_cumulative_probabilities
     )
     from betadesigner.subroutines.variables import gen_amino_acids_dict
@@ -53,6 +55,38 @@ class run_ga_calcs(initialise_ga_object):
         """
 
         print('Measuring {} network fitness'.format(surface))
+
+        dict_list = []
+        for label, scale in self.propensity_dicts.items():
+            weight = self.dict_weights[label]
+            dict_list.append((label, weight, scale))
+        for label, scale in self.frequency_dicts.items():
+            weight = self.dict_weights[label]
+            dict_list.append((label, weight, scale))
+
+        with open('{}/Networks_dict.pkl'.format(self.working_directory), 'wb') as f:
+            pickle.dump(networks_dict, f)
+        with open('{}/Prop_freq_dicts.pkl'.format(self.working_directory), 'wb') as f:
+            pickle.dump(dict_list, f)
+        with open('{}/Dict_name_indices.pkl'.format(self.working_directory), 'wb') as f:
+            pickle.dump(self.dict_name_indices, f)
+
+        os.system('python -m scoop {}/calc_propensity_in_parallel.py '
+                  '-net {}/Networks_dict.pkl -dicts {}/Prop_freq_dicts.pkl '
+                  '-indices {}/Dict_name_indices.pkl -s {} -o {}'.format(
+                  os.path.dirname(os.path.abspath(__file__)),
+                  self.working_directory, self.working_directory,
+                  self.working_directory, self.barrel_or_sandwich,
+                  self.working_directory))
+
+        os.remove('{}/Networks_dict.pkl'.format(self.working_directory))
+        os.remove('{}/Prop_freq_dicts.pkl'.format(self.working_directory))
+        os.remove('{}/Dict_name_indices.pkl'.format(self.working_directory))
+        with open('{}/Network_prop_freq_scores.pkl'.format(self.working_directory), 'rb') as f:
+            network_prop_scores, network_freq_scores = pickle.load(f)
+        os.remove('{}/Network_prop_freq_scores.pkl'.format(self.working_directory))
+
+        return network_prop_scores, network_freq_scores
 
     def combine_prop_and_freq_scores(
         self, network_prop_scores, network_freq_scores, raw_or_rank
@@ -114,7 +148,7 @@ class run_ga_calcs(initialise_ga_object):
 
             probability = (  (self.propensity_weight*propensity)
                            + ((1-self.propensity_weight)*frequency))
-            network_fitness_scores[network_num] = probability
+            network_fitness_scores[int(network_num)] = probability
 
         return network_fitness_scores
 

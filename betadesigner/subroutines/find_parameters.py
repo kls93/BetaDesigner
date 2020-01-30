@@ -1570,7 +1570,7 @@ def find_params(args):
     # params['initialseqmethod'] = def_method_initial_seq(params)
     params['initialseqmethod'] = 'random'  # Currently set to "random" by default
     # params['fitnessscoremethod'] = def_method_fitness_scoring(params)
-    params['fitnessscoremethod'] = 'allatom'  # Currently set to "split" by default
+    params['fitnessscoremethod'] = 'propensity'  # Currently set to "split" by default
     # params['splitfraction'] = def_split_fraction(params)
     params['splitfraction'] = 0.5  # Currently set as 50:50 by default (in my
     # opinion variation of this hyperparameter is probably an "optimisation too far")

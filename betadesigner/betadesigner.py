@@ -64,12 +64,12 @@ def main():
 
     run_ga = True
     run_opt = True
-    max_evals = 10  # Number of hyperparameter combinations for hyperopt to try
-    sub_gen = 4  # Number of generations to run the GA with a particular
+    max_evals = 1  # Number of hyperparameter combinations for hyperopt to try
+    sub_gen = 2  # Number of generations to run the GA with a particular
     # combination of hyperparameters
     # max_gen = copy.copy(params['maxnumgenerations'])  # Total number of generations
     # GA can be run for (changing hyperparameters every sub_gen generations)
-    max_gen = 4
+    max_gen = 2
     params['maxnumgenerations'] = sub_gen
 
     count = 0
@@ -117,6 +117,9 @@ def main():
         while run_opt is True:
             best_params = fmin(fn=run_genetic_algorithm, space=bayes_params,
                                algo=tpe.suggest, trials=trials, max_evals=max_evals)
+
+            run_opt = False
+            break
 
             if max_evals == 10:
                 current_best = copy.deepcopy(best_params)
@@ -182,7 +185,8 @@ def main():
     (molp_struct_dict, molp_res_dict
     ) = output.score_pdb_molprobity(structures_dict)
 
-    with open('{}/Program_output/GA_output_struct_eval_dicts.pkl', 'wb') as f:
+    with open('{}/Program_output/GA_output_struct_eval_dicts.pkl'.format(
+        params['workingdirectory']), 'wb') as f:
         pickle.dump((sequences_dict, structures_dict, bude_struct_energies_dict,
                      rosetta_struct_energies_dict, rosetta_res_energies_dict,
                      molp_struct_dict, molp_res_dict), f)

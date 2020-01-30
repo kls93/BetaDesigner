@@ -7,6 +7,7 @@ import numpy as np
 import pandas as pd
 import unittest
 from collections import OrderedDict
+from betadesigner.subroutines.calc_propensity_in_parallel import measure_fitness_propensity
 from betadesigner.subroutines.find_parameters import initialise_ga_object
 from betadesigner.subroutines.run_genetic_algorithm import run_ga_calcs
 
@@ -78,35 +79,36 @@ def gen_sequence_networks():
     """
 
     network_1 = nx.MultiGraph()
-    network_1.add_node(1, aa_id='A', int_ext='int', z=-5)
-    network_1.add_node(2, aa_id='A', int_ext='int', z=0)
-    network_1.add_node(3, aa_id='A', int_ext='int', z=7)
+    network_1.add_node(1, aa_id='A', int_ext='int', eoc='edge', z=-5)
+    network_1.add_node(2, aa_id='A', int_ext='int', eoc='central', z=0)
+    network_1.add_node(3, aa_id='A', int_ext='int', eoc='edge', z=7)
     network_1.add_edge(1, 2, interaction='hb')
     network_1.add_edge(2, 3, interaction='hb')
 
     network_2 = nx.MultiGraph()
-    network_2.add_node(1, aa_id='A', int_ext='int', z=-5)
-    network_2.add_node(2, aa_id='N', int_ext='int', z=0)
-    network_2.add_node(3, aa_id='R', int_ext='int', z=7)
+    network_2.add_node(1, aa_id='A', int_ext='int', eoc='edge', z=-5)
+    network_2.add_node(2, aa_id='N', int_ext='int', eoc='central', z=0)
+    network_2.add_node(3, aa_id='R', int_ext='int', eoc='edge', z=7)
     network_2.add_edge(1, 2, interaction='hb')
     network_2.add_edge(2, 3, interaction='hb')
 
     network_3 = nx.MultiGraph()
-    network_3.add_node(1, aa_id='R', int_ext='int', z=-5)
-    network_3.add_node(2, aa_id='A', int_ext='int', z=0)
-    network_3.add_node(3, aa_id='N', int_ext='int', z=7)
+    network_3.add_node(1, aa_id='R', int_ext='int', eoc='-', z=-5)
+    network_3.add_node(2, aa_id='A', int_ext='int', eoc='-', z=0)
+    network_3.add_node(3, aa_id='N', int_ext='int', eoc='-', z=7)
     network_3.add_edge(1, 2, interaction='hb')
     network_3.add_edge(2, 3, interaction='hb')
 
     network_4 = nx.MultiGraph()
-    network_4.add_node(1, aa_id='N', int_ext='int', z=-5)
-    network_4.add_node(2, aa_id='R', int_ext='int', z=0)
-    network_4.add_node(3, aa_id='N', int_ext='int', z=7)
+    network_4.add_node(1, aa_id='N', int_ext='int', eoc='-', z=-5)
+    network_4.add_node(2, aa_id='R', int_ext='int', eoc='-', z=0)
+    network_4.add_node(3, aa_id='N', int_ext='int', eoc='-', z=7)
     network_4.add_edge(1, 2, interaction='hb')
     network_4.add_edge(2, 3, interaction='hb')
 
-    fit_test_dict = {'int': {1: network_1,
-                             2: network_2}}
+
+    fit_test_dict = {1: network_1,
+                     2: network_2}
 
     cross_test_dict = {'int': {1: network_1,
                                2: network_2,
@@ -125,18 +127,23 @@ class testGeneticAlgorithm(unittest.TestCase):
         """
 
         params = define_params()
-        bayes_params = {'propensityweight': 0.5,
-                        'unfitfraction': 0.2,
-                        'crossoverprob': 0.1,
-                        'mutationprob': 0.05}
         fit_test_dict, cross_test_dict = gen_sequence_networks()
+        prop_freq_dicts = gen_prop_and_freq_distributions()
+        prop_freq_list = []
+        for label, scale in prop_freq_dicts.items():
+            weight = params['scaleweights'][label]
+            prop_freq_list.append((label, weight, scale))
 
-        ga_calcs = run_ga_calcs({**params, **bayes_params}, test=True)
-        network_propensities, network_frequencies = ga_calcs.measure_fitness_propensity(
-            'int', fit_test_dict['int']
-        )
+        network_prop = OrderedDict()
+        network_freq = OrderedDict()
+        for num, network in fit_test_dict.items():
+            num, prop, freq = measure_fitness_propensity(
+                num, network, prop_freq_list, params['dictnameindices'], '2.60'
+            )
+            network_prop[num] = prop
+            network_freq[num] = freq
 
-        return network_propensities, network_frequencies
+        return network_prop, network_freq
 
     def test_measure_fitness_propensity(self):
         """
