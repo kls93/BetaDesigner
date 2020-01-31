@@ -2,6 +2,7 @@
 import copy
 import isambard
 import os
+import pickle
 import shutil
 import numpy as np
 import pandas as pd
@@ -13,71 +14,6 @@ if __name__ == 'subroutines.write_output_structures':
 else:
     from betadesigner.subroutines.find_parameters import initialise_ga_object
     from betadesigner.subroutines.calc_bude_energy_in_parallel import pack_side_chains
-
-
-def parse_rosetta_score_file(score_file_lines):
-    """
-    """
-
-    total_energy_index = score_file_lines[1].split().index('total_score')
-    total_energy = float(score_file_lines[2].split()[total_energy_index])
-
-    return total_energy
-
-
-def parse_rosetta_pdb_file(
-    res_energies_dict, surface, pdb_path, rosetta_lines, pdb_lines
-):
-    """
-    """
-
-    res_energies_dict[surface][pdb_path] = OrderedDict()
-
-    pdb_res_list = []
-    rosetta_res_list = []
-    res_energies_list = []
-
-    # Matches renumbered Rosetta res ids to res ids in the input PDB file
-    for line in pdb_lines:
-        # Will return '' rather than error if list index out of bounds
-        res_id = '{}_{}_{}'.format(line[17:20], line[21:22], line[22:26].strip())
-        if line[0:6].strip() in ['ATOM', 'HETATM'] and not res_id in pdb_res_list:
-            pdb_res_list.append(res_id)
-
-    start = False
-    res_energy_index = ''
-    dropped_lines = ['label', 'weights', 'pose', 'MEM', 'VRT',
-                     '#END_POSE_ENERGIES_TABLE']
-    for line in rosetta_lines:
-        if line.startswith('label'):
-            start = True
-            res_energy_index = line.split().index('total')
-
-        if start is True and not any(line.startswith(x) for x in dropped_lines):
-            line = line.split()
-            rosetta_res_list.append(line[0])
-            res_energies_list.append(float(line[res_energy_index]))
-
-    try:
-        res_ids_convers = pd.DataFrame({'PDB_res_ids': pdb_res_list,
-                                        'Rosetta_res_ids': rosetta_res_list,
-                                        'Res_energies': res_energies_list})
-    except ValueError:
-        res_ids_convers = pd.DataFrame({})
-        raise Exception(
-            'Residues in PDB file failed to be processed correctly by Rosetta.\n'
-            'PDB res ids:\n{}\n\nRosetta res ids:\n{}\n\n'
-            'Rosetta res energies:\n{}\n\n'.format(
-                pdb_res_list, rosetta_res_list, res_energies_list
-            )
-        )
-
-    # Extracts per-residue energy values
-    for index, res in enumerate(res_ids_convers['PDB_res_ids'].tolist()):
-        res_energy = res_ids_convers['Res_energies'][index]
-        res_energies_dict[surface][pdb_path][res] = res_energy
-
-    return res_energies_dict
 
 
 def parse_molprobity_struct_output(
@@ -278,94 +214,21 @@ class gen_output(initialise_ga_object):
         Relaxes structures and calculates their energy in the Rosetta force-field
         """
 
-        struct_energies_dict = OrderedDict()
-        res_energies_dict = OrderedDict()
+        print('Scoring structures with ROSETTA')
 
-        for surface in structures_dict.keys():
-            struct_energies_dict[surface] = OrderedDict()
-            res_energies_dict[surface] = OrderedDict()
+        with open('{}/Structures_dict.pkl'.format(self.working_directory), 'wb') as f:
+            pickle.dump(structures_dict, f)
 
-            for pdb_path in structures_dict[surface]:
-                pdb = pdb_path.split('/')[-1].strip('.pdb')
-                wd = '/'.join(pdb_path.split('/')[:-1])  # More complicated to use
-                # self.working_directory because PDB file is in its own directory
-                wd = '{}/{}_rosetta_results'.format(wd, pdb)
-                if not os.path.isdir(wd):
-                    os.mkdir(wd)
-                os.chdir(wd)  # Need to change directory so that when running
-                # RosettaMP output spanfile is written here (unfortunately
-                # can't specify location with flag)
+        os.system('python -m scoop {}/calc_rosetta_score_in_parallel.py '
+                  '-s {}/Structures_dict.pkl -bos {} -o {}'.format(
+                  os.path.dirname(os.path.abspath(__file__)),
+                  self.working_directory, self.barrel_or_sandwich,
+                  self.working_directory))
 
-                # Relaxes a beta-sandwich structure and calculates the total
-                # energy of the structure (in Rosetta Energy Units)
-                if self.barrel_or_sandwich == '2.60':
-                    with open('{}/RosettaRelaxInputs'.format(self.working_directory), 'w') as f:
-                        f.write('-in:file:s {}\n'
-                                '-out:path:pdb {}/\n'
-                                '-out:file:scorefile {}/{}_score.sc\n'
-                                '-relax:fast\n'
-                                '-relax:constrain_relax_to_start_coords\n'
-                                '-relax:ramp_constraints false'.format(
-                                    pdb_path, wd, wd, pdb
-                                ))
-                    os.system('relax.linuxgccrelease @{}/RosettaRelaxInputs'.format(
-                        self.working_directory
-                    ))
-                    os.remove('{}/RosettaRelaxInputs'.format(self.working_directory))
-
-                # Relaxes a beta-barrel structure in the context of the
-                # membrane with RosettaMP and calculates the total energy of
-                # the structure (in Rosetta Energy Units)
-                elif self.barrel_or_sandwich == '2.40':
-                    # N.B. INPUT STRUCTURE MUST BE ORIENTED SUCH THAT THE
-                    # Z-AXIS IS ALIGNED WITH THE MEMBRANE NORMAL (E.G. BY
-                    # RUNNING THE STRUCTURE THROUGH THE OPM)
-
-                    # First generate spanfile
-                    os.system('mp_span_from_pdb.linuxgccrelease -in:file:s '
-                              '{}'.format(pdb_path))
-
-                    # Then relax structure with RosettaMP. Use mp_relax
-                    # protocol updated for ROSETTA3.
-                    with open('{}/RosettaMPRelaxInputs'.format(self.working_directory), 'w') as f:
-                        f.write('-parser:protocol $ROSETTA3/src/apps/public/membrane/mp_relax_updated.xml\n'
-                                '-in:file:s {}\n'
-                                '-nstruct 1\n'
-                                '-mp:setup:spanfiles {}/{}.span\n'
-                                '-mp:scoring:hbond\n'
-                                '-relax:fast\n'
-                                '-relax:jump_move true\n'
-                                '-out:path:pdb {}/\n'
-                                '-out:file:scorefile {}/{}_score.sc\n'
-                                '-packing:pack_missing_sidechains 0'.format(
-                                    pdb_path, wd, pdb, wd, wd, pdb
-                                ))
-                    os.system('rosetta_scripts.linuxgccrelease @{}/RosettaMPRelaxInputs'.format(
-                        self.working_directory
-                    ))
-                    os.remove('{}/RosettaMPRelaxInputs'.format(self.working_directory))
-
-                # N.B. Good total score value = < -2 x number of residues
-                with open('{}/{}_score.sc'.format(wd, pdb), 'r') as f:
-                    score_file_lines = f.readlines()
-                total_energy = parse_rosetta_score_file(score_file_lines)
-                struct_energies_dict[surface][pdb_path] = total_energy
-
-
-                # Extracts per-residue energy values from the previously
-                # generated Rosetta output files
-                with open('{}/{}_0001.pdb'.format(wd, pdb), 'r') as f:
-                    rosetta_lines = ('#BEGIN_POSE_ENERGIES_TABLE'
-                                     + f.read().split('#BEGIN_POSE_ENERGIES_TABLE')[1])
-                    rosetta_lines = [line for line in rosetta_lines.split('\n')
-                                     if line.strip() != '']
-                with open(pdb_path, 'r') as f:
-                    pdb_lines = [line for line in f.readlines()
-                                 if line.strip() != '']
-
-                res_energies_dict = parse_rosetta_pdb_file(
-                    res_energies_dict, surface, pdb_path, rosetta_lines, pdb_lines
-                )
+        os.remove('{}/Structures_dict.pkl'.format(self.working_directory))
+        with open('{}/Rosetta_scores.pkl'.format(self.working_directory), 'rb') as f:
+            struct_energies_dict, res_energies_dict = pickle.load(f)
+        os.remove('{}/Rosetta_scores.pkl'.format(self.working_directory))
 
         return struct_energies_dict, res_energies_dict
 

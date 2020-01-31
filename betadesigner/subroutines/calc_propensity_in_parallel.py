@@ -273,10 +273,11 @@ if __name__ == '__main__':
     parser.add_argument('-indices', help='Absolute file path to pickled '
                         'dictionary of propensity and frequency scale labelling'
                         ' scheme')
-    parser.add_argument('-s', '--structure', help='Specifies whether the '
-                        'structure is a beta-barrel or -sandwich')
+    parser.add_argument('-bos', help='Specifies whether the structure is a '
+                        'beta-barrel or -sandwich')
     parser.add_argument('-o', '--output', help='Location to which to save the '
-                        'output pickled dictionary of BUDE scores')
+                        'output pickled dictionary of propensity and frequency '
+                        'scores')
     args = parser.parse_args()
 
     networks_dict = vars(args)['net']
@@ -292,7 +293,7 @@ if __name__ == '__main__':
         label_indices = pickle.load(f)
     label_indices = [copy.deepcopy(label_indices)
                      for n in range(len(networks_dict))]
-    barrel_or_sandwich = vars(args)['structure']
+    barrel_or_sandwich = vars(args)['bos']
     barrel_or_sandwich = [copy.deepcopy(barrel_or_sandwich)
                           for n in range(len(networks_dict))]
     wd = vars(args)['output']
@@ -302,7 +303,7 @@ if __name__ == '__main__':
         list(networks_dict.values()), dicts_list, label_indices,
         barrel_or_sandwich
     )
-    print(network_fitness_list)
+
     network_propensity_scores = OrderedDict()
     network_frequency_scores = OrderedDict()
     for tup in network_fitness_list:

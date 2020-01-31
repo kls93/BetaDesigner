@@ -73,7 +73,7 @@ class run_ga_calcs(initialise_ga_object):
 
         os.system('python -m scoop {}/calc_propensity_in_parallel.py '
                   '-net {}/Networks_dict.pkl -dicts {}/Prop_freq_dicts.pkl '
-                  '-indices {}/Dict_name_indices.pkl -s {} -o {}'.format(
+                  '-indices {}/Dict_name_indices.pkl -bos {} -o {}'.format(
                   os.path.dirname(os.path.abspath(__file__)),
                   self.working_directory, self.working_directory,
                   self.working_directory, self.barrel_or_sandwich,

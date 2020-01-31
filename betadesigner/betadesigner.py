@@ -65,11 +65,11 @@ def main():
     run_ga = True
     run_opt = True
     max_evals = 1  # Number of hyperparameter combinations for hyperopt to try
-    sub_gen = 2  # Number of generations to run the GA with a particular
+    sub_gen = 1  # Number of generations to run the GA with a particular
     # combination of hyperparameters
     # max_gen = copy.copy(params['maxnumgenerations'])  # Total number of generations
     # GA can be run for (changing hyperparameters every sub_gen generations)
-    max_gen = 2
+    max_gen = 1
     params['maxnumgenerations'] = sub_gen
 
     count = 0
