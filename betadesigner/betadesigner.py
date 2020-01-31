@@ -179,7 +179,8 @@ def main():
                          'propensityweight': best_params['propensityweight'],
                          'sequencesdict': sequences_dict}
     output = gen_output(params, best_bayes_params)
-    structures_dict, bude_struct_energies_dict = output.write_pdb(sequences_dict)
+    (updated_sequences_dict, structures_dict, bude_struct_energies_dict
+    ) = output.write_pdb(sequences_dict)
     (rosetta_struct_energies_dict, rosetta_res_energies_dict
     ) = output.score_pdb_rosetta(structures_dict)
     (molp_struct_dict, molp_res_dict
@@ -187,9 +188,9 @@ def main():
 
     with open('{}/Program_output/GA_output_struct_eval_dicts.pkl'.format(
         params['workingdirectory']), 'wb') as f:
-        pickle.dump((sequences_dict, structures_dict, bude_struct_energies_dict,
-                     rosetta_struct_energies_dict, rosetta_res_energies_dict,
-                     molp_struct_dict, molp_res_dict), f)
+        pickle.dump((updated_sequences_dict, structures_dict,
+                     bude_struct_energies_dict, rosetta_struct_energies_dict,
+                     rosetta_res_energies_dict, molp_struct_dict, molp_res_dict), f)
 
     return (sequences_dict, structures_dict, bude_struct_energies_dict,
             rosetta_struct_energies_dict, rosetta_res_energies_dict,

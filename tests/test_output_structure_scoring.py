@@ -7,8 +7,10 @@ import unittest
 import numpy as np
 import pandas as pd
 from collections import OrderedDict
-from betadesigner.subroutines.write_output_structures import (
-    parse_rosetta_score_file, parse_rosetta_pdb_file,
+from betadesigner.subroutines.calc_rosetta_score_in_parallel import (
+    parse_rosetta_score_file, parse_rosetta_pdb_file
+)
+from betadesigner.subroutines.calc_molprobity_score_in_parallel import (
     parse_molprobity_struct_output, parse_molprobity_res_output
 )
 
@@ -35,19 +37,19 @@ class test_output_structure_scoring(unittest.TestCase):
                 self.assertEqual(exp_tot_energy, meas_tot_energy)
 
         # Tests parsing of PDB file to extract individual residue scores
-        meas_res_energies_dict = OrderedDict({'int': OrderedDict()})
-        exp_res_energies_dict = OrderedDict({'int': OrderedDict()})
         for pdb_dir in os.listdir('tests/test_files/'):
             if pdb_dir.endswith('_output_test'):
                 pdb = pdb_dir.split('_')[0]
-                with open('tests/test_files/{}/example_pdb_{}_0001.pdb'.format(
+                rosetta_path = 'tests/test_files/{}/example_pdb_{}_0001.pdb'.format(
                         pdb_dir, pdb
-                    ), 'r') as f:
+                )
+                pdb_path = 'tests/test_files/{}/example_pdb_{}.pdb'.format(
+                        pdb_dir, pdb
+                )
+                with open(rosetta_path, 'r') as f:
                     rosetta_file_lines = [line for line in f.readlines()
                                           if not line.strip() == '']
-                with open('tests/test_files/{}/example_pdb_{}.pdb'.format(
-                        pdb_dir, pdb
-                    ), 'r') as f:
+                with open(pdb_path, 'r') as f:
                     pdb_file_lines = [line for line in f.readlines() if not line.strip() == '']
 
                 pdb_res = []
@@ -73,10 +75,10 @@ class test_output_structure_scoring(unittest.TestCase):
                         ])
                     ):
                         rosetta_energies.append(float(line.split()[-1]))
-                exp_res_energies_dict['int'][pdb] = OrderedDict(zip(pdb_res, rosetta_energies))
+                exp_res_energies_dict = OrderedDict(zip(pdb_res, rosetta_energies))
 
                 meas_res_energies_dict = parse_rosetta_pdb_file(
-                    meas_res_energies_dict, 'int', pdb, rosetta_file_lines, pdb_file_lines
+                    pdb_path, rosetta_file_lines, pdb_file_lines
                 )
 
         self.assertDictEqual(meas_res_energies_dict, exp_res_energies_dict)
@@ -102,42 +104,24 @@ class test_output_structure_scoring(unittest.TestCase):
                     res_header = lines[1].split(',')
 
                 # Parse test files with program code
-                meas_struct_molp = OrderedDict({'int': OrderedDict({
-                    'Structure_id': [''],
-                    'C_Beta_outliers': [''],
-                    'Rotamer_outliers': [''],
-                    'Ramachandran_favoured': [''],
-                    'Ramachandran_allowed': [''],
-                    'Ramachandran_outliers': [''],
-                    'Clashscore': [''],
-                    'Clashscore_percentile': ['']
-                })})
                 meas_struct_molp = parse_molprobity_struct_output(
-                    molp_struct_out, struct_header, meas_struct_molp, 'int',
-                    pdb_file, 0
+                    molp_struct_out, struct_header, pdb_file
                 )
-
-                meas_res_molp = OrderedDict({'int': OrderedDict()})
                 meas_res_molp = parse_molprobity_res_output(
-                    molp_res_out, res_header, meas_res_molp, 'int', pdb_file
+                    molp_res_out, res_header, pdb_file
                 )
 
                 # Parse test files with test code
-                exp_struct_molp = OrderedDict({
-                    'Structure_id': [molp_struct_out[0]],
-                    'C_Beta_outliers': [(float(molp_struct_out[15])
-                                         / float(molp_struct_out[16]))],
-                    'Rotamer_outliers': [(float(molp_struct_out[17])
-                                          / float(molp_struct_out[18]))],
-                    'Ramachandran_favoured': [(float(molp_struct_out[21])
-                                               / float(molp_struct_out[22]))],
-                    'Ramachandran_allowed': [(float(molp_struct_out[20])
-                                              / float(molp_struct_out[22]))],
-                    'Ramachandran_outliers': [(float(molp_struct_out[19])
-                                               / float(molp_struct_out[22]))],
-                    'Clashscore': [float(molp_struct_out[8])],
-                    'Clashscore_percentile': [float(molp_struct_out[13])]
-                })
+                exp_struct_molp = [
+                    molp_struct_out[0],
+                    (float(molp_struct_out[15]) / float(molp_struct_out[16])),
+                    (float(molp_struct_out[17]) / float(molp_struct_out[18])),
+                    (float(molp_struct_out[21]) / float(molp_struct_out[22])),
+                    (float(molp_struct_out[20]) / float(molp_struct_out[22])),
+                    (float(molp_struct_out[19]) / float(molp_struct_out[22])),
+                    float(molp_struct_out[8]),
+                    float(molp_struct_out[13])
+                ]
 
                 exp_res_molp = OrderedDict({
                     'Residue_id': [],
@@ -175,8 +159,5 @@ class test_output_structure_scoring(unittest.TestCase):
                 exp_res_molp = pd.DataFrame(exp_res_molp)
 
                 # Test for equality
-                self.assertDictEqual(meas_struct_molp['int'], exp_struct_molp)
-                pd.testing.assert_frame_equal(
-                    meas_res_molp['int']['example_pdb_{}.pdb'.format(pdb)],
-                    exp_res_molp
-                )
+                self.assertEqual(meas_struct_molp, exp_struct_molp)
+                pd.testing.assert_frame_equal(meas_res_molp, exp_res_molp)
