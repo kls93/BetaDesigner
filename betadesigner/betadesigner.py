@@ -65,20 +65,19 @@ def main():
     run_ga = True
     run_opt = True
     max_evals = 1  # Number of hyperparameter combinations for hyperopt to try
-    sub_gen = 1  # Number of generations to run the GA with a particular
+    sub_gen = 2  # Number of generations to run the GA with a particular
     # combination of hyperparameters
     # max_gen = copy.copy(params['maxnumgenerations'])  # Total number of generations
     # GA can be run for (changing hyperparameters every sub_gen generations)
-    max_gen = 1
+    max_gen = 2
     params['maxnumgenerations'] = sub_gen
 
-    count = 0
+    opt_cycle_count = 0
     # Runs GA in subsets of sub_gen generations, until either the output fitness
     # score has converged (to within 1%) or the number of generations exceeds
     # the user-defined threshold
     while run_ga is True:
-        count += 1
-        setup_input_output(params, count)
+        opt_cycle_count += 1
 
         orig_sequences_dict = copy.deepcopy(new_sequences_dict)
         trials = Trials()
@@ -88,27 +87,30 @@ def main():
         # propensity_weights to uniform ranges between 0 and 1 for optimisation
         # via a tree parzen estimator with hyperopt
         bayes_params = {}
-        bayes_params['unfitfraction'] = hp.uniform('unfitfraction', 0, 1)
+        bayes_params['unfitfraction'] = hp.uniform('unfitfraction', 0, 0)
         bayes_params['crossoverprob'] = hp.uniform('crossoverprob', 0, 1)
         bayes_params['mutationprob'] = hp.uniform('mutationprob', 0, 1)
         bayes_params['propensityweight'] = hp.uniform('propensityweight', 0, 1)
-        """
-        bayes_params['unfitfraction'] = 0.3
-        bayes_params['crossoverprob'] = 0.4
-        bayes_params['mutationprob'] = 0.2
-        bayes_params['propensityweight'] = 0.5
-        """
+
         # Pickles parameters not being optimised with hyperopt (unfortunately
         # can't feed dataframe (or series or array) data into a function with
         # hyperopt, so am having to pickle the parameters not being optimised
         # with hyperopt
-        bayes_params['workingdirectory'] = params['workingdirectory']
-        bayes_params['optimisationcycle'] = count
-        params['sequencesdict'] = orig_sequences_dict
-        with open('{}/Program_input/Optimisation_cycle_{}_params.pkl'.format(
-            params['workingdirectory'], count), 'wb'
+        bayes_params['optimisationcycle'] = opt_cycle_count
+        bayes_params['hyperparam_count'] = max_evals
+        updated_params = setup_input_output(
+            copy.deepcopy(params), opt_cycle_count,
+            bayes_params['hyperparam_count']
+        )
+        # DEFINITION OF bayes_params['workingdirectory'] MUST FOLLOW
+        # DEFINITION OF updated_params AFTER RUNNING setup_input_output
+        bayes_params['workingdirectory'] = updated_params['workingdirectory']
+
+        updated_params['sequencesdict'] = copy.deepcopy(orig_sequences_dict)
+        with open('{}/Program_input/Input_params.pkl'.format(
+            bayes_params['workingdirectory']), 'wb'
         ) as f:
-            pickle.dump(params, f)
+            pickle.dump(updated_params, f)
 
         # Runs hyperparameter optimisation in increments of sqrt(10) evaluations,
         # until either the selected hyperparameter values have converged (to
@@ -125,13 +127,14 @@ def main():
                 current_best = copy.deepcopy(best_params)
                 max_evals = int(max_evals * math.sqrt(10))
             else:
-                # If best values are within 1% of previous OR number of trials >= 1000000
+                # If best values are within 5% of previous OR number of trials >= 10000
                 similarity_dict = {}
                 for key in list(best_params.keys()):
                     if key in ['unfitfraction', 'crossoverprob', 'mutationprob', 'propensityweight']:
                         if (
-                               ((0.99*current_best[key]) <= best_params[key] <= (1.01*current_best[key]))
-                            or max_evals >= 100
+                               ((0.95*current_best[key]) <= best_params[key]
+                                 <= (1.05*current_best[key]))
+                            or max_evals >= 10000
                         ):
                             similarity_dict[key] = True
                         else:
@@ -142,11 +145,26 @@ def main():
                     current_best = copy.deepcopy(best_params)
                     max_evals = int(max_evals * math.sqrt(10))
 
-        best_params['workingdirectory'] = params['workingdirectory']
-        best_params['optimisationcycle'] = count
+        best_params['optimisationcycle'] = opt_cycle_count
+        best_params['hyperparam_count'] = '{}_final_run'.format(max_evals)
+        updated_params = setup_input_output(
+            copy.deepcopy(params), opt_cycle_count, best_params['hyperparam_count']
+        )
+        # DEFINITION OF best_params['workingdirectory'] MUST FOLLOW DEFINITION
+        # OF updated_params AFTER RUNNING setup_input_output
+        best_params['workingdirectory'] = updated_params['workingdirectory']
+
+        updated_params['sequencesdict'] = copy.deepcopy(orig_sequences_dict)
+        with open('{}/Program_input/Input_params.pkl'.format(
+            best_params['workingdirectory']), 'wb'
+        ) as f:
+            pickle.dump(updated_params, f)
+
         fitness = run_genetic_algorithm(best_params)
-        with open('{}/Program_output/GA_output_sequences_dict.pkl'.format(
-            params['workingdirectory']), 'rb') as f:
+        with open(
+            '{}/Program_output/GA_output_sequences_dict.pkl'.format(
+            best_params['workingdirectory']), 'rb'
+        ) as f:
             new_sequences_dict = pickle.load(f)
 
         if max_gen == sub_gen:
@@ -155,10 +173,10 @@ def main():
         if sub_gen == 10:
             current_fitness = copy.deepcopy(fitness)
         else:
-            # If updated fitness is within 1% of previous fitness score OR
+            # If updated fitness is within 5% of previous fitness score OR
             # number of generations > user-defined limit
             if (
-                   ((0.99*current_fitness) <= fitness <= (1.01*current_fitness))
+                   ((0.95*current_fitness) <= fitness <= (1.05*current_fitness))
                 or sub_gen >= max_gen
             ):
                 run_ga = False
@@ -171,14 +189,14 @@ def main():
     # backbone model, and writes the resulting model to a PDB file. Also
     # returns each model's total energy within BUDEFF.
     with open('{}/Program_output/GA_output_sequences_dict.pkl'.format(
-        params['workingdirectory']), 'rb') as f:
+        updated_params['workingdirectory']), 'rb') as f:
         sequences_dict = pickle.load(f)
     best_bayes_params = {'unfitfraction': best_params['unfitfraction'],
                          'crossoverprob': best_params['crossoverprob'],
                          'mutationprob': best_params['mutationprob'],
                          'propensityweight': best_params['propensityweight'],
                          'sequencesdict': sequences_dict}
-    output = gen_output(params, best_bayes_params)
+    output = gen_output(updated_params, best_bayes_params)
     (updated_sequences_dict, structures_dict, bude_struct_energies_dict
     ) = output.write_pdb(sequences_dict)
     (rosetta_struct_energies_dict, rosetta_res_energies_dict
@@ -186,13 +204,49 @@ def main():
     (molp_struct_dict, molp_res_dict
     ) = output.score_pdb_molprobity(structures_dict)
 
-    with open('{}/Program_output/GA_output_struct_eval_dicts.pkl'.format(
-        params['workingdirectory']), 'wb') as f:
-        pickle.dump((updated_sequences_dict, structures_dict,
-                     bude_struct_energies_dict, rosetta_struct_energies_dict,
-                     rosetta_res_energies_dict, molp_struct_dict, molp_res_dict), f)
+    with open('{}/Program_output/GA_output_sequences_full_name_dict.pkl'.format(
+        updated_params['workingdirectory']), 'wb') as f:
+        pickle.dump(updated_sequences_dict, f)
+    with open('{}/BetaDesigner_results/{}/GA_output_sequences_dict.pkl'.format(
+        params['workingdirectory'], params['jobid']), 'wb') as f:
+        pickle.dump(updated_sequences_dict, f)
 
-    return (sequences_dict, structures_dict, bude_struct_energies_dict,
+    with open('{}/Program_output/BUDE_struct_energies_dict.pkl'.format(
+        updated_params['workingdirectory']), 'wb') as f:
+        pickle.dump(bude_struct_energies_dict, f)
+    with open('{}/BetaDesigner_results/{}/BUDE_struct_energies_dict.pkl'.format(
+        params['workingdirectory'], params['jobid']), 'wb') as f:
+        pickle.dump(bude_struct_energies_dict, f)
+
+    with open('{}/Program_output/Rosetta_struct_energies_dict.pkl'.format(
+        updated_params['workingdirectory']), 'wb') as f:
+        pickle.dump(rosetta_struct_energies_dict, f)
+    with open('{}/BetaDesigner_results/{}/Rosetta_struct_energies_dict.pkl'.format(
+        params['workingdirectory'], params['jobid']), 'wb') as f:
+        pickle.dump(rosetta_struct_energies_dict, f)
+
+    with open('{}/Program_output/Rosetta_res_energies_dict.pkl'.format(
+        updated_params['workingdirectory']), 'wb') as f:
+        pickle.dump(rosetta_res_energies_dict, f)
+    with open('{}/BetaDesigner_results/{}/Rosetta_res_energies_dict.pkl'.format(
+        params['workingdirectory'], params['jobid']), 'wb') as f:
+        pickle.dump(rosetta_res_energies_dict, f)
+
+    with open('{}/Program_output/MolProbity_struct_score_dict.pkl'.format(
+        updated_params['workingdirectory']), 'wb') as f:
+        pickle.dump(molp_struct_dict, f)
+    with open('{}/BetaDesigner_results/{}/MolProbity_struct_score_dict.pkl'.format(
+        params['workingdirectory'], params['jobid']), 'wb') as f:
+        pickle.dump(molp_struct_dict, f)
+
+    with open('{}/Program_output/MolProbity_res_score_dict.pkl'.format(
+        updated_params['workingdirectory']), 'wb') as f:
+        pickle.dump(molp_res_dict, f)
+    with open('{}/BetaDesigner_results/{}/MolProbity_res_score_dict.pkl'.format(
+        params['workingdirectory'], params['jobid']), 'wb') as f:
+        pickle.dump(molp_res_dict, f)
+
+    return (updated_sequences_dict, structures_dict, bude_struct_energies_dict,
             rosetta_struct_energies_dict, rosetta_res_energies_dict,
             molp_struct_dict, molp_res_dict)
 

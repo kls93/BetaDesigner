@@ -192,7 +192,7 @@ def score_pdb_molprobity(pdb_path):
         molp_stdout_res, stdout_res_header, pdb_path
     )
 
-    return (pdb_path, per_struct_molp_prop, per_res_molp_df)
+    return [pdb_path, per_struct_molp_prop, per_res_molp_df]
 
 
 if __name__ == '__main__':
@@ -244,6 +244,7 @@ if __name__ == '__main__':
             per_struct_molp_dict[surface]['Ramachandran_outliers'][index] = struct_list[5]
             per_struct_molp_dict[surface]['Clashscore'][index] = struct_list[6]
             per_struct_molp_dict[surface]['Clashscore_percentile'][index] = struct_list[7]
+            per_struct_molp_dict[surface] = pd.DataFrame(per_struct_molp_dict[surface])
 
             per_res_molp_dict[surface][pdb_path] = res_df
 

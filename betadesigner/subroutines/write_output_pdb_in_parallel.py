@@ -4,6 +4,7 @@
 # executed within an if __name__ == '__main__' clause
 
 import argparse
+import budeff
 import copy
 import isambard
 import os
@@ -12,7 +13,7 @@ from collections import OrderedDict
 from scoop import futures
 from betadesigner.subroutines.calc_bude_energy_in_parallel import pack_side_chains
 
-def write_pdb(num, G, wd, surface, pdb):
+def write_pdb(num, G, wd, surface, ampal_pdb, pdb):
     """
     Uses SCWRL4 to pack network side chains onto the backbone structure and
     writes a PDB file of the output structure. Note that each network is
@@ -29,9 +30,18 @@ def write_pdb(num, G, wd, surface, pdb):
 
     # Packs network side chains onto the model with SCWRL4 and calculates model
     # energies in BUDE
-    new_pdb, energy = pack_side_chains(pdb, G, False)
+    new_pdb, energy = pack_side_chains(ampal_pdb, G, False)
     with open('{}/Program_output/Model_energies.txt'.format(wd), 'a') as f:
         f.write('{}_{}: {}\n'.format(surface, num, energy))
+    # Calculates total energy of input PDB structure within BUDE (note that this
+    # does not include the interaction of the object with its surrounding
+    # environment, hence hydrophobic side chains will not be penalised on the
+    # surface of a globular protein and vice versa for membrane proteins).
+    # Hence this is just a rough measure of side-chain clashes.
+    orig_ampal_pdb = isambard.ampal.load_pdb(pdb)
+    energy = budeff.get_internal_energy(orig_ampal_pdb).total_energy
+    with open('{}/Program_output/Model_energies.txt'.format(wd), 'a') as f:
+        f.write('\n\n\nInput structure: {}\n'.format(energy))
 
     # Writes PDB file of model. N.B. Currently code only designs
     # sequences containing the 20 canonical amino acids, but have
@@ -76,7 +86,7 @@ if __name__ == '__main__':
 
     # Loads backbone model into ISAMBARD. NOTE must have been pre-processed
     # to remove ligands etc. so that only backbone coordinates remain.
-    pdb = isambard.ampal.load_pdb(pdb)
+    ampal_pdb = isambard.ampal.load_pdb(pdb)
 
     for surface, networks_dict in sequences_dict.items():
         print('Packing side chains for {} surface'.format(surface))
@@ -87,11 +97,12 @@ if __name__ == '__main__':
 
         wd_list = [copy.deepcopy(wd) for n in range(len(networks_dict))]
         surface_list = [copy.deepcopy(surface) for n in range(len(networks_dict))]
+        ampal_pdb_list = [copy.deepcopy(ampal_pdb) for n in range(len(networks_dict))]
         pdb_list = [copy.deepcopy(pdb) for n in range(len(networks_dict))]
 
         structures_list = futures.map(
             write_pdb, list(networks_dict.keys()), list(networks_dict.values()),
-            wd_list, surface_list, pdb_list
+            wd_list, surface_list, ampal_pdb_list, pdb_list
         )
 
         for tup in structures_list:

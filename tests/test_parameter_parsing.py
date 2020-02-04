@@ -325,7 +325,7 @@ class testParameterParsing(unittest.TestCase):
             [{'workingdirectory': 'tests/test_files/example_input_df.pkl'},
              'Path to working directory not recognised'],
             [{'workingdirectory': 'tests/test_files/'},
-             'tests/test_files/']
+             'tests/test_files']
         ]
 
         for pair in expected_vals:

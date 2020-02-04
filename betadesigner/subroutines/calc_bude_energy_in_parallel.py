@@ -64,7 +64,7 @@ def measure_fitness_allatom(pdb, network_num, G):
     # the total model energy within BUDE
     new_pdb, energy = pack_side_chains(pdb, G, True)
 
-    return (network_num, energy)
+    return [network_num, energy]
 
 
 if __name__ == '__main__':

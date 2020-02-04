@@ -663,7 +663,7 @@ def def_working_directory(params, test=False):
         if test is True:
             return stdout
 
-    wd = wd.rstrip('/') + '/'
+    wd = wd.rstrip('/')
 
     return wd
 
@@ -1607,17 +1607,23 @@ def find_params(args):
     return params
 
 
-def setup_input_output(params, cycle):
+def setup_input_output(params, opt_cycle, hyperopt_cycle):
     """
     Changes directory to user-specified "working directory", creates directories
     for the input and output data, and copies across necessary input files in
     preparation for running the genetic algorithm
     """
 
+    # Defines directory where universal program inputs (i.e. common across all
+    # generations and hyperparameter combinations) are stored
+    uwd = '{}/BetaDesigner_results/{}/Universal_program_input'.format(
+        params['workingdirectory'], params['jobid']
+    )
+
     # Creates working directory
     params['workingdirectory'] = (
-        '{}/BetaDesigner_results/{}/Optimisation_cycle_{}'.format(
-        params['workingdirectory'], params['jobid'], cycle
+        '{}/BetaDesigner_results/{}/Optimisation_cycle_{}/{}/'.format(
+        params['workingdirectory'], params['jobid'], opt_cycle, hyperopt_cycle
     ))
 
     if os.path.isdir(params['workingdirectory']):
@@ -1644,40 +1650,26 @@ def setup_input_output(params, cycle):
     if not os.path.isdir(params['workingdirectory']):
         os.makedirs(params['workingdirectory'])
 
+    # Copies common input files into universal data directory if not already
+    # done so
+    if not os.path.isdir(uwd):
+        os.makedirs(uwd)
+        shutil.copy(params['inputpdb'], '{}/Input_PDB.pdb'.format(uwd))
+        with open('{}/Propensity_scales.pkl'.format(uwd), 'wb') as pickle_file:
+            pickle.dump((params['propensityscales']), pickle_file)
+        if 'frequencyscales' in list(params.keys()):
+            with open('{}/Frequency_scales.pkl'.format(uwd), 'wb') as pickle_file:
+                pickle.dump((params['frequencyscales']), pickle_file)
+        if 'phipsiclustercoords' in list(params.keys()):
+            with open('{}/Ramachandran_voronoi_cluster_coords.pkl'.format(
+                uwd), 'wb') as pickle_file:
+                pickle.dump((params['phipsiclustercoords']), pickle_file)
+
     # Creates directories for input and output data
     os.mkdir('{}/Program_input'.format(params['workingdirectory']))
     os.mkdir('{}/Program_output'.format(params['workingdirectory']))
 
-    # Copies input files into input data directory
-    shutil.copy(params['inputdataframepath'],
-                '{}/Program_input/Input_DataFrame.pkl'.format(params['workingdirectory']))
-
-    shutil.copy(params['inputpdb'],
-                '{}/Program_input/Input_PDB.pdb'.format(params['workingdirectory']))
-
-    with open('{}/Program_input/Propensity_scales.pkl'.format(
-        params['workingdirectory']), 'wb') as pickle_file:
-        pickle.dump((params['propensityscales']), pickle_file)
-
-    if 'frequencyscales' in list(params.keys()):
-        with open('{}/Program_input/Frequency_scales.pkl'.format(
-            params['workingdirectory']), 'wb') as pickle_file:
-            pickle.dump((params['frequencyscales']), pickle_file)
-
-    if 'phipsiclustercoords' in list(params.keys()):
-        with open('{}/Program_input/Ramachandran_voronoi_cluster_coords.pkl'.format(
-            params['workingdirectory']), 'wb') as pickle_file:
-            pickle.dump((params['phipsiclustercoords']), pickle_file)
-
-    with open('{}/Program_input/Input_parameters.pkl'.format(
-        params['workingdirectory']), 'wb') as f:
-        pickle.dump((params), f)
-
-    # Writes program params to a txt file for user records
-    with open('{}/Program_input/BetaDesigner_params.txt'.format(
-        params['workingdirectory']), 'w') as f:
-        for key, parameter in params.items():
-            f.write('{}: {}\n\n\n\n\n\n'.format(key, parameter))
+    return params
 
 
 class initialise_ga_object():

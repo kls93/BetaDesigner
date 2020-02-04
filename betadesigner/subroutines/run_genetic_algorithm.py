@@ -8,6 +8,7 @@ import copy
 import os
 import pickle
 import random
+import string
 import multiprocessing as mp
 import networkx as nx
 import numpy as np
@@ -143,12 +144,12 @@ class run_ga_calcs(initialise_ga_object):
             index_prop = index_prop[0]
             index_freq = np.where(frequency_array[0] == network_num)[0][0]
 
-            propensity = propensity_array[1][index_prop]
-            frequency = frequency_array[1][index_freq]
+            propensity = float(propensity_array[1][index_prop])
+            frequency = float(frequency_array[1][index_freq])
 
             probability = (  (self.propensity_weight*propensity)
                            + ((1-self.propensity_weight)*frequency))
-            network_fitness_scores[int(network_num)] = probability
+            network_fitness_scores[network_num] = probability
 
         return network_fitness_scores
 
@@ -521,7 +522,7 @@ class run_ga_calcs(initialise_ga_object):
         return mutated_pop_dict
 
     def add_children_to_parents(
-        self, surface, mutated_pop_dict, mating_pop_dict, index
+        self, surface, mutated_pop_dict, mating_pop_dict
     ):
         """
         Combines parent and child generations
@@ -529,20 +530,16 @@ class run_ga_calcs(initialise_ga_object):
 
         print('Combining parent and child generations for {}'.format(surface))
 
-        # Renumbers networks to prevent overlap
-        if index == 0:
-            count = 0
-        elif index == 1:
-            count = int(2*self.propensity_pop_size)  # The number of networks
-            # already added to sequences_dict following propensity scoring
         merged_networks_dict = OrderedDict()
 
-        for num, G in mutated_pop_dict.items():
-            merged_networks_dict[count] = copy.deepcopy(G)
-            count += 1
-        for num, G in mating_pop_dict.items():
-            merged_networks_dict[count] = copy.deepcopy(G)
-            count += 1
+        for id, G in mutated_pop_dict.items():
+            new_id = ''.join(
+                [random.choice(string.ascii_letters + string.digits)
+                for i in range(10)]
+            )
+            merged_networks_dict[new_id] = copy.deepcopy(G)
+        for id, G in mating_pop_dict.items():
+            merged_networks_dict[id] = copy.deepcopy(G)
 
         return merged_networks_dict
 
@@ -557,8 +554,8 @@ def run_genetic_algorithm(bayes_params):
     # Unpacks parameters (unfortunately can't feed dataframe (or series or
     # array) data into a function with hyperopt, so am having to pickle the
     # parameters not being optimised with hyperopt
-    params_file = '{}/Program_input/Optimisation_cycle_{}_params.pkl'.format(
-        bayes_params['workingdirectory'], bayes_params['optimisationcycle']
+    params_file = '{}/Program_input/Input_params.pkl'.format(
+        bayes_params['workingdirectory']
     )
     with open(params_file, 'rb') as f:
         fixed_params = pickle.load(f)
@@ -568,7 +565,7 @@ def run_genetic_algorithm(bayes_params):
 
     # Records sequences and their fitnesses after each generation
     with open('{}/Program_output/Sequence_track.txt'.format(
-        params['workingdirectory']), 'w') as f:
+        bayes_params['workingdirectory']), 'w') as f:
         f.write('Tracking GA optimisation progress\n')
 
     ga_calcs = run_ga_calcs(params)
@@ -583,7 +580,7 @@ def run_genetic_algorithm(bayes_params):
         gen += 1
         print('Generation {}'.format(gen))
         with open('{}/Program_output/Sequence_track.txt'.format(
-            params['workingdirectory']), 'a') as f:
+            bayes_params['workingdirectory']), 'a') as f:
             f.write('\n\n\n\n\nGeneration {}\n'.format(gen))
 
         for surface in list(params['sequencesdict'].keys()):
@@ -627,6 +624,20 @@ def run_genetic_algorithm(bayes_params):
                     network_fitness_scores = ga_calcs.combine_prop_and_freq_scores(
                         network_propensity_scores, network_frequency_scores, raw_or_rank
                     )
+
+                    # Records sequences output from this generation and their
+                    # associated fitnesses
+                    with open('{}/Program_output/Sequence_track.txt'.format(
+                        bayes_params['workingdirectory']), 'a') as f:
+                        f.write('{}\n'.format(surface))
+                        for network, G in networks_dict.items():
+                            sequence = ''.join([G.nodes[node]['aa_id'] for node in G.nodes])
+                            propensity = network_propensity_scores[network]
+                            frequency = network_frequency_scores[network]
+                            f.write('{}, {}, {}, {}\n'.format(
+                                network, sequence, propensity, frequency
+                            ))
+                        f.write('\n')
                 elif (
                     (params['fitnessscoremethod'] == 'allatom')
                     or
@@ -635,28 +646,22 @@ def run_genetic_algorithm(bayes_params):
                     (params['fitnessscoremethod'] == 'split' and index == 1)
                 ):
                     # Runs BUDE energy scoring on parallel processors
-                    import time
-                    import math
-                    start = time.time()
                     network_energies = ga_calcs.measure_fitness_allatom(
                         surface, networks_dict
                     )
-                    end = time.time()
-                    print(math.fmod((end-start), 60))
                     (network_fitness_scores
                     ) = ga_calcs.convert_energies_to_probabilities(network_energies)
 
-                # Records sequences output from this generation and their
-                # associated fitnesses. Doesn't record network number to avoid
-                # confusion (since is randomly reassigned in the next generation)
-                with open('{}/Program_output/Sequence_track.txt'.format(
-                    params['workingdirectory']), 'a') as f:
-                    f.write('{}\n'.format(surface))
-                    for network, G in networks_dict.items():
-                        sequence = ''.join([G.nodes[node]['aa_id'] for node in G.nodes])
-                        probability = network_fitness_scores[network]
-                        f.write('{}, {}\n'.format(sequence, probability))
-                    f.write('\n')
+                    # Records sequences output from this generation and their
+                    # associated fitnesses
+                    with open('{}/Program_output/Sequence_track.txt'.format(
+                        bayes_params['workingdirectory']), 'a') as f:
+                        f.write('{}\n'.format(surface))
+                        for network, G in networks_dict.items():
+                            sequence = ''.join([G.nodes[node]['aa_id'] for node in G.nodes])
+                            energy = network_energies[network]
+                            f.write('{}, {}, {}\n'.format(network, sequence, energy))
+                        f.write('\n')
 
                 # Selects subpopulation for mating
                 if params['matingpopmethod'] == 'fittest':
@@ -683,7 +688,7 @@ def run_genetic_algorithm(bayes_params):
 
                 # Combines parent and child sequences into single generation
                 merged_networks_dict = ga_calcs.add_children_to_parents(
-                    surface, mutated_pop_dict, mating_pop_dict, index
+                    surface, mutated_pop_dict, mating_pop_dict
                 )
 
                 # Shuffles networks dictionary so that in the case of a split
@@ -695,12 +700,11 @@ def run_genetic_algorithm(bayes_params):
                         {**params['sequencesdict'][surface], **merged_networks_dict}
                     )
 
-                merged_networks_keys = list(merged_networks_dict.keys())
-                merged_networks_vals = list(merged_networks_dict.values())
-                random.shuffle(merged_networks_vals)
+                random_order = [n for n in range(len(merged_networks_dict))]
+                random.shuffle(random_order)
                 shuffled_merged_networks_dict = OrderedDict(
-                    {merged_networks_keys[i]: merged_networks_vals[i]
-                     for i in range(len(merged_networks_keys))}
+                    {list(merged_networks_dict.keys())[n]:
+                     list(merged_networks_dict.values())[n] for n in random_order}
                 )
                 params['sequencesdict'][surface] = shuffled_merged_networks_dict
 
@@ -710,7 +714,7 @@ def run_genetic_algorithm(bayes_params):
     summed_fitness = 0
 
     with open('{}/Program_output/Sequence_track.txt'.format(
-        params['workingdirectory']), 'a') as f:
+        bayes_params['workingdirectory']), 'a') as f:
         f.write('\n\n\n\n\nOutput generation\n')
 
     for surface in list(params['sequencesdict'].keys()):
@@ -727,15 +731,22 @@ def run_genetic_algorithm(bayes_params):
             (network_fitness_scores
             ) = ga_calcs.convert_energies_to_probabilities(network_energies)
 
-        # Records sequences output from this generation and their
-        # associated fitnesses. Records network number in this final generation.
+        # Records sequences output from this generation and their associated
+        # fitnesses
         with open('{}/Program_output/Sequence_track.txt'.format(
-            params['workingdirectory']), 'a') as f:
+            bayes_params['workingdirectory']), 'a') as f:
             f.write('{}\n'.format(surface))
             for network, G in networks_dict.items():
                 sequence = ''.join([G.nodes[node]['aa_id'] for node in G.nodes])
-                probability = network_fitness_scores[network]
-                f.write('{}, {}, {}\n'.format(network, sequence, probability))
+                if params['fitnessscoremethod'] != 'allatom':
+                    propensity = network_propensity_scores[network]
+                    frequency = network_frequency_scores[network]
+                    f.write('{}, {}, {}, {}\n'.format(
+                        network, sequence, propensity, frequency
+                    ))
+                elif params['fitnessscoremethod'] == 'allatom':
+                    energy = network_energies[network]
+                    f.write('{}, {}, {}\n'.format(network, sequence, energy))
             f.write('\n')
 
         mating_pop_dict = ga_calcs.create_mat_pop_fittest(
@@ -745,13 +756,24 @@ def run_genetic_algorithm(bayes_params):
         params['sequencesdict'][surface] = mating_pop_dict
 
         for network in params['sequencesdict'][surface].keys():
-            summed_fitness += network_fitness_scores[network]
+            # Higher propensity is more likely, so add because output from
+            # measure_fitness_propensity is sum of -log(propensity) values,
+            # and hyperopt minimises output score
+            # Can't combine propensity and frequency scores without first
+            # converting to a probability, so for calculating output combined
+            # fitness can only use combined propensity scores to rank the
+            # structures
+            if params['fitnessscoremethod'] != 'allatom':
+                summed_fitness += network_propensity_scores[network]
+            # Lower score is more likely, so add because hyperopt minimises
+            # output score
+            elif params['fitnessscoremethod'] == 'allatom':
+                summed_fitness += network_energies[network]
 
     with open('{}/Program_output/GA_output_sequences_dict.pkl'.format(
-        params['workingdirectory']), 'wb') as f:
+        bayes_params['workingdirectory']), 'wb') as f:
         pickle.dump(params['sequencesdict'], f)
 
     print(summed_fitness)
-    print(-summed_fitness)
 
-    return -summed_fitness
+    return summed_fitness

@@ -88,7 +88,7 @@ class gen_output(initialise_ga_object):
 
             for pdb_path in pdb_path_list:
                 # First generate ...
-                pdb = pdb_path.split('/')[-1].strip('.pdb')
+                pdb = pdb_path.split('/')[-1].replace('.pdb', '')
                 wd = '/'.join(pdb_path.split('/')[:-1])  # More complicated to use
                 # self.working_directory because PDB file is in its own directory
                 wd = '{}/{}_rosetta_results'.format(wd, pdb)

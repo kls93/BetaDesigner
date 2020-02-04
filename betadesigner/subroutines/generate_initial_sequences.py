@@ -1,6 +1,7 @@
 
 import copy
 import random
+import string
 import networkx as nx
 import numpy as np
 import pandas as pd
@@ -112,7 +113,6 @@ def propensity_to_probability_distribution(index_num, node_indv_propensities):
     ) = random_shuffle(
         index_num, node_indv_propensities, node_probabilities
     )
-    index_num = index_num.astype(int)
 
     return index_num, node_indv_propensities, node_probabilities
 
@@ -144,7 +144,6 @@ def frequency_to_probability_distribution(index_num, node_indv_vals, prop_or_fre
     (index_num, node_indv_vals, node_probabilities) = random_shuffle(
         index_num, node_indv_vals, node_probabilities
     )
-    index_num = index_num.astype(int)
 
     return index_num, node_indv_vals, node_probabilities
 
@@ -358,7 +357,12 @@ class gen_ga_input_calcs(initialise_ga_object):
                 new_node_aa_ids[node] = {'aa_id': random_aa}
             nx.set_node_attributes(H, new_node_aa_ids)
 
-            initial_networks[num] = H
+
+            unique_id = ''.join(
+                [random.choice(string.ascii_letters + string.digits)
+                for i in range(10)]
+            )
+            initial_networks[unique_id] = H
 
         initial_sequences_dict[network_label] = initial_networks
 
@@ -378,8 +382,14 @@ class gen_ga_input_calcs(initialise_ga_object):
 
         # Initialises dictionary of starting sequences
         initial_networks = OrderedDict()
+        ids_list = []
         for num in range(2*self.pop_size):
-            initial_networks[num] = copy.deepcopy(G)
+            unique_id = ''.join(
+                [random.choice(string.ascii_letters + string.digits)
+                for i in range(10)]
+            )
+            initial_networks[unique_id] = copy.deepcopy(G)
+            ids_list.append(unique_id)
 
         # Extracts individual amino acid propensity scales for the surface
         intext_index = self.dict_name_indices['intorext']
@@ -504,7 +514,7 @@ class gen_ga_input_calcs(initialise_ga_object):
             )
 
             # Selects amino acid weighted by its probability
-            for num in range(2*self.pop_size):
+            for unique_id in ids_list:
                 if test is False:
                     random_number = random.uniform(0, 1)
                 elif test is True:
@@ -517,7 +527,7 @@ class gen_ga_input_calcs(initialise_ga_object):
                     selected_aa = filtered_aa_list[nearest_index+1]
 
                 nx.set_node_attributes(
-                    initial_networks[num],
+                    initial_networks[unique_id],
                     values={'{}'.format(node): {'aa_id': '{}'.format(selected_aa)}}
                 )
 

@@ -34,6 +34,7 @@ def define_params():
                                   'discorcont': 5,
                                   'proporfreq': 6},
               'workingdirectory': '',
+              'uniworkdir': '',
               'barrelorsandwich': '2.40',
               'jobid': '',
               'initialseqmethod': '',
@@ -451,17 +452,17 @@ class testGeneticAlgorithm(unittest.TestCase):
                         'mutationprob': 0.2}
 
         test_combinations = [
-            (OrderedDict({1: '1', 2: '2', 3: '3'}), OrderedDict({1: '1', 2: '2', 3: '3'}), 0),
-            (OrderedDict({1: '1', 2: '2', 3: '3'}), OrderedDict({1: '1', 2: '2', 3: '3'}), 1),
-            (OrderedDict({2: '3', 1: '2', 3: '1'}), OrderedDict({3: '1', 1: '2', 2: '3'}), 1),
-            (OrderedDict({}), OrderedDict({1: '1', 2: '2', 3: '3'}), 0),
-            (OrderedDict({}), OrderedDict({}), 1)
+            (OrderedDict({1: '1', 2: '2', 3: '3'}), OrderedDict({6: '1', 5: '2', 4: '3'})),
+            (OrderedDict({1: '1', 2: '3', 3: '2'}), OrderedDict({1: '1', 3: '2', 2: '3'})),
+            (OrderedDict({'he': '3', 'l': '2', 'lo': '1'}), OrderedDict({'wo': '1', 'r': '2', 'ld': '3'})),
+            (OrderedDict({}), OrderedDict({1: '1', 2: '2', 3: '3'})),
+            (OrderedDict({}), OrderedDict({}))
         ]
         expected_combinations = [
-            OrderedDict({0: '1', 1: '2', 2: '3', 3: '1', 4: '2', 5: '3'}),
-            OrderedDict({2: '1', 3: '2', 4: '3', 5: '1', 6: '2', 7: '3'}),
-            OrderedDict({2: '3', 3: '2', 4: '1', 5: '1', 6: '2', 7: '3'}),
-            OrderedDict({0: '1', 1: '2', 2: '3'}),
+            OrderedDict({'ra': '1', 'nd': '2', 'om': '3', 6: '1', 5: '2', 4: '3'}),
+            OrderedDict({'ra': '1', 'nd': '3', 'om': '2', 1: '1', 3: '2', 2: '3'}),
+            OrderedDict({'ra': '3', 'nd': '2', 'om': '1', 'wo': '1', 'r': '2', 'ld': '3'}),
+            OrderedDict({1: '1', 2: '2', 3: '3'}),
             OrderedDict({})
         ]
 
@@ -469,6 +470,17 @@ class testGeneticAlgorithm(unittest.TestCase):
 
         for index, combination in enumerate(test_combinations):
             combined_dicts = ga_calcs.add_children_to_parents(
-                'int', combination[0], combination[1], combination[2]
+                'int', combination[0], combination[1]
             )
-            self.assertEqual(combined_dicts, expected_combinations[index])
+            if index in range(3):
+                exp_mut_keys = list(expected_combinations[index].keys())[0:3]
+                exp_mat_keys = list(expected_combinations[index].keys())[3:6]
+                act_mut_keys = list(combined_dicts.keys())[0:3]
+                act_mat_keys = list(combined_dicts.keys())[3:6]
+                self.assertEqual(exp_mat_keys, act_mat_keys)
+                self.assertNotEqual(exp_mut_keys, act_mut_keys)
+                assert(all(len(x) == 10 for x in act_mut_keys))
+                self.assertEqual(list(combined_dicts.values()),
+                                 list(expected_combinations[index].values()))
+            elif index in range(3, 5):
+                self.assertEqual(combined_dicts, expected_combinations[index])

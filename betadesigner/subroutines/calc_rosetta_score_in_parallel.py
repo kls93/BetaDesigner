@@ -82,7 +82,7 @@ def score_pdb_rosetta(pdb_path, cwd, barrel_or_sandwich):
     Relaxes structures and calculates their energy in the Rosetta force-field
     """
 
-    pdb = pdb_path.split('/')[-1].strip('.pdb')
+    pdb = pdb_path.split('/')[-1].replace('.pdb', '')
     nwd = '/'.join(pdb_path.split('/')[:-1])  # More complicated to use cwd
     # because PDB file is in its own directory
     nwd = '{}/{}_rosetta_results'.format(nwd, pdb)
@@ -163,7 +163,7 @@ def score_pdb_rosetta(pdb_path, cwd, barrel_or_sandwich):
 
     res_energies_dict = parse_rosetta_pdb_file(pdb_path, rosetta_lines, pdb_lines)
 
-    return (pdb_path, total_energy, res_energies_dict)
+    return [pdb_path, total_energy, res_energies_dict]
 
 
 if __name__ == '__main__':

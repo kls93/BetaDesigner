@@ -259,7 +259,7 @@ def measure_fitness_propensity(
         print('WARNING: frequency count for network {} is '
               '{}'.format(num, frequency_count))
 
-    return (num, propensity_count, frequency_count)
+    return [num, propensity_count, frequency_count]
 
 
 if __name__ == '__main__':
