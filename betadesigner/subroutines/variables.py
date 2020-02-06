@@ -3,7 +3,7 @@
 # acids
 
 
-def gen_amino_acids_dict():
+def three_to_one_aa_dict():
     amino_acids_dict = {'ALA': 'A',
                         'ARG': 'R',
                         'ASN': 'N',

@@ -9,9 +9,9 @@ import pandas as pd
 from collections import OrderedDict
 
 if __name__ == 'subroutines.find_parameters':
-    from subroutines.variables import gen_amino_acids_dict
+    from subroutines.variables import three_to_one_aa_dict
 else:
-    from betadesigner.subroutines.variables import gen_amino_acids_dict
+    from betadesigner.subroutines.variables import three_to_one_aa_dict
 
 prompt = '> '
 
@@ -1675,9 +1675,9 @@ def setup_input_output(params, opt_cycle, hyperopt_cycle):
 class initialise_ga_object():
 
     def __init__(self, params, test=False):
-        aa_code_dict = gen_amino_acids_dict()
+        aa_code_dict = three_to_one_aa_dict()
         if params['barrelorsandwich'] == '2.40':
-            aa_code_dict.pop('CYS')
+            aa_code_dict.pop('C')
         params['aacodes'] = list(aa_code_dict.values())
 
         self.input_df = params['inputdataframe']

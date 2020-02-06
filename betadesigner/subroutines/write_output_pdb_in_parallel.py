@@ -30,18 +30,14 @@ def write_pdb(num, G, wd, surface, ampal_pdb, pdb):
 
     # Packs network side chains onto the model with SCWRL4 and calculates model
     # energies in BUDE
-    new_pdb, energy = pack_side_chains(ampal_pdb, G, False)
-    with open('{}/Program_output/Model_energies.txt'.format(wd), 'a') as f:
-        f.write('{}_{}: {}\n'.format(surface, num, energy))
+    new_pdb, new_energy = pack_side_chains(ampal_pdb, G, False)
     # Calculates total energy of input PDB structure within BUDE (note that this
     # does not include the interaction of the object with its surrounding
     # environment, hence hydrophobic side chains will not be penalised on the
     # surface of a globular protein and vice versa for membrane proteins).
     # Hence this is just a rough measure of side-chain clashes.
     orig_ampal_pdb = isambard.ampal.load_pdb(pdb)
-    energy = budeff.get_internal_energy(orig_ampal_pdb).total_energy
-    with open('{}/Program_output/Model_energies.txt'.format(wd), 'a') as f:
-        f.write('\n\n\nInput structure: {}\n'.format(energy))
+    orig_energy = budeff.get_internal_energy(orig_ampal_pdb).total_energy
 
     # Writes PDB file of model. N.B. Currently code only designs
     # sequences containing the 20 canonical amino acids, but have
@@ -61,7 +57,7 @@ def write_pdb(num, G, wd, surface, ampal_pdb, pdb):
         f.write('>{}_{}\n'.format(surface, num))
         f.write('{}\n'.format(fasta_seq))
 
-    return (struct_name, G, energy)
+    return [struct_name, num, G, new_energy, orig_energy]
 
 
 if __name__ == '__main__':
@@ -105,13 +101,22 @@ if __name__ == '__main__':
             wd_list, surface_list, ampal_pdb_list, pdb_list
         )
 
-        for tup in structures_list:
+        for index, tup in enumerate(structures_list):
             struct_name = tup[0]
-            network = tup[1]
-            bude_energy = tup[2]
-            bude_energies_dict[surface][struct_name] = bude_energy
+            num = tup[1]
+            network = tup[2]
+            new_struct_energy = tup[3]
+            orig_struct_energy = tup[4]
+
+            bude_energies_dict[surface][struct_name] = new_struct_energy
             structures_dict[surface].append(struct_name)
             updated_sequences_dict[surface][struct_name] = network
+
+            if index == 0:
+                with open('{}/Program_output/Model_energies.txt'.format(wd), 'a') as f:
+                    f.write('\nInput structure: {}\n\n\n'.format(orig_energy))
+            with open('{}/Program_output/Model_energies.txt'.format(wd), 'a') as f:
+                f.write('{}_{}: {}\n'.format(surface, num, new_struct_energy))
 
     with open('{}/BUDE_energies.pkl'.format(wd), 'wb') as f:
         pickle.dump((updated_sequences_dict, structures_dict, bude_energies_dict), f)

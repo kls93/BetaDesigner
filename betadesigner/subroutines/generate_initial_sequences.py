@@ -267,7 +267,8 @@ class gen_ga_input_calcs(initialise_ga_object):
                              'vdw': 'van_der_waals'}
 
         # Creates networks of interacting residues on each surface
-        networks = OrderedDict()
+        in_networks = OrderedDict()
+        out_networks = OrderedDict()
 
         for surface_label, sub_df in surface_dfs.items():
             # Initialises MultiGraph (= undirected graph with self loops and
@@ -281,21 +282,23 @@ class gen_ga_input_calcs(initialise_ga_object):
             if self.barrel_or_sandwich == '2.40':
                 for num in range(sub_df.shape[0]):
                     node = sub_df['domain_ids'][num] + sub_df['res_ids'][num]
+                    aa_id = sub_df['fasta_seq'][num]
                     int_or_ext = sub_df['int_ext'][num][0:3]
                     z_coord = sub_df['z_coords'][num]
                     phi_psi_class = sub_df['phi_psi_class'][num]
-                    G.add_node(node, aa_id='UNK', int_ext=int_or_ext, eoc='-',
+                    G.add_node(node, aa_id=aa_id, int_ext=int_or_ext, eoc='-',
                                z=z_coord, phipsi=phi_psi_class)
             elif self.barrel_or_sandwich == '2.60':
                 for num in range(sub_df.shape[0]):
                     node = sub_df['domain_ids'][num] + sub_df['res_ids'][num]
+                    aa_id = sub_df['fasta_seq'][num]
                     int_or_ext = sub_df['int_ext'][num][0:3]
                     z_sandwich_coord = sub_df['sandwich_z_coords'][num]
                     z_strand_coord = sub_df['strand_z_coords'][num]
                     buried_surface_area = sub_df['buried_surface_area'][num]
                     edge_or_central = sub_df['edge_or_central'][num]
                     phi_psi_class = sub_df['phi_psi_class'][num]
-                    G.add_node(node, aa_id='UNK', int_ext=int_or_ext,
+                    G.add_node(node, aa_id=aa_id, int_ext=int_or_ext,
                                zsandwich=z_sandwich_coord,
                                zstrand=z_strand_coord,
                                bsa=buried_surface_area, eoc=edge_or_central,
@@ -331,9 +334,11 @@ class gen_ga_input_calcs(initialise_ga_object):
                                 if not edge_label in attributes:
                                     G.add_edge(res_1, res_2, interaction=edge_label)
 
-            networks[surface_label] = G
+            in_networks[surface_label] = OrderedDict()
+            in_networks[surface_label][1] = copy.deepcopy(G)
+            out_networks[surface_label] = copy.deepcopy(G)
 
-        return networks
+        return in_networks, out_networks
 
     def add_random_initial_side_chains(
         self, initial_sequences_dict, network_label, G
@@ -356,7 +361,6 @@ class gen_ga_input_calcs(initialise_ga_object):
                 random_aa = self.aa_list[random.randint(0, (len(self.aa_list)-1))]
                 new_node_aa_ids[node] = {'aa_id': random_aa}
             nx.set_node_attributes(H, new_node_aa_ids)
-
 
             unique_id = ''.join(
                 [random.choice(string.ascii_letters + string.digits)
@@ -551,12 +555,13 @@ class gen_ga_input(initialise_ga_object):
 
         # Creates networks of interacting residues from input dataframe
         surface_dfs_dict = input_calcs.slice_input_df()
-        networks_dict = input_calcs.generate_networks(surface_dfs_dict)
+        (input_networks, networks_dict
+        ) = input_calcs.generate_networks(surface_dfs_dict)
 
         # Adds side-chains in order to generate a population of starting
         # sequences to be fed into the genetic algorithm
         initial_sequences_dict = OrderedDict()
-        for network_label, G in networks_dict.items():
+        for network_label, G in copy.deepcopy(networks_dict).items():
             print('Generating initial sequence population for {} surface of '
                   'backbone model'.format(network_label.split('_')[0]))
             if self.method_initial_side_chains == 'random':
@@ -573,4 +578,4 @@ class gen_ga_input(initialise_ga_object):
                     )
                 )
 
-        return initial_sequences_dict
+        return input_networks, initial_sequences_dict

@@ -22,7 +22,7 @@ if __name__ == 'subroutines.run_genetic_algorithm':
         random_shuffle, propensity_to_probability_distribution,
         frequency_to_probability_distribution, gen_cumulative_probabilities
     )
-    from subroutines.variables import gen_amino_acids_dict
+    from subroutines.variables import three_to_one_aa_dict
 else:
     from betadesigner.subroutines.calc_propensity_in_parallel import linear_interpolation
     from betadesigner.subroutines.find_parameters import initialise_ga_object
@@ -30,9 +30,9 @@ else:
         random_shuffle, propensity_to_probability_distribution,
         frequency_to_probability_distribution, gen_cumulative_probabilities
     )
-    from betadesigner.subroutines.variables import gen_amino_acids_dict
+    from betadesigner.subroutines.variables import three_to_one_aa_dict
 
-aa_code_dict = gen_amino_acids_dict()
+aa_code_dict = three_to_one_aa_dict()
 
 
 class run_ga_calcs(initialise_ga_object):
@@ -575,6 +575,41 @@ def run_genetic_algorithm(bayes_params):
     elif params['matingpopmethod'] == 'rankroulettewheel':
         raw_or_rank = 'rank'
 
+    # Calculates propensity and/or BUDE energy of input structure
+    with open('{}/Program_output/Sequence_track.txt'.format(
+        bayes_params['workingdirectory']), 'a') as f:
+        f.write('Input structure\n')
+
+    for surface, networks_dict in params['initialsequencesdict'].items():
+        if params['fitnessscoremethod'] != 'allatom':
+            (network_propensity_scores, network_frequency_scores
+            ) = ga_calcs.measure_fitness_propensity(surface, networks_dict)
+
+            with open('{}/Program_output/Sequence_track.txt'.format(
+                bayes_params['workingdirectory']), 'a') as f:
+                f.write('{}\n'.format(surface))
+
+                for network, G in networks_dict.items():
+                    sequence = ''.join([G.nodes[node]['aa_id'] for node in G.nodes])
+                    propensity = network_propensity_scores[network]
+                    frequency = network_frequency_scores[network]
+                    f.write('{}, {}, {}, {}\n'.format(network, sequence, propensity, frequency))
+                f.write('\n')
+
+        elif params['fitnessscoremethod'] == 'allatom':
+            network_energies = ga_calcs.measure_fitness_allatom(surface, networks_dict)
+
+            with open('{}/Program_output/Sequence_track.txt'.format(
+                bayes_params['workingdirectory']), 'a') as f:
+                f.write('{}\n'.format(surface))
+
+                for network, G in networks_dict.items():
+                    sequence = ''.join([G.nodes[node]['aa_id'] for node in G.nodes])
+                    energy = network_energies[network]
+                    f.write('{}, {}, {}, {}\n'.format(network, sequence, energy))
+                f.write('\n')
+
+    # Runs GA cycles
     gen = 0
     while gen < params['maxnumgenerations']:
         gen += 1

@@ -60,16 +60,18 @@ def main():
     # exterior surfaces), and three networks are constructed for a sandwich
     # (interior and two exterior surfaces).
     gen_initial_sequences = gen_ga_input(params)
-    new_sequences_dict = gen_initial_sequences.initial_sequences_pipeline()
+    (input_sequences_dict, new_sequences_dict
+    ) = gen_initial_sequences.initial_sequences_pipeline()
+    params['initialsequencesdict'] = input_sequences_dict
 
     run_ga = True
     run_opt = True
-    max_evals = 1  # Number of hyperparameter combinations for hyperopt to try
-    sub_gen = 2  # Number of generations to run the GA with a particular
+    max_evals = 10  # Number of hyperparameter combinations for hyperopt to try
+    sub_gen = 50  # Number of generations to run the GA with a particular
     # combination of hyperparameters
     # max_gen = copy.copy(params['maxnumgenerations'])  # Total number of generations
     # GA can be run for (changing hyperparameters every sub_gen generations)
-    max_gen = 2
+    max_gen = 50
     params['maxnumgenerations'] = sub_gen
 
     opt_cycle_count = 0
@@ -80,50 +82,72 @@ def main():
         opt_cycle_count += 1
 
         orig_sequences_dict = copy.deepcopy(new_sequences_dict)
-        trials = Trials()
-
-        # Sets the hyperparams unfit_fraction, crossover_probability,
-        # mutation_probability, propensity_to_frequency weighting and
-        # propensity_weights to uniform ranges between 0 and 1 for optimisation
-        # via a tree parzen estimator with hyperopt
-        bayes_params = {}
-        bayes_params['unfitfraction'] = hp.uniform('unfitfraction', 0, 0)
-        bayes_params['crossoverprob'] = hp.uniform('crossoverprob', 0, 1)
-        bayes_params['mutationprob'] = hp.uniform('mutationprob', 0, 1)
-        bayes_params['propensityweight'] = hp.uniform('propensityweight', 0, 1)
-
-        # Pickles parameters not being optimised with hyperopt (unfortunately
-        # can't feed dataframe (or series or array) data into a function with
-        # hyperopt, so am having to pickle the parameters not being optimised
-        # with hyperopt
-        bayes_params['optimisationcycle'] = opt_cycle_count
-        bayes_params['hyperparam_count'] = max_evals
-        updated_params = setup_input_output(
-            copy.deepcopy(params), opt_cycle_count,
-            bayes_params['hyperparam_count']
-        )
-        # DEFINITION OF bayes_params['workingdirectory'] MUST FOLLOW
-        # DEFINITION OF updated_params AFTER RUNNING setup_input_output
-        bayes_params['workingdirectory'] = updated_params['workingdirectory']
-
-        updated_params['sequencesdict'] = copy.deepcopy(orig_sequences_dict)
-        with open('{}/Program_input/Input_params.pkl'.format(
-            bayes_params['workingdirectory']), 'wb'
-        ) as f:
-            pickle.dump(updated_params, f)
 
         # Runs hyperparameter optimisation in increments of sqrt(10) evaluations,
         # until either the selected hyperparameter values have converged (to
         # within 1%) or the number of combinations of hyperparameters tested
         # exceeds 1000000
         while run_opt is True:
+            # Sets the hyperparams unfit_fraction, crossover_probability,
+            # mutation_probability, propensity_to_frequency weighting and
+            # propensity_weights to uniform ranges between 0 and 1 for optimisation
+            # via a tree parzen estimator with hyperopt
+            bayes_params = {}
+            bayes_params['crossoverprob'] = hp.uniform('crossoverprob', 0, 1)
+            bayes_params['mutationprob'] = hp.uniform('mutationprob', 0, 1)
+            bayes_params['propensityweight'] = hp.uniform('propensityweight', 0, 1)
+            bayes_params['unfitfraction'] = hp.uniform('unfitfraction', 0, 1)
+
+            # Pickles parameters not being optimised with hyperopt (unfortunately
+            # can't feed dataframe (or series or array) data into a function with
+            # hyperopt, so am having to pickle the parameters not being optimised
+            # with hyperopt
+            bayes_params['optimisationcycle'] = opt_cycle_count
+            bayes_params['hyperparam_count'] = max_evals
+            updated_params = setup_input_output(
+                copy.deepcopy(params), opt_cycle_count, bayes_params['hyperparam_count']
+            )
+            # DEFINITION OF bayes_params['workingdirectory'] MUST FOLLOW
+            # DEFINITION OF updated_params AFTER RUNNING setup_input_output
+            bayes_params['workingdirectory'] = updated_params['workingdirectory']
+
+            updated_params['sequencesdict'] = copy.deepcopy(orig_sequences_dict)
+            with open('{}/Program_input/Input_params.pkl'.format(
+                bayes_params['workingdirectory']), 'wb'
+            ) as f:
+                pickle.dump(updated_params, f)
+
+            trials = Trials()
+
+            # Runs GA with hyperopt
             best_params = fmin(fn=run_genetic_algorithm, space=bayes_params,
                                algo=tpe.suggest, trials=trials, max_evals=max_evals)
+            for trial in trials.trials:
+                # Record trial_id, hyperparameter values and corresponding loss
+                trial_id = '{}_{}_{}'.format(opt_cycle_count, max_evals, trial['tid'])
+                crossover_prob = trial['misc']['vals']['crossoverprob'][0]
+                mutation_prob = trial['misc']['vals']['mutationprob'][0]
+                prop_weight = trial['misc']['vals']['propensityweight'][0]
+                unfit_frac = trial['misc']['vals']['unfitfraction'][0]
+                out = trial['result']['loss']
+                with open('{}/Program_output/Hyperparameter_track.txt'.format(
+                    updated_params['workingdirectory']), 'a') as f:
+                    if trial['tid'] == 0:
+                        f.write('\n\n\nHyperparameter cycle {}\n'.format(max_evals))
+                        f.write('trial_id:     crossover_probability, mutation_probability,'
+                                ' propensity_weight, unfit_fraction     output_loss\n')
+                    f.write('{}:     {}, {}, {}, {}     {}\n'.format(trial_id,
+                        crossover_prob, mutation_prob, prop_weight, unfit_frac, out
+                    ))
+            with open('{}/Program_output/Hyperparameter_track.txt'.format(
+                updated_params['workingdirectory']), 'a') as f:
+                f.write('\nBest_params:\n')
+                f.write('crossover_probability: {}\n'.format(best_params['crossoverprob']))
+                f.write('mutation_probability: {}\n'.format(best_params['mutationprob']))
+                f.write('propensity_weight: {}\n'.format(best_params['propensityweight']))
+                f.write('unfit_fraction: {}\n'.format(best_params['unfitfraction']))
 
-            run_opt = False
-            break
-
-            if max_evals == 10:
+            if max_evals == 1:
                 current_best = copy.deepcopy(best_params)
                 max_evals = int(max_evals * math.sqrt(10))
             else:
@@ -170,7 +194,7 @@ def main():
         if max_gen == sub_gen:
             break
 
-        if sub_gen == 10:
+        if sub_gen == 10:  # Optimises hyperparameters for 10 generation cycles
             current_fitness = copy.deepcopy(fitness)
         else:
             # If updated fitness is within 5% of previous fitness score OR

@@ -76,6 +76,9 @@ class gen_output(initialise_ga_object):
         """
         make_fragments.pl is REALLY slow, forward-folding will be even slower
         => don't think either is a feasible scoring approach
+        Use make_fragments.pl rather than any other strategy (will be quicker)
+        Use PsiPred only for secondary structure prediction
+        No need to use NR database
         """
 
         # 2 metrics: % coverage and precision

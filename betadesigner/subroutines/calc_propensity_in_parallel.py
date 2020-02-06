@@ -249,7 +249,7 @@ def measure_fitness_propensity(
             elif dict_prop_freq == 'frequency':
                 frequency_count += value
             else:
-                raise ValueError('Scale {} not labelled as either a propenity '
+                raise ValueError('Scale {} not labelled as either a propensity '
                                  'or a frequency scale'.format(label))
 
     if propensity_count == 0 or np.isnan(propensity_count):
