@@ -114,7 +114,7 @@ if __name__ == '__main__':
 
             if index == 0:
                 with open('{}/Program_output/Model_energies.txt'.format(wd), 'a') as f:
-                    f.write('\nInput structure: {}\n\n\n'.format(orig_energy))
+                    f.write('\nInput structure: {}\n\n\n'.format(orig_struct_energy))
             with open('{}/Program_output/Model_energies.txt'.format(wd), 'a') as f:
                 f.write('{}_{}: {}\n'.format(surface, num, new_struct_energy))
 

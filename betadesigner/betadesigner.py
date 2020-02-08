@@ -2,6 +2,7 @@
 import argparse
 import copy
 import math
+import os
 import pickle
 from hyperopt import fmin, hp, tpe, Trials
 
@@ -66,11 +67,13 @@ def main():
 
     run_ga = True
     run_opt = True
-    max_evals = 10  # Number of hyperparameter combinations for hyperopt to try
+    max_evals = [10, 30, 100, 300, 1000, 3000, 10000]  # Number of
+    # hyperparameter combinations for hyperopt to try
     sub_gen = 50  # Number of generations to run the GA with a particular
     # combination of hyperparameters
-    # max_gen = copy.copy(params['maxnumgenerations'])  # Total number of generations
-    # GA can be run for (changing hyperparameters every sub_gen generations)
+    # max_gen = copy.copy(params['maxnumgenerations'])  # Total number of
+    # generations GA can be run for (changing hyperparameters every sub_gen
+    # generations)
     max_gen = 50
     params['maxnumgenerations'] = sub_gen
 
@@ -86,7 +89,9 @@ def main():
         # Runs hyperparameter optimisation in increments of sqrt(10) evaluations,
         # until either the selected hyperparameter values have converged (to
         # within 1%) or the number of combinations of hyperparameters tested
-        # exceeds 1000000
+        # exceeds 10000
+        hyperparam_count = max_evals[0]
+
         while run_opt is True:
             # Sets the hyperparams unfit_fraction, crossover_probability,
             # mutation_probability, propensity_to_frequency weighting and
@@ -103,7 +108,7 @@ def main():
             # hyperopt, so am having to pickle the parameters not being optimised
             # with hyperopt
             bayes_params['optimisationcycle'] = opt_cycle_count
-            bayes_params['hyperparam_count'] = max_evals
+            bayes_params['hyperparam_count'] = hyperparam_count
             updated_params = setup_input_output(
                 copy.deepcopy(params), opt_cycle_count, bayes_params['hyperparam_count']
             )
@@ -117,28 +122,45 @@ def main():
             ) as f:
                 pickle.dump(updated_params, f)
 
-            trials = Trials()
+            if os.path.isfile('{}/Program_output/Pickled_trials.pkl'.format(
+                updated_params['workingdirectory'])):
+                pass
+            else:
+                trials = Trials()
+                with open('{}/Program_output/Pickled_trials.pkl'.format(
+                    updated_params['workingdirectory']), 'wb') as f:
+                    pickle.dump(trials, f)
 
             # Runs GA with hyperopt
-            best_params = fmin(fn=run_genetic_algorithm, space=bayes_params,
-                               algo=tpe.suggest, trials=trials, max_evals=max_evals)
-            for trial in trials.trials:
-                # Record trial_id, hyperparameter values and corresponding loss
-                trial_id = '{}_{}_{}'.format(opt_cycle_count, max_evals, trial['tid'])
-                crossover_prob = trial['misc']['vals']['crossoverprob'][0]
-                mutation_prob = trial['misc']['vals']['mutationprob'][0]
-                prop_weight = trial['misc']['vals']['propensityweight'][0]
-                unfit_frac = trial['misc']['vals']['unfitfraction'][0]
-                out = trial['result']['loss']
-                with open('{}/Program_output/Hyperparameter_track.txt'.format(
-                    updated_params['workingdirectory']), 'a') as f:
-                    if trial['tid'] == 0:
-                        f.write('\n\n\nHyperparameter cycle {}\n'.format(max_evals))
-                        f.write('trial_id:     crossover_probability, mutation_probability,'
-                                ' propensity_weight, unfit_fraction     output_loss\n')
-                    f.write('{}:     {}, {}, {}, {}     {}\n'.format(trial_id,
-                        crossover_prob, mutation_prob, prop_weight, unfit_frac, out
-                    ))
+            save_points = range(10, hyperparam_count+1, 10)
+            for point in save_points:
+                with open('{}/Program_output/Pickled_trials.pkl'.format(
+                    updated_params['workingdirectory']), 'rb') as f:
+                    trials = pickle.load(f)
+                best_params = fmin(fn=run_genetic_algorithm, space=bayes_params,
+                                   algo=tpe.suggest, trials=trials, max_evals=point)
+                with open('{}/Program_output/Pickled_trials.pkl'.format(
+                    updated_params['workingdirectory']), 'wb') as f:
+                    pickle.dump(trials, f)
+
+                for trial in trials.trials:
+                    # Record trial_id, hyperparameter values and corresponding loss
+                    trial_id = '{}_{}_{}'.format(opt_cycle_count, hyperparam_count, trial['tid'])
+                    crossover_prob = trial['misc']['vals']['crossoverprob'][0]
+                    mutation_prob = trial['misc']['vals']['mutationprob'][0]
+                    prop_weight = trial['misc']['vals']['propensityweight'][0]
+                    unfit_frac = trial['misc']['vals']['unfitfraction'][0]
+                    out = trial['result']['loss']
+                    with open('{}/Program_output/Hyperparameter_track.txt'.format(
+                        updated_params['workingdirectory']), 'a') as f:
+                        if trial['tid'] == 0:
+                            f.write('\n\n\nHyperparameter cycle {}\n'.format(hyperparam_count))
+                            f.write('trial_id:     crossover_probability, mutation_probability,'
+                                    ' propensity_weight, unfit_fraction     output_loss\n')
+                        f.write('{}:     {}, {}, {}, {}     {}\n'.format(trial_id,
+                            crossover_prob, mutation_prob, prop_weight, unfit_frac, out
+                        ))
+
             with open('{}/Program_output/Hyperparameter_track.txt'.format(
                 updated_params['workingdirectory']), 'a') as f:
                 f.write('\nBest_params:\n')
@@ -147,9 +169,9 @@ def main():
                 f.write('propensity_weight: {}\n'.format(best_params['propensityweight']))
                 f.write('unfit_fraction: {}\n'.format(best_params['unfitfraction']))
 
-            if max_evals == 1:
+            if hyperparam_count == 10:
                 current_best = copy.deepcopy(best_params)
-                max_evals = int(max_evals * math.sqrt(10))
+                hyperparam_count = max_evals[max_evals.index(hyperparam_count)+1]
             else:
                 # If best values are within 5% of previous OR number of trials >= 10000
                 similarity_dict = {}
@@ -158,7 +180,7 @@ def main():
                         if (
                                ((0.95*current_best[key]) <= best_params[key]
                                  <= (1.05*current_best[key]))
-                            or max_evals >= 10000
+                            or hyperparam_count == 10000
                         ):
                             similarity_dict[key] = True
                         else:
@@ -167,10 +189,10 @@ def main():
                     run_opt = False
                 else:
                     current_best = copy.deepcopy(best_params)
-                    max_evals = int(max_evals * math.sqrt(10))
+                    hyperparam_count = max_evals[max_evals.index(hyperparam_count)+1]
 
         best_params['optimisationcycle'] = opt_cycle_count
-        best_params['hyperparam_count'] = '{}_final_run'.format(max_evals)
+        best_params['hyperparam_count'] = '{}_final_run'.format(hyperparam_count)
         updated_params = setup_input_output(
             copy.deepcopy(params), opt_cycle_count, best_params['hyperparam_count']
         )

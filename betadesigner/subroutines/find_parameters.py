@@ -1570,7 +1570,7 @@ def find_params(args):
     # params['initialseqmethod'] = def_method_initial_seq(params)
     params['initialseqmethod'] = 'random'  # Currently set to "random" by default
     # params['fitnessscoremethod'] = def_method_fitness_scoring(params)
-    params['fitnessscoremethod'] = 'propensity'  # Currently set to "split" by default
+    params['fitnessscoremethod'] = 'split'  # Currently set to "split" by default
     # params['splitfraction'] = def_split_fraction(params)
     params['splitfraction'] = 0.5  # Currently set as 50:50 by default (in my
     # opinion variation of this hyperparameter is probably an "optimisation too far")
@@ -1677,7 +1677,7 @@ class initialise_ga_object():
     def __init__(self, params, test=False):
         aa_code_dict = three_to_one_aa_dict()
         if params['barrelorsandwich'] == '2.40':
-            aa_code_dict.pop('C')
+            aa_code_dict.pop('CYS')
         params['aacodes'] = list(aa_code_dict.values())
 
         self.input_df = params['inputdataframe']
