@@ -4,6 +4,7 @@ import copy
 import math
 import os
 import pickle
+import time
 from hyperopt import fmin, hp, tpe, Trials
 
 # Wrapper script to run the BetaDesigner program. The program takes as input a
@@ -26,6 +27,7 @@ def main():
         from betadesigner.subroutines.run_genetic_algorithm import run_genetic_algorithm
         from betadesigner.subroutines.write_output_structures import gen_output
 
+    start = time.time()
     # Reads in command line inputs
     parser = argparse.ArgumentParser()
     parser.add_argument('-i', '--input_file', help='OPTIONAL: Specifies the '
@@ -67,7 +69,7 @@ def main():
 
     run_ga = True
     run_opt = True
-    max_evals = [10, 30, 100, 300, 1000, 3000, 10000]  # Number of
+    max_evals = [10]  # Number of
     # hyperparameter combinations for hyperopt to try
     sub_gen = 50  # Number of generations to run the GA with a particular
     # combination of hyperparameters
@@ -172,6 +174,7 @@ def main():
             if hyperparam_count == 10:
                 current_best = copy.deepcopy(best_params)
                 hyperparam_count = max_evals[max_evals.index(hyperparam_count)+1]
+                run_opt = False
             else:
                 # If best values are within 5% of previous OR number of trials >= 10000
                 similarity_dict = {}
@@ -247,6 +250,8 @@ def main():
     ) = output.write_pdb(sequences_dict)
     (rosetta_struct_energies_dict, rosetta_res_energies_dict
     ) = output.score_pdb_rosetta(structures_dict)
+    (worst_best_frag_dict, num_frag_dict, frag_cov_dict
+    ) = output.calc_rosetta_frag_coverage(structures_dict)
     (molp_struct_dict, molp_res_dict
     ) = output.score_pdb_molprobity(structures_dict)
 
@@ -278,6 +283,27 @@ def main():
         params['workingdirectory'], params['jobid']), 'wb') as f:
         pickle.dump(rosetta_res_energies_dict, f)
 
+    with open('{}/Program_output/Rosetta_struct_worst_best_frag_dict.pkl'.format(
+        updated_params['workingdirectory']), 'wb') as f:
+        pickle.dump(worst_best_frag_dict, f)
+    with open('{}/BetaDesigner_results/{}/Rosetta_struct_worst_best_frag_dict.pkl'.format(
+        params['workingdirectory'], params['jobid']), 'wb') as f:
+        pickle.dump(worst_best_frag_dict, f)
+
+    with open('{}/Program_output/Rosetta_struct_num_frag_dict.pkl'.format(
+        updated_params['workingdirectory']), 'wb') as f:
+        pickle.dump(num_frag_dict, f)
+    with open('{}/BetaDesigner_results/{}/Rosetta_struct_num_frag_dict.pkl'.format(
+        params['workingdirectory'], params['jobid']), 'wb') as f:
+        pickle.dump(num_frag_dict, f)
+
+    with open('{}/Program_output/Rosetta_struct_frag_cov_dict.pkl'.format(
+        updated_params['workingdirectory']), 'wb') as f:
+        pickle.dump(frag_cov_dict, f)
+    with open('{}/BetaDesigner_results/{}/Rosetta_struct_frag_cov_dict.pkl'.format(
+        params['workingdirectory'], params['jobid']), 'wb') as f:
+        pickle.dump(frag_cov_dict, f)
+
     with open('{}/Program_output/MolProbity_struct_score_dict.pkl'.format(
         updated_params['workingdirectory']), 'wb') as f:
         pickle.dump(molp_struct_dict, f)
@@ -291,6 +317,11 @@ def main():
     with open('{}/BetaDesigner_results/{}/MolProbity_res_score_dict.pkl'.format(
         params['workingdirectory'], params['jobid']), 'wb') as f:
         pickle.dump(molp_res_dict, f)
+
+    end = time.time()
+    print('Time for GA to run (2000 sequences, 50 generations, 10 '
+          'hyperparameter combinations, split propensity and BUDE '
+          'measurements): {}'.format(end-start))
 
     return (updated_sequences_dict, structures_dict, bude_struct_energies_dict,
             rosetta_struct_energies_dict, rosetta_res_energies_dict,
