@@ -59,9 +59,7 @@ def main():
     # by edges (separate edges are constructed for hydrogen-bonding backbone
     # interactions and non-hydrogen bonding backbone interactions (see
     # Hutchinson et al., 1998), +/-2 interactions and van der Waals
-    # interactions). Two networks are constructed for a barrel (interior and
-    # exterior surfaces), and three networks are constructed for a sandwich
-    # (interior and two exterior surfaces).
+    # interactions).
     gen_initial_sequences = gen_ga_input(params)
     (input_sequences_dict, new_sequences_dict
     ) = gen_initial_sequences.initial_sequences_pipeline()
@@ -246,14 +244,14 @@ def main():
                          'propensityweight': best_params['propensityweight'],
                          'sequencesdict': sequences_dict}
     output = gen_output(updated_params, best_bayes_params)
-    (updated_sequences_dict, structures_dict, bude_struct_energies_dict
+    (updated_sequences_dict, structures_list, bude_struct_energies_dict
     ) = output.write_pdb(sequences_dict)
     (rosetta_struct_energies_dict, rosetta_res_energies_dict
-    ) = output.score_pdb_rosetta(structures_dict)
+    ) = output.score_pdb_rosetta(structures_list)
     (worst_best_frag_dict, num_frag_dict, frag_cov_dict
-    ) = output.calc_rosetta_frag_coverage(structures_dict)
+    ) = output.calc_rosetta_frag_coverage(structures_list)
     (molp_struct_dict, molp_res_dict
-    ) = output.score_pdb_molprobity(structures_dict)
+    ) = output.score_pdb_molprobity(structures_list)
 
     with open('{}/Program_output/GA_output_sequences_full_name_dict.pkl'.format(
         updated_params['workingdirectory']), 'wb') as f:
@@ -323,7 +321,7 @@ def main():
           'hyperparameter combinations, split propensity and BUDE '
           'measurements): {}'.format(end-start))
 
-    return (updated_sequences_dict, structures_dict, bude_struct_energies_dict,
+    return (updated_sequences_dict, structures_list, bude_struct_energies_dict,
             rosetta_struct_energies_dict, rosetta_res_energies_dict,
             molp_struct_dict, molp_res_dict)
 

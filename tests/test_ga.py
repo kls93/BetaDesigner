@@ -80,30 +80,30 @@ def gen_sequence_networks():
     """
 
     network_1 = nx.MultiGraph()
-    network_1.add_node(1, aa_id='A', int_ext='int', eoc='edge', z=-5)
-    network_1.add_node(2, aa_id='A', int_ext='int', eoc='central', z=0)
-    network_1.add_node(3, aa_id='A', int_ext='int', eoc='edge', z=7)
+    network_1.add_node(1, type='strand', aa_id='A', int_ext='int', eoc='edge', z=-5)
+    network_1.add_node(2, type='strand', aa_id='A', int_ext='int', eoc='central', z=0)
+    network_1.add_node(3, type='strand', aa_id='A', int_ext='int', eoc='edge', z=7)
     network_1.add_edge(1, 2, interaction='hb')
     network_1.add_edge(2, 3, interaction='hb')
 
     network_2 = nx.MultiGraph()
-    network_2.add_node(1, aa_id='A', int_ext='int', eoc='edge', z=-5)
-    network_2.add_node(2, aa_id='N', int_ext='int', eoc='central', z=0)
-    network_2.add_node(3, aa_id='R', int_ext='int', eoc='edge', z=7)
+    network_2.add_node(1, type='strand', aa_id='A', int_ext='int', eoc='edge', z=-5)
+    network_2.add_node(2, type='strand', aa_id='N', int_ext='int', eoc='central', z=0)
+    network_2.add_node(3, type='strand', aa_id='R', int_ext='int', eoc='edge', z=7)
     network_2.add_edge(1, 2, interaction='hb')
     network_2.add_edge(2, 3, interaction='hb')
 
     network_3 = nx.MultiGraph()
-    network_3.add_node(1, aa_id='R', int_ext='int', eoc='-', z=-5)
-    network_3.add_node(2, aa_id='A', int_ext='int', eoc='-', z=0)
-    network_3.add_node(3, aa_id='N', int_ext='int', eoc='-', z=7)
+    network_3.add_node(1, type='strand', aa_id='R', int_ext='int', eoc='-', z=-5)
+    network_3.add_node(2, type='strand', aa_id='A', int_ext='int', eoc='-', z=0)
+    network_3.add_node(3, type='strand', aa_id='N', int_ext='int', eoc='-', z=7)
     network_3.add_edge(1, 2, interaction='hb')
     network_3.add_edge(2, 3, interaction='hb')
 
     network_4 = nx.MultiGraph()
-    network_4.add_node(1, aa_id='N', int_ext='int', eoc='-', z=-5)
-    network_4.add_node(2, aa_id='R', int_ext='int', eoc='-', z=0)
-    network_4.add_node(3, aa_id='N', int_ext='int', eoc='-', z=7)
+    network_4.add_node(1, type='strand', aa_id='N', int_ext='int', eoc='-', z=-5)
+    network_4.add_node(2, type='strand', aa_id='R', int_ext='int', eoc='-', z=0)
+    network_4.add_node(3, type='strand', aa_id='N', int_ext='int', eoc='-', z=7)
     network_4.add_edge(1, 2, interaction='hb')
     network_4.add_edge(2, 3, interaction='hb')
 
@@ -111,10 +111,10 @@ def gen_sequence_networks():
     fit_test_dict = {1: network_1,
                      2: network_2}
 
-    cross_test_dict = {'int': {1: network_1,
-                               2: network_2,
-                               3: network_3,
-                               4: network_4}}
+    cross_test_dict = {1: network_1,
+                       2: network_2,
+                       3: network_3,
+                       4: network_4}
 
     return fit_test_dict, cross_test_dict
 
@@ -283,7 +283,7 @@ class testGeneticAlgorithm(unittest.TestCase):
 
         random_nums = [1, 2, 4, 2, 3, 0]
         selected_networks = ga_calcs.create_mat_pop_fittest(
-            'int', sequences_dict, network_fitness_scores, 8,
+            sequences_dict, network_fitness_scores, 8,
             bayes_params['unfitfraction'], test=True, random_nums=random_nums
         )
         np.testing.assert_equal(list(selected_networks.keys()),
@@ -296,7 +296,7 @@ class testGeneticAlgorithm(unittest.TestCase):
 
         random_nums = [0.653, 0.979, 0.116, 0.669, 0.704, 0.729]
         selected_networks = ga_calcs.create_mat_pop_roulette_wheel(
-            'int', sequences_dict, network_fitness_scores, 6,
+            sequences_dict, network_fitness_scores, 6,
             test=True, random_nums=random_nums
         )
         np.testing.assert_equal(list(selected_networks.keys()),
@@ -324,7 +324,7 @@ class testGeneticAlgorithm(unittest.TestCase):
                           1: {1: 0.04, 2: 0, 3: 0.9}}
 
         uniform_crossover_dict = ga_calcs.uniform_crossover(
-            'int', cross_test_dict['int'], test=True, pairs=pairs,
+            cross_test_dict, test=True, pairs=pairs,
             crossover_prob=crossover_prob
         )
 
@@ -354,7 +354,7 @@ class testGeneticAlgorithm(unittest.TestCase):
                           1: {1: 0.1, 2: 0.4, 3: 0.4}}
 
         segmented_crossover_dict = ga_calcs.segmented_crossover(
-            'int', cross_test_dict['int'], test=True, pairs=pairs,
+            cross_test_dict, test=True, pairs=pairs,
             crossover_prob=crossover_prob
         )
 
@@ -395,13 +395,13 @@ class testGeneticAlgorithm(unittest.TestCase):
 
         random_aas = 'BCDEFGHIJKLMOPQSTUVWXYZ'
         swap_mutation_dict = ga_calcs.swap_mutate(
-            'int', mut_test_dict['int'], test=True, mutation_prob=mutation_prob,
+            mut_test_dict, test=True, mutation_prob=mutation_prob,
             random_aas=random_aas
         )
 
         for network in swap_mutation_dict.keys():
             for node in swap_mutation_dict[network].nodes:
-                orig_aa_id = mut_test_dict['int'][network].nodes[node]['aa_id']
+                orig_aa_id = mut_test_dict[network].nodes[node]['aa_id']
                 new_aa_id = swap_mutation_dict[network].nodes[node]['aa_id']
                 mut_prob = mutation_prob[network][node]
                 if mut_prob <= 0.2:
@@ -412,7 +412,7 @@ class testGeneticAlgorithm(unittest.TestCase):
         # Tests scramble mutation
         print('Testing scramble_mutate()')
         scramble_mutation_dict = ga_calcs.scramble_mutate(
-            'int', mut_test_dict['int'], test=True, mutation_prob=mutation_prob
+            mut_test_dict, test=True, mutation_prob=mutation_prob
         )
 
         for network in scramble_mutation_dict.keys():
@@ -423,7 +423,7 @@ class testGeneticAlgorithm(unittest.TestCase):
                 count = 0
 
                 for index, node in enumerate(list(scramble_mutation_dict[network].nodes)):
-                    orig_aa_id = mut_test_dict['int'][network].nodes[node]['aa_id']
+                    orig_aa_id = mut_test_dict[network].nodes[node]['aa_id']
                     new_aa_id = scramble_mutation_dict[network].nodes[node]['aa_id']
                     mut_prob = mutation_prob[network][node]
 
@@ -470,7 +470,7 @@ class testGeneticAlgorithm(unittest.TestCase):
 
         for index, combination in enumerate(test_combinations):
             combined_dicts = ga_calcs.add_children_to_parents(
-                'int', combination[0], combination[1]
+                combination[0], combination[1]
             )
             if index in range(3):
                 exp_mut_keys = list(expected_combinations[index].keys())[0:3]

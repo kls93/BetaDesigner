@@ -213,49 +213,9 @@ class gen_ga_input_calcs(initialise_ga_object):
     def __init__(self, params):
         initialise_ga_object.__init__(self, params)
 
-    def slice_input_df(self):
+    def generate_networks(self):
         """
-        Slices input dataframe into sub-dataframes of residues on the same
-        surface of the structure
-        """
-
-        surface_dfs = OrderedDict()
-
-        if self.barrel_or_sandwich == '2.40':
-            int_surf_df = copy.deepcopy(self.input_df[self.input_df['int_ext'] == 'interior'])
-            int_surf_df = int_surf_df.reset_index(drop=True)
-            surface_dfs['int'] = int_surf_df
-
-            ext_surf_df = copy.deepcopy(self.input_df[self.input_df['int_ext'] == 'exterior'])
-            ext_surf_df = ext_surf_df.reset_index(drop=True)
-            surface_dfs['ext'] = ext_surf_df
-
-        elif self.barrel_or_sandwich == '2.60':
-            int_surf_df = copy.deepcopy(self.input_df[self.input_df['int_ext'] == 'interior'])
-            int_surf_df = int_surf_df.reset_index(drop=True)
-            surface_dfs['int'] = int_surf_df
-
-            sheet_ids = list(set(self.input_df['sheet_number'].tolist()))
-            if len(sheet_ids) != 2:
-                raise Exception('Incorrect number of sheets in input beta-sandwich structure')
-
-            ext_surf_1_df = copy.deepcopy(self.input_df[  (self.input_df['int_ext'] == 'exterior')
-                                                        & (self.input_df['sheet_number'] == sheet_ids[0])])
-            ext_surf_1_df = ext_surf_1_df.reset_index(drop=True)
-            surface_dfs['ext1'] = ext_surf_1_df  # Label must be "ext1"
-
-            ext_surf_2_df = copy.deepcopy(self.input_df[  (self.input_df['int_ext'] == 'exterior')
-                                                        & (self.input_df['sheet_number'] == sheet_ids[1])])
-            ext_surf_2_df = ext_surf_2_df.reset_index(drop=True)
-            surface_dfs['ext2'] = ext_surf_2_df  # Label must be "ext2"
-
-        return surface_dfs
-
-    def generate_networks(self, surface_dfs):
-        """
-        Generates 2 (beta-barrels - interior and exterior surfaces) / 3
-        (beta-sandwiches - interior and (x2) exterior surfaces) networks of
-        interacting residues.
+        Generates networks of interacting residues
         """
 
         # Defines dictionary of residue interaction types to include as network
@@ -264,85 +224,83 @@ class gen_ga_input_calcs(initialise_ga_object):
         interactions_dict = {'hb': 'hb_pairs',
                              'nhb': 'nhb_pairs',
                              'plusminus2': 'minus_2',
+                             'plusminus1': 'minus_1',
                              'vdw': 'van_der_waals'}
 
-        # Creates networks of interacting residues on each surface
-        in_networks = OrderedDict()
-        out_networks = OrderedDict()
+        # Initialises MultiGraph (= undirected graph with self loops and
+        # parallel edges) network of interacting residues
+        G = nx.MultiGraph()
 
-        for surface_label, sub_df in surface_dfs.items():
-            # Initialises MultiGraph (= undirected graph with self loops and
-            # parallel edges)
-            G = nx.MultiGraph()
+        # Adds nodes (= residues) to MultiGraph, labelled with their side-chain
+        # identity (initially set to unknown), z-coordinate, buried surface area
+        # (sandwiches only) and whether they are edge or central strands
+        # (sandwiches only).
+        if self.barrel_or_sandwich == '2.40':
+            for num in range(self.input_df.shape[0]):
+                node = self.input_df['domain_ids'][num] + self.input_df['res_ids'][num]
+                aa_id = self.input_df['fasta_seq'][num]
+                int_or_ext = self.input_df['int_ext'][num][0:3]
+                z_coord = self.input_df['z_coords'][num]
+                phi_psi_class = self.input_df['phi_psi_class'][num]
+                if not int_or_ext in ['interior', 'exterior']:
+                    raise ValueError('Residue {} has not been assigned to the '
+                                     'interior or exterior surface of the input'
+                                     ' beta-barrel structure')
+                G.add_node(node, type='strand', aa_id=aa_id, int_ext=int_or_ext,
+                           eoc='-', z=z_coord, phipsi=phi_psi_class)
+        elif self.barrel_or_sandwich == '2.60':
+            for num in range(self.input_df.shape[0]):
+                node = self.input_df['domain_ids'][num] + self.input_df['res_ids'][num]
+                aa_id = self.input_df['fasta_seq'][num]
+                int_or_ext = self.input_df['int_ext'][num][0:3]
+                z_sandwich_coord = self.input_df['sandwich_z_coords'][num]
+                z_strand_coord = self.input_df['strand_z_coords'][num]
+                buried_surface_area = self.input_df['buried_surface_area'][num]
+                edge_or_central = self.input_df['edge_or_central'][num]
+                phi_psi_class = self.input_df['phi_psi_class'][num]
+                if not int_or_ext in ['interior', 'exterior']:
+                    raise ValueError('Residue {} has not been assigned to the '
+                                     'interior or exterior surface of the input'
+                                     ' beta-barrel structure')
+                G.add_node(node, type='strand', aa_id=aa_id, int_ext=int_or_ext,
+                           zsandwich=z_sandwich_coord, zstrand=z_strand_coord,
+                           bsa=buried_surface_area, eoc=edge_or_central,
+                           phipsi=phi_psi_class)
 
-            # Adds nodes (= residues) to MultiGraph, labelled with their
-            # side-chain identity (initially set to unknown), z-coordinate,
-            # buried surface area (sandwiches only) and whether they are edge
-            # or central strands (sandwiches only).
-            if self.barrel_or_sandwich == '2.40':
-                for num in range(sub_df.shape[0]):
-                    node = sub_df['domain_ids'][num] + sub_df['res_ids'][num]
-                    aa_id = sub_df['fasta_seq'][num]
-                    int_or_ext = sub_df['int_ext'][num][0:3]
-                    z_coord = sub_df['z_coords'][num]
-                    phi_psi_class = sub_df['phi_psi_class'][num]
-                    G.add_node(node, aa_id=aa_id, int_ext=int_or_ext, eoc='-',
-                               z=z_coord, phipsi=phi_psi_class)
-            elif self.barrel_or_sandwich == '2.60':
-                for num in range(sub_df.shape[0]):
-                    node = sub_df['domain_ids'][num] + sub_df['res_ids'][num]
-                    aa_id = sub_df['fasta_seq'][num]
-                    int_or_ext = sub_df['int_ext'][num][0:3]
-                    z_sandwich_coord = sub_df['sandwich_z_coords'][num]
-                    z_strand_coord = sub_df['strand_z_coords'][num]
-                    buried_surface_area = sub_df['buried_surface_area'][num]
-                    edge_or_central = sub_df['edge_or_central'][num]
-                    phi_psi_class = sub_df['phi_psi_class'][num]
-                    G.add_node(node, aa_id=aa_id, int_ext=int_or_ext,
-                               zsandwich=z_sandwich_coord,
-                               zstrand=z_strand_coord,
-                               bsa=buried_surface_area, eoc=edge_or_central,
-                               phipsi=phi_psi_class)
+        domain_res_ids = list(G.nodes)
 
-            domain_res_ids = list(G.nodes)
+        # Adds edges (= residue interactions) to MultiGraph, labelled by
+        # interaction type. The interactions considered are defined in
+        # interactions_dict.
+        for edge_label, interaction_type in interactions_dict.items():
+            for num in range(self.input_df.shape[0]):
+                res_1 = self.input_df['domain_ids'][num] + self.input_df['res_ids'][num]
+                res_list = self.input_df[interaction_type][num]
+                if type(res_list) != list:
+                    res_list = [res_list]
 
-            # Adds edges (= residue interactions) to MultiGraph, labelled by
-            # interaction type. The interactions considered are defined in
-            # interactions_dict.
-            for edge_label, interaction_type in interactions_dict.items():
-                for num in range(sub_df.shape[0]):
-                    res_1 = sub_df['domain_ids'][num] + sub_df['res_ids'][num]
-                    res_list = sub_df[interaction_type][num]
-                    if type(res_list) != list:
-                        res_list = [res_list]
+                for res_2 in res_list:
+                    res_2 = self.input_df['domain_ids'][num] + res_2
+                    # Accounts for interactions between residue pairs where one
+                    # residue is in the beta-barrel/sandwich domain and the
+                    # other is within a loop region
+                    if 'interactiontype' == 'minus_1':
+                        aa_id = self.input_df['minus_1_fasta'][num]
+                        G.add_node(res_2, type='loop', aa_id=aa_id)
 
-                    for res_2 in res_list:
-                        res_2 = sub_df['domain_ids'][num] + res_2
-                        # Only interactions between residues within sub_df are
-                        # considered.
-                        if not res_2 in domain_res_ids:
-                            pass
-                        else:
-                            # Ensures interactions are only added to the
-                            # network once.
-                            if G.has_edge(res_1, res_2) is False:
-                                G.add_edge(res_1, res_2, interaction=edge_label)
-                            elif G.has_edge(res_1, res_2) is True:
-                                attributes = [val for label, sub_dict in
-                                              G[res_1][res_2].items() for key,
-                                              val in sub_dict.items()]
-                                if not edge_label in attributes:
-                                    G.add_edge(res_1, res_2, interaction=edge_label)
+                    # Ensures interactions are only added to the network once
+                    if G.has_edge(res_1, res_2) is False:
+                        G.add_edge(res_1, res_2, interaction=edge_label)
+                    elif G.has_edge(res_1, res_2) is True:
+                        attributes = [val for label, sub_dict in
+                                      G[res_1][res_2].items() for key,
+                                      val in sub_dict.items()]
+                        if not edge_label in attributes:
+                            G.add_edge(res_1, res_2, interaction=edge_label)
 
-            in_networks[surface_label] = OrderedDict()
-            in_networks[surface_label][1] = copy.deepcopy(G)
-            out_networks[surface_label] = copy.deepcopy(G)
+        return G
 
-        return in_networks, out_networks
-
-    def add_random_initial_side_chains(
-        self, initial_sequences_dict, network_label, G
-    ):
+    def add_random_initial_side_chains(self, G):
         """
         For each network, assigns a random amino acid to each node in the
         network to generate an initial sequence. Repeats 2*pop_size times to
@@ -358,6 +316,8 @@ class gen_ga_input_calcs(initialise_ga_object):
 
             new_node_aa_ids = OrderedDict()
             for node in list(H.nodes):
+                if H.nodes[node]['type'] == 'loop':
+                    continue
                 random_aa = self.aa_list[random.randint(0, (len(self.aa_list)-1))]
                 new_node_aa_ids[node] = {'aa_id': random_aa}
             nx.set_node_attributes(H, new_node_aa_ids)
@@ -368,20 +328,20 @@ class gen_ga_input_calcs(initialise_ga_object):
             )
             initial_networks[unique_id] = H
 
-        initial_sequences_dict[network_label] = initial_networks
-
-        return initial_sequences_dict
+        return initial_networks
 
     def add_initial_side_chains_from_propensities(
-        self, initial_sequences_dict, network_label, G, raw_or_rank, test, input_num
+        self, G, raw_or_rank, test, input_num
     ):
         """
-        For each network, assigns an amino acid to each node in the
-        network to generate an initial sequence. The likelihood of selection
-        of an amino acid for a particular node is weighted by the raw / rank
-        propensity and / or frequency of the amino acid for the structural
-        features of that node. Repeats 2*pop_size times to generate a
-        starting population of sequences to be fed into the genetic algorithm.
+        For each network, assigns an amino acid to each node in the network to
+        generate an initial sequence. The likelihood of selection of an amino
+        acid for a particular node is weighted by the raw / rank propensity and
+        / or frequency of the amino acid for the structural features of that
+        node. N.B. Only uses individual (i.e. not pairwise) propensity /
+        frequency scores for this initial side chain assignment. Repeats
+        2*pop_size times to generate a starting population of sequences to be
+        fed into the genetic algorithm.
         """
 
         # Initialises dictionary of starting sequences
@@ -409,15 +369,17 @@ class gen_ga_input_calcs(initialise_ga_object):
         })
 
         for node in list(G.nodes):
+            if G.nodes[node]['type'] == 'loop':
+                continue
+
             if self.barrel_or_sandwich == '2.60':
                 # Filters propensity and frequency scales depending upon
                 # whether the node is in an edge or a central strand
                 eoc = G.nodes[node]['eoc']
                 eoc_index = self.dict_name_indices['edgeorcent']
                 sub_dicts = OrderedDict(
-                    {dict_label: scale_dict for dict_label,
-                     scale_dict in dicts.items() if
-                     dict_label.split('_')[eoc_index] in [eoc, '-']}
+                    {dict_label: scale_dict for dict_label, scale_dict in dicts.items()
+                     if dict_label.split('_')[eoc_index] in [eoc, '-']}
                 )
             else:
                 sub_dicts = dicts
@@ -535,9 +497,7 @@ class gen_ga_input_calcs(initialise_ga_object):
                     values={'{}'.format(node): {'aa_id': '{}'.format(selected_aa)}}
                 )
 
-        initial_sequences_dict[network_label] = initial_networks
-
-        return initial_sequences_dict
+        return initial_networks
 
 
 class gen_ga_input(initialise_ga_object):
@@ -554,28 +514,21 @@ class gen_ga_input(initialise_ga_object):
         input_calcs = gen_ga_input_calcs(self.params)
 
         # Creates networks of interacting residues from input dataframe
-        surface_dfs_dict = input_calcs.slice_input_df()
-        (input_networks, networks_dict
-        ) = input_calcs.generate_networks(surface_dfs_dict)
+        sheet_ids = list(set(self.input_df['sheet_number'].tolist()))
+        if len(sheet_ids) != 2:
+            raise Exception('Incorrect number of sheets in input beta-sandwich structure')
+        network = input_calcs.generate_networks()
 
         # Adds side-chains in order to generate a population of starting
         # sequences to be fed into the genetic algorithm
         initial_sequences_dict = OrderedDict()
-        for network_label, G in copy.deepcopy(networks_dict).items():
-            print('Generating initial sequence population for {} surface of '
-                  'backbone model'.format(network_label.split('_')[0]))
-            if self.method_initial_side_chains == 'random':
-                initial_sequences_dict = (
-                    input_calcs.add_random_initial_side_chains(
-                        initial_sequences_dict, network_label, G
-                    )
-                )
-            elif self.method_initial_side_chains in ['rawpropensity', 'rankpropensity']:
-                raw_or_rank = self.method_initial_side_chains.replace('propensity', '')
-                initial_sequences_dict = (
-                    input_calcs.add_initial_side_chains_from_propensities(
-                        initial_sequences_dict, network_label, G, raw_or_rank, False, ''
-                    )
-                )
+        print('Generating initial sequence population for backbone model')
+        if self.method_initial_side_chains == 'random':
+            initial_sequences_dict = input_calcs.add_random_initial_side_chains(network)
+        elif self.method_initial_side_chains in ['rawpropensity', 'rankpropensity']:
+            raw_or_rank = self.method_initial_side_chains.replace('propensity', '')
+            initial_sequences_dict = input_calcs.add_initial_side_chains_from_propensities(
+                network, raw_or_rank, False, ''
+            )
 
-        return input_networks, initial_sequences_dict
+        return initial_sequences_dict

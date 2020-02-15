@@ -170,7 +170,6 @@ def look_up_pair_propensity(G, node_1, scale, label, weight, label_indices):
                 ):
                     aa_scale = scale[aa_pair]
                     value = linear_interpolation(node_val, aa_scale, label)
-
                 elif label.split('_')[label_indices['discorcont']] == 'disc':
                     # Filter dataframe
                     scale_copy = scale.set_index('FASTA', drop=True)
@@ -209,6 +208,8 @@ def measure_fitness_propensity(
     for node_1 in list(G.nodes):
         # Calculates interpolated propensity of each node for all individual
         # structural features considered
+        if G.nodes[node_1]['type'] == 'loop':
+            continue
 
         for tup in dicts:
             label = tup[0]

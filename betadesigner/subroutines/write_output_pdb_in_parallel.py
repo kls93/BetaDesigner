@@ -13,7 +13,7 @@ from collections import OrderedDict
 from scoop import futures
 from betadesigner.subroutines.calc_bude_energy_in_parallel import pack_side_chains
 
-def write_pdb(num, G, wd, surface, ampal_pdb, pdb):
+def write_pdb(num, G, wd, ampal_pdb, pdb):
     """
     Uses SCWRL4 to pack network side chains onto the backbone structure and
     writes a PDB file of the output structure. Note that each network is
@@ -23,10 +23,8 @@ def write_pdb(num, G, wd, surface, ampal_pdb, pdb):
     the same as the original input structure)
     """
 
-    os.mkdir('{}/Program_output/{}_{}/'.format(wd, surface, num))
-    struct_name = '{}/Program_output/{}_{}/{}_{}.pdb'.format(
-        wd, surface, num, surface, num
-    )
+    os.mkdir('{}/Program_output/{}/'.format(wd, num))
+    struct_name = '{}/Program_output/{}/{}.pdb'.format(wd, num, num)
 
     # Packs network side chains onto the model with SCWRL4 and calculates model
     # energies in BUDE
@@ -54,7 +52,7 @@ def write_pdb(num, G, wd, surface, ampal_pdb, pdb):
         fasta_seq += G.nodes[res_id]['aa_id']
     fasta_name = struct_name.replace('.pdb', '.fasta')
     with open(fasta_name, 'w') as f:
-        f.write('>{}_{}\n'.format(surface, num))
+        f.write('>{}\n'.format(num))
         f.write('{}\n'.format(fasta_seq))
 
     return [struct_name, num, G, new_energy, orig_energy]
@@ -77,46 +75,39 @@ if __name__ == '__main__':
     wd = vars(args)['output']
 
     updated_sequences_dict = OrderedDict()
-    structures_dict = OrderedDict()
+    structures_list = []
     bude_energies_dict = OrderedDict()
 
     # Loads backbone model into ISAMBARD. NOTE must have been pre-processed
     # to remove ligands etc. so that only backbone coordinates remain.
     ampal_pdb = isambard.ampal.load_pdb(pdb)
+    print('Packing side chains')
 
-    for surface, networks_dict in sequences_dict.items():
-        print('Packing side chains for {} surface'.format(surface))
+    wd_list = [copy.deepcopy(wd) for n in range(len(sequences_dict))]
+    ampal_pdb_list = [copy.deepcopy(ampal_pdb) for n in range(len(sequences_dict))]
+    pdb_list = [copy.deepcopy(pdb) for n in range(len(sequences_dict))]
 
-        updated_sequences_dict[surface] = OrderedDict()
-        structures_dict[surface] = []
-        bude_energies_dict[surface] = OrderedDict()
+    structures_list = futures.map(
+        write_pdb, list(sequences_dict.keys()), list(sequences_dict.values()),
+        wd_list, ampal_pdb_list, pdb_list
+    )
 
-        wd_list = [copy.deepcopy(wd) for n in range(len(networks_dict))]
-        surface_list = [copy.deepcopy(surface) for n in range(len(networks_dict))]
-        ampal_pdb_list = [copy.deepcopy(ampal_pdb) for n in range(len(networks_dict))]
-        pdb_list = [copy.deepcopy(pdb) for n in range(len(networks_dict))]
+    for index, tup in enumerate(structures_list):
+        struct_name = tup[0]
+        num = tup[1]
+        network = tup[2]
+        new_struct_energy = tup[3]
+        orig_struct_energy = tup[4]
 
-        structures_list = futures.map(
-            write_pdb, list(networks_dict.keys()), list(networks_dict.values()),
-            wd_list, surface_list, ampal_pdb_list, pdb_list
-        )
+        bude_energies_dict[struct_name] = new_struct_energy
+        structures_list.append(struct_name)
+        updated_sequences_dict[struct_name] = network
 
-        for index, tup in enumerate(structures_list):
-            struct_name = tup[0]
-            num = tup[1]
-            network = tup[2]
-            new_struct_energy = tup[3]
-            orig_struct_energy = tup[4]
-
-            bude_energies_dict[surface][struct_name] = new_struct_energy
-            structures_dict[surface].append(struct_name)
-            updated_sequences_dict[surface][struct_name] = network
-
-            if index == 0:
-                with open('{}/Program_output/Model_energies.txt'.format(wd), 'a') as f:
-                    f.write('\nInput structure: {}\n\n\n'.format(orig_struct_energy))
+        if index == 0:
             with open('{}/Program_output/Model_energies.txt'.format(wd), 'a') as f:
-                f.write('{}_{}: {}\n'.format(surface, num, new_struct_energy))
+                f.write('\nInput structure: {}\n\n\n'.format(orig_struct_energy))
+        with open('{}/Program_output/Model_energies.txt'.format(wd), 'a') as f:
+            f.write('{}: {}\n'.format(num, new_struct_energy))
 
     with open('{}/BUDE_energies.pkl'.format(wd), 'wb') as f:
-        pickle.dump((updated_sequences_dict, structures_dict, bude_energies_dict), f)
+        pickle.dump((updated_sequences_dict, structures_list, bude_energies_dict), f)

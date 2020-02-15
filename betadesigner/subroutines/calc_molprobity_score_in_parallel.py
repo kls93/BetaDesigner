@@ -198,55 +198,51 @@ def score_pdb_molprobity(pdb_path):
 if __name__ == '__main__':
     # Reads in command line inputs
     parser = argparse.ArgumentParser()
-    parser.add_argument('-s', '--structures_dict', help='Absolute file path of '
-                        'pickled structures output from running the GA')
+    parser.add_argument('-pdb_list', help='Absolute file path of pickled '
+                        'structures output from running the GA')
     parser.add_argument('-o', '--output', help='Location to which to save the '
                         'output pickled dictionary of Rosetta scores')
     args = parser.parse_args()
 
-    structures_dict = vars(args)['structures_dict']
-    with open(structures_dict, 'rb') as f:
-        structures_dict = pickle.load(f)
+    pdb_list = vars(args)['pdb_list']
+    with open(pdb_list, 'rb') as f:
+        pdb_list = pickle.load(f)
     wd = vars(args)['output']
 
-    per_struct_molp_dict = OrderedDict()
+    per_struct_molp_dict = OrderedDict({
+        'Structure_id': ['']*len(pdb_list),
+        'C_Beta_outliers': ['']*len(pdb_list),
+        'Rotamer_outliers': ['']*len(pdb_list),
+        'Ramachandran_favoured': ['']*len(pdb_list),
+        'Ramachandran_allowed': ['']*len(pdb_list),
+        'Ramachandran_outliers': ['']*len(pdb_list),
+        'Clashscore': ['']*len(pdb_list),
+        'Clashscore_percentile': ['']*len(pdb_list)
+    })
     per_res_molp_dict = OrderedDict()
 
-    for surface, pdb_path_list in structures_dict.items():
-        per_struct_molp_dict[surface] = OrderedDict({
-            'Structure_id': ['']*len(pdb_path_list),
-            'C_Beta_outliers': ['']*len(pdb_path_list),
-            'Rotamer_outliers': ['']*len(pdb_path_list),
-            'Ramachandran_favoured': ['']*len(pdb_path_list),
-            'Ramachandran_allowed': ['']*len(pdb_path_list),
-            'Ramachandran_outliers': ['']*len(pdb_path_list),
-            'Clashscore': ['']*len(pdb_path_list),
-            'Clashscore_percentile': ['']*len(pdb_path_list)
-        })
-        per_res_molp_dict[surface] = OrderedDict()
+    molprobity_scores = futures.map(score_pdb_molprobity, pdb_list)
 
-        molprobity_scores = futures.map(score_pdb_molprobity, pdb_path_list)
+    for index, tup in enumerate(molprobity_scores):
+        pdb_path = tup[0]
+        struct_list = tup[1]
+        res_df = tup[2]
 
-        for index, tup in enumerate(molprobity_scores):
-            pdb_path = tup[0]
-            struct_list = tup[1]
-            res_df = tup[2]
+        if pdb_path != struct_list[0]:
+            raise Exception(
+                'PDB path {} != PDB path {}'.format(pdb_path, struct_list[0])
+            )
+        per_struct_molp_dict['Structure_id'][index] = struct_list[0]
+        per_struct_molp_dict['C_Beta_outliers'][index] = struct_list[1]
+        per_struct_molp_dict['Rotamer_outliers'][index] = struct_list[2]
+        per_struct_molp_dict['Ramachandran_favoured'][index] = struct_list[3]
+        per_struct_molp_dict['Ramachandran_allowed'][index] = struct_list[4]
+        per_struct_molp_dict['Ramachandran_outliers'][index] = struct_list[5]
+        per_struct_molp_dict['Clashscore'][index] = struct_list[6]
+        per_struct_molp_dict['Clashscore_percentile'][index] = struct_list[7]
+        per_struct_molp_dict = pd.DataFrame(per_struct_molp_dict)
 
-            if pdb_path != struct_list[0]:
-                raise Exception(
-                    'PDB path {} != PDB path {}'.format(pdb_path, struct_list[0])
-                )
-            per_struct_molp_dict[surface]['Structure_id'][index] = struct_list[0]
-            per_struct_molp_dict[surface]['C_Beta_outliers'][index] = struct_list[1]
-            per_struct_molp_dict[surface]['Rotamer_outliers'][index] = struct_list[2]
-            per_struct_molp_dict[surface]['Ramachandran_favoured'][index] = struct_list[3]
-            per_struct_molp_dict[surface]['Ramachandran_allowed'][index] = struct_list[4]
-            per_struct_molp_dict[surface]['Ramachandran_outliers'][index] = struct_list[5]
-            per_struct_molp_dict[surface]['Clashscore'][index] = struct_list[6]
-            per_struct_molp_dict[surface]['Clashscore_percentile'][index] = struct_list[7]
-            per_struct_molp_dict[surface] = pd.DataFrame(per_struct_molp_dict[surface])
-
-            per_res_molp_dict[surface][pdb_path] = res_df
+        per_res_molp_dict[pdb_path] = res_df
 
     with open('{}/MolProbity_scores.pkl'.format(wd), 'wb') as f:
         pickle.dump((per_struct_molp_dict, per_res_molp_dict), f)

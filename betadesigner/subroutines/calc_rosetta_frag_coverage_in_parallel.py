@@ -67,34 +67,30 @@ def calc_rosetta_frag_coverage(
 if __name__ == '__main__':
     # Reads in command line inputs
     parser = argparse.ArgumentParser()
-    parser.add_argument('-s', '--structures_dict', help='Absolute file path of '
-                        'pickled structures output from running the GA')
+    parser.add_argument('-pdb_list', help='Absolute file path of pickled '
+                        'structures output from running the GA')
     parser.add_argument('-o', '--output', help='Location to which to save the '
                         'output pickled dictionary of Rosetta scores')
     args = parser.parse_args()
 
-    structures_dict = vars(args)['structures_dict']
-    with open(structures_dict, 'rb') as f:
-        structures_dict = pickle.load(f)
+    pdb_list = vars(args)['pdb_list']
+    with open(pdb_list, 'rb') as f:
+        pdb_list = pickle.load(f)
     wd = vars(args)['output']
 
     worst_best_frag_dict = OrderedDict()
     num_frag_dict = OrderedDict()
     frag_cov_dict = OrderedDict()
-    for surface, pdb_path_list in structures_dict.items():
-        worst_best_frag_dict[surface] = OrderedDict()
-        num_frag_dict[surface] = OrderedDict()
-        frag_cov_dict[surface] = OrderedDict()
 
-        wd_list = [copy.deepcopy(wd) for n in range(len(pdb_path_list))]
-        rosetta_frag_cov_list = futures.map(
-            calc_rosetta_frag_coverage, pdb_path_list, wd_list
-        )
+    wd_list = [copy.deepcopy(wd) for n in range(len(pdb_list))]
+    rosetta_frag_cov_list = futures.map(
+        calc_rosetta_frag_coverage, pdb_list, wd_list
+    )
 
-        for tup in rosetta_frag_cov_list:
-            worst_best_frag_dict[tup[0]] = tup[1]
-            num_frag_dict[tup[0]] = tup[2]
-            frag_cov_dict[tup[0]] = tup[3]
+    for tup in rosetta_frag_cov_list:
+        worst_best_frag_dict[tup[0]] = tup[1]
+        num_frag_dict[tup[0]] = tup[2]
+        frag_cov_dict[tup[0]] = tup[3]
 
     with open('{}/Rosetta_frag_coverage.pkl'.format(wd), 'wb') as f:
         pickle.dump((worst_best_frag_dict, num_frag_dict, frag_cov_dict), f)

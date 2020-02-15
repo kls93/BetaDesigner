@@ -42,71 +42,71 @@ class gen_output(initialise_ga_object):
 
         os.remove('{}/Sequences_dict.pkl'.format(self.working_directory))
         with open('{}/BUDE_energies.pkl'.format(self.working_directory), 'rb') as f:
-            updated_sequences_dict, structures_dict, bude_energies_dict = pickle.load(f)
+            updated_sequences_dict, structures_list, bude_energies_dict = pickle.load(f)
         os.remove('{}/BUDE_energies.pkl'.format(self.working_directory))
 
-        return updated_sequences_dict, structures_dict, bude_energies_dict
+        return updated_sequences_dict, structures_list, bude_energies_dict
 
-    def score_pdb_rosetta(self, structures_dict):
+    def score_pdb_rosetta(self, structures_list):
         """
         Relaxes structures and calculates their energy in the Rosetta force-field
         """
 
         print('Scoring structures with ROSETTA')
 
-        with open('{}/Structures_dict.pkl'.format(self.working_directory), 'wb') as f:
-            pickle.dump(structures_dict, f)
+        with open('{}/structures_list.pkl'.format(self.working_directory), 'wb') as f:
+            pickle.dump(structures_list, f)
 
         os.system('python -m scoop {}/calc_rosetta_score_in_parallel.py '
-                  '-s {}/Structures_dict.pkl -bos {} -o {}'.format(
+                  '-pdb_list {}/structures_list.pkl -bos {} -o {}'.format(
                   os.path.dirname(os.path.abspath(__file__)),
                   self.working_directory, self.barrel_or_sandwich,
                   self.working_directory))
 
-        os.remove('{}/Structures_dict.pkl'.format(self.working_directory))
+        os.remove('{}/structures_list.pkl'.format(self.working_directory))
         with open('{}/Rosetta_scores.pkl'.format(self.working_directory), 'rb') as f:
             struct_energies_dict, res_energies_dict = pickle.load(f)
         os.remove('{}/Rosetta_scores.pkl'.format(self.working_directory))
 
         return struct_energies_dict, res_energies_dict
 
-    def calc_rosetta_frag_coverage(self, structures_dict):
+    def calc_rosetta_frag_coverage(self, structures_list):
         """
         Runs basic fragment generation with make_fragments.pl in Rosetta
         """
 
         print('Generating fragments with make_fragments.pl in ROSETTA')
 
-        with open('{}/Structures_dict.pkl'.format(self.working_directory), 'wb') as f:
-            pickle.dump(structures_dict, f)
+        with open('{}/Structures_list.pkl'.format(self.working_directory), 'wb') as f:
+            pickle.dump(structures_list, f)
 
         os.system('python -m scoop {}/calc_rosetta_frag_coverage_in_parallel.py '
-                  '-s {}/Structures_dict.pkl -o {}'.format(
+                  '-pdb_list {}/Structures_list.pkl -o {}'.format(
                   os.path.dirname(os.path.abspath(__file__)),
                   self.working_directory, self.working_directory))
 
-        os.remove('{}/Structures_dict.pkl'.format(self.working_directory))
+        os.remove('{}/Structures_list.pkl'.format(self.working_directory))
         with open('{}/Rosetta_frag_coverage.pkl'.format(self.working_directory), 'rb') as f:
             worst_best_frag_dict, num_frag_dict, frag_cov_dict = pickle.load(f)
         os.remove('{}/Rosetta_frag_coverage.pkl'.format(self.working_directory))
 
         return worst_best_frag_dict, num_frag_dict, frag_cov_dict
 
-    def score_pdb_molprobity(self, structures_dict):
+    def score_pdb_molprobity(self, structures_list):
         """
         """
 
         print('Calculating MolProbity scores')
 
-        with open('{}/Structures_dict.pkl'.format(self.working_directory), 'wb') as f:
-            pickle.dump(structures_dict, f)
+        with open('{}/Structures_list.pkl'.format(self.working_directory), 'wb') as f:
+            pickle.dump(structures_list, f)
 
         os.system('python -m scoop {}/calc_molprobity_score_in_parallel.py '
-                  '-s {}/Structures_dict.pkl -o {}'.format(
+                  '-pdb_list {}/Structures_list.pkl -o {}'.format(
                   os.path.dirname(os.path.abspath(__file__)),
                   self.working_directory, self.working_directory))
 
-        os.remove('{}/Structures_dict.pkl'.format(self.working_directory))
+        os.remove('{}/Structures_list.pkl'.format(self.working_directory))
         with open('{}/MolProbity_scores.pkl'.format(self.working_directory), 'rb') as f:
             per_struct_molp_dict, per_res_molp_dict = pickle.load(f)
         os.remove('{}/MolProbity_scores.pkl'.format(self.working_directory))

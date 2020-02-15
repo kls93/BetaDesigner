@@ -169,39 +169,35 @@ def score_pdb_rosetta(pdb_path, cwd, barrel_or_sandwich):
 if __name__ == '__main__':
     # Reads in command line inputs
     parser = argparse.ArgumentParser()
-    parser.add_argument('-s', '--structures_dict', help='Absolute file path of '
-                        'pickled structures output from running the GA')
+    parser.add_argument('-pdb_list', help='Absolute file path of pickled '
+                        'structures output from running the GA')
     parser.add_argument('-bos', help='Specifies whether the structure is a '
                         'beta-barrel or -sandwich')
     parser.add_argument('-o', '--output', help='Location to which to save the '
                         'output pickled dictionary of Rosetta scores')
     args = parser.parse_args()
 
-    structures_dict = vars(args)['structures_dict']
-    with open(structures_dict, 'rb') as f:
-        structures_dict = pickle.load(f)
+    pdb_list = vars(args)['pdb_list']
+    with open(pdb_list, 'rb') as f:
+        pdb_list = pickle.load(f)
     barrel_or_sandwich = vars(args)['bos']
     wd = vars(args)['output']
 
     struct_energies_dict = OrderedDict()
     res_energies_dict = OrderedDict()
-    for surface, pdb_path_list in structures_dict.items():
-        struct_energies_dict[surface] = OrderedDict()
-        res_energies_dict[surface] = OrderedDict()
 
-        wd_list = [copy.deepcopy(wd) for n in range(len(pdb_path_list))]
-        bos_list = [copy.deepcopy(barrel_or_sandwich)
-                    for n in range(len(pdb_path_list))]
-        rosetta_scores_list = futures.map(
-            score_pdb_rosetta, pdb_path_list, wd_list, bos_list
-        )
+    wd_list = [copy.deepcopy(wd) for n in range(len(pdb_list))]
+    bos_list = [copy.deepcopy(barrel_or_sandwich) for n in range(len(pdb_list))]
+    rosetta_scores_list = futures.map(
+        score_pdb_rosetta, pdb_list, wd_list, bos_list
+    )
 
-        for tup in rosetta_scores_list:
-            pdb_path = tup[0]
-            total_energy = tup[1]
-            res_energies_sub_dict = tup[2]
-            struct_energies_dict[surface][pdb_path] = total_energy
-            res_energies_dict[surface][pdb_path] = res_energies_sub_dict
+    for tup in rosetta_scores_list:
+        pdb_path = tup[0]
+        total_energy = tup[1]
+        res_energies_sub_dict = tup[2]
+        struct_energies_dict[pdb_path] = total_energy
+        res_energies_dict[pdb_path] = res_energies_sub_dict
 
     with open('{}/Rosetta_scores.pkl'.format(wd), 'wb') as f:
         pickle.dump((struct_energies_dict, res_energies_dict), f)
