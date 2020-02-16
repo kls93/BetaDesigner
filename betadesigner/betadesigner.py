@@ -3,8 +3,10 @@ import argparse
 import copy
 import math
 import os
+import pandas as pd
 import pickle
 import time
+from collections import OrderedDict
 from hyperopt import fmin, hp, tpe, Trials
 
 # Wrapper script to run the BetaDesigner program. The program takes as input a
@@ -250,7 +252,7 @@ def main():
     ) = output.score_pdb_rosetta(structures_list)
     (worst_best_frag_dict, num_frag_dict, frag_cov_dict
     ) = output.calc_rosetta_frag_coverage(structures_list)
-    (molp_struct_dict, molp_res_dict
+    (molp_struct_df, molp_res_dict
     ) = output.score_pdb_molprobity(structures_list)
 
     with open('{}/Program_output/GA_output_sequences_full_name_dict.pkl'.format(
@@ -260,61 +262,48 @@ def main():
         params['workingdirectory'], params['jobid']), 'wb') as f:
         pickle.dump(updated_sequences_dict, f)
 
-    with open('{}/Program_output/BUDE_struct_energies_dict.pkl'.format(
-        updated_params['workingdirectory']), 'wb') as f:
-        pickle.dump(bude_struct_energies_dict, f)
-    with open('{}/BetaDesigner_results/{}/BUDE_struct_energies_dict.pkl'.format(
-        params['workingdirectory'], params['jobid']), 'wb') as f:
-        pickle.dump(bude_struct_energies_dict, f)
+    # Saves per-structure scores in a dataframe
+    bude_struct_list = []
+    rosetta_struct_list = []
+    worst_best_frag_list = []
+    num_frag_list = []
+    frag_cov_list = []
+    for struct in molp_struct_df['Structure_id'].tolist():
+        bude_struct_list.append(bude_struct_energies_dict[struct])
+        rosetta_struct_list.append(rosetta_struct_energies_dict[struct])
+        worst_best_frag_list.append(worst_best_frag_dict[struct])
+        num_frag_list.append(num_frag_dict[struct])
+        frag_cov_list.append(frag_cov_dict[struct])
+    per_struct_scores_df = pd.DataFrame(OrderedDict({
+        'BUDE_score': bude_struct_list,
+        'Rosetta_score': rosetta_struct_list,
+        'Worst_best_frag': worst_best_frag_list,
+        'Num_frag': num_frag_list,
+        'Frag_cov': frag_cov_list
+    }))
+    per_struct_scores_df = pd.concat([molp_struct_df, per_struct_scores_df], axis=1)
+    per_struct_scores_df.to_pickle('{}/Program_output/Per_struct_scores.pkl'.format(
+        updated_params['workingdirectory']))
+    per_struct_scores_df.to_pickle('{}/BetaDesigner_results/{}/Per_struct_scores.pkl'.format(
+        params['workingdirectory'], params['jobid']))
 
-    with open('{}/Program_output/Rosetta_struct_energies_dict.pkl'.format(
+    # Saves per-residue scores as a dictionary of dataframes (one dataframe per
+    # structure)
+    per_res_scores_dict = OrderedDict()
+    for struct, molp_res_df in molp_res_dict.items():
+        rosetta_res_list = []
+        for res in molp_res_df['Residue_id'].tolist():
+            energy = rosetta_res_energies_dict[res]
+            rosetta_res_list.append(energy)
+        per_res_scores_df = pd.DataFrame({'Rosetta_score': rosetta_res_list})
+        per_res_scores_df = pd.concat([molp_res_df, per_res_scores_df], axis=1)
+        per_res_scores_df[struct] = per_res_scores_df
+    with open('{}/Program_output/Per_res_scores.pkl'.format(
         updated_params['workingdirectory']), 'wb') as f:
-        pickle.dump(rosetta_struct_energies_dict, f)
-    with open('{}/BetaDesigner_results/{}/Rosetta_struct_energies_dict.pkl'.format(
+        pickle.dump(per_res_scores_dict, f)
+    with open('{}/BetaDesigner_results/{}/Per_res_scores.pkl'.format(
         params['workingdirectory'], params['jobid']), 'wb') as f:
-        pickle.dump(rosetta_struct_energies_dict, f)
-
-    with open('{}/Program_output/Rosetta_res_energies_dict.pkl'.format(
-        updated_params['workingdirectory']), 'wb') as f:
-        pickle.dump(rosetta_res_energies_dict, f)
-    with open('{}/BetaDesigner_results/{}/Rosetta_res_energies_dict.pkl'.format(
-        params['workingdirectory'], params['jobid']), 'wb') as f:
-        pickle.dump(rosetta_res_energies_dict, f)
-
-    with open('{}/Program_output/Rosetta_struct_worst_best_frag_dict.pkl'.format(
-        updated_params['workingdirectory']), 'wb') as f:
-        pickle.dump(worst_best_frag_dict, f)
-    with open('{}/BetaDesigner_results/{}/Rosetta_struct_worst_best_frag_dict.pkl'.format(
-        params['workingdirectory'], params['jobid']), 'wb') as f:
-        pickle.dump(worst_best_frag_dict, f)
-
-    with open('{}/Program_output/Rosetta_struct_num_frag_dict.pkl'.format(
-        updated_params['workingdirectory']), 'wb') as f:
-        pickle.dump(num_frag_dict, f)
-    with open('{}/BetaDesigner_results/{}/Rosetta_struct_num_frag_dict.pkl'.format(
-        params['workingdirectory'], params['jobid']), 'wb') as f:
-        pickle.dump(num_frag_dict, f)
-
-    with open('{}/Program_output/Rosetta_struct_frag_cov_dict.pkl'.format(
-        updated_params['workingdirectory']), 'wb') as f:
-        pickle.dump(frag_cov_dict, f)
-    with open('{}/BetaDesigner_results/{}/Rosetta_struct_frag_cov_dict.pkl'.format(
-        params['workingdirectory'], params['jobid']), 'wb') as f:
-        pickle.dump(frag_cov_dict, f)
-
-    with open('{}/Program_output/MolProbity_struct_score_dict.pkl'.format(
-        updated_params['workingdirectory']), 'wb') as f:
-        pickle.dump(molp_struct_dict, f)
-    with open('{}/BetaDesigner_results/{}/MolProbity_struct_score_dict.pkl'.format(
-        params['workingdirectory'], params['jobid']), 'wb') as f:
-        pickle.dump(molp_struct_dict, f)
-
-    with open('{}/Program_output/MolProbity_res_score_dict.pkl'.format(
-        updated_params['workingdirectory']), 'wb') as f:
-        pickle.dump(molp_res_dict, f)
-    with open('{}/BetaDesigner_results/{}/MolProbity_res_score_dict.pkl'.format(
-        params['workingdirectory'], params['jobid']), 'wb') as f:
-        pickle.dump(molp_res_dict, f)
+        pickle.dump(per_res_scores_dict, f)
 
     end = time.time()
     print('Time for GA to run (2000 sequences, 50 generations, 10 '

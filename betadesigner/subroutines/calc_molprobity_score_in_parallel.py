@@ -240,9 +240,9 @@ if __name__ == '__main__':
         per_struct_molp_dict['Ramachandran_outliers'][index] = struct_list[5]
         per_struct_molp_dict['Clashscore'][index] = struct_list[6]
         per_struct_molp_dict['Clashscore_percentile'][index] = struct_list[7]
-        per_struct_molp_dict = pd.DataFrame(per_struct_molp_dict)
+        per_struct_molp_df = pd.DataFrame(per_struct_molp_dict)
 
         per_res_molp_dict[pdb_path] = res_df
 
     with open('{}/MolProbity_scores.pkl'.format(wd), 'wb') as f:
-        pickle.dump((per_struct_molp_dict, per_res_molp_dict), f)
+        pickle.dump((per_struct_molp_df, per_res_molp_dict), f)
