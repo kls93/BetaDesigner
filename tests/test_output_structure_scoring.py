@@ -136,8 +136,9 @@ class test_output_structure_scoring(unittest.TestCase):
                     if not line.startswith('#'):
                         line = line.split(',')
                         res_id = line[2].strip().split()
-                        res_id = '{}_{}_{}'.format(res_id[2], res_id[0], res_id[1])
-                        exp_res_molp['Residue_id'].append('{}_{}'.format(pdb_file, res_id))
+                        exp_res_molp['Residue_id'].append(
+                            '{}_{}_{}'.format(res_id[2], res_id[0], res_id[1])
+                        )
                         try:
                             exp_res_molp['C_Beta_deviation'].append(float(line[9]))
                         except ValueError:

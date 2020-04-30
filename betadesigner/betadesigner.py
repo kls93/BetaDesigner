@@ -63,20 +63,20 @@ def main():
     # Hutchinson et al., 1998), +/-2 interactions and van der Waals
     # interactions).
     gen_initial_sequences = gen_ga_input(params)
-    (input_sequences_dict, new_sequences_dict
+    (initial_network, new_sequences_dict
     ) = gen_initial_sequences.initial_sequences_pipeline()
-    params['initialsequencesdict'] = input_sequences_dict
+    params['initialnetwork'] = {'initial_network': initial_network}
 
     run_ga = True
     run_opt = True
-    max_evals = [10]  # Number of
+    max_evals = [2]  # Number of
     # hyperparameter combinations for hyperopt to try
-    sub_gen = 50  # Number of generations to run the GA with a particular
+    sub_gen = 2  # Number of generations to run the GA with a particular
     # combination of hyperparameters
     # max_gen = copy.copy(params['maxnumgenerations'])  # Total number of
     # generations GA can be run for (changing hyperparameters every sub_gen
     # generations)
-    max_gen = 50
+    max_gen = 2
     params['maxnumgenerations'] = sub_gen
 
     opt_cycle_count = 0
@@ -134,7 +134,7 @@ def main():
                     pickle.dump(trials, f)
 
             # Runs GA with hyperopt
-            save_points = range(10, hyperparam_count+1, 10)
+            save_points = range(2, hyperparam_count+1, 1)
             for point in save_points:
                 with open('{}/Program_output/Pickled_trials.pkl'.format(
                     updated_params['workingdirectory']), 'rb') as f:
@@ -145,6 +145,7 @@ def main():
                     updated_params['workingdirectory']), 'wb') as f:
                     pickle.dump(trials, f)
 
+                trial = trials.trials[-1]
                 for trial in trials.trials:
                     # Record trial_id, hyperparameter values and corresponding loss
                     trial_id = '{}_{}_{}'.format(opt_cycle_count, hyperparam_count, trial['tid'])
@@ -155,13 +156,16 @@ def main():
                     out = trial['result']['loss']
                     with open('{}/Program_output/Hyperparameter_track.txt'.format(
                         updated_params['workingdirectory']), 'a') as f:
+                        current_lines = f.readlines()
                         if trial['tid'] == 0:
                             f.write('\n\n\nHyperparameter cycle {}\n'.format(hyperparam_count))
                             f.write('trial_id:     crossover_probability, mutation_probability,'
                                     ' propensity_weight, unfit_fraction     output_loss\n')
-                        f.write('{}:     {}, {}, {}, {}     {}\n'.format(trial_id,
+                        new_line = '{}:     {}, {}, {}, {}     {}\n'.format(trial_id,
                             crossover_prob, mutation_prob, prop_weight, unfit_frac, out
-                        ))
+                        )
+                        if not new_line in current_lines:
+                            f.write(new_line)
 
             with open('{}/Program_output/Hyperparameter_track.txt'.format(
                 updated_params['workingdirectory']), 'a') as f:
@@ -171,10 +175,11 @@ def main():
                 f.write('propensity_weight: {}\n'.format(best_params['propensityweight']))
                 f.write('unfit_fraction: {}\n'.format(best_params['unfitfraction']))
 
-            if hyperparam_count == 10:
+            if hyperparam_count == 2:
+                run_opt = False  # DELETE ME!
+                break  # DELETE ME!
                 current_best = copy.deepcopy(best_params)
                 hyperparam_count = max_evals[max_evals.index(hyperparam_count)+1]
-                run_opt = False
             else:
                 # If best values are within 5% of previous OR number of trials >= 10000
                 similarity_dict = {}
@@ -219,7 +224,7 @@ def main():
         if max_gen == sub_gen:
             break
 
-        if sub_gen == 10:  # Optimises hyperparameters for 10 generation cycles
+        if sub_gen == 10:  # Optimises hyperparameters for minimum of 20 generations
             current_fitness = copy.deepcopy(fitness)
         else:
             # If updated fitness is within 5% of previous fitness score OR
@@ -250,8 +255,10 @@ def main():
     ) = output.write_pdb(sequences_dict)
     (rosetta_struct_energies_dict, rosetta_res_energies_dict
     ) = output.score_pdb_rosetta(structures_list)
+    """
     (worst_best_frag_dict, num_frag_dict, frag_cov_dict
     ) = output.calc_rosetta_frag_coverage(structures_list)
+    """
     (molp_struct_df, molp_res_dict
     ) = output.score_pdb_molprobity(structures_list)
 
@@ -265,22 +272,28 @@ def main():
     # Saves per-structure scores in a dataframe
     bude_struct_list = []
     rosetta_struct_list = []
+    """
     worst_best_frag_list = []
     num_frag_list = []
     frag_cov_list = []
+    """
     for struct in molp_struct_df['Structure_id'].tolist():
         bude_struct_list.append(bude_struct_energies_dict[struct])
         rosetta_struct_list.append(rosetta_struct_energies_dict[struct])
+        """
         worst_best_frag_list.append(worst_best_frag_dict[struct])
         num_frag_list.append(num_frag_dict[struct])
         frag_cov_list.append(frag_cov_dict[struct])
+        """
     per_struct_scores_df = pd.DataFrame(OrderedDict({
         'BUDE_score': bude_struct_list,
-        'Rosetta_score': rosetta_struct_list,
+        'Rosetta_score': rosetta_struct_list}))
+    """
         'Worst_best_frag': worst_best_frag_list,
         'Num_frag': num_frag_list,
         'Frag_cov': frag_cov_list
     }))
+    """
     per_struct_scores_df = pd.concat([molp_struct_df, per_struct_scores_df], axis=1)
     per_struct_scores_df.to_pickle('{}/Program_output/Per_struct_scores.pkl'.format(
         updated_params['workingdirectory']))
@@ -293,11 +306,11 @@ def main():
     for struct, molp_res_df in molp_res_dict.items():
         rosetta_res_list = []
         for res in molp_res_df['Residue_id'].tolist():
-            energy = rosetta_res_energies_dict[res]
+            energy = rosetta_res_energies_dict[struct][res]
             rosetta_res_list.append(energy)
         per_res_scores_df = pd.DataFrame({'Rosetta_score': rosetta_res_list})
         per_res_scores_df = pd.concat([molp_res_df, per_res_scores_df], axis=1)
-        per_res_scores_df[struct] = per_res_scores_df
+        per_res_scores_dict[struct] = per_res_scores_df
     with open('{}/Program_output/Per_res_scores.pkl'.format(
         updated_params['workingdirectory']), 'wb') as f:
         pickle.dump(per_res_scores_dict, f)
@@ -309,10 +322,6 @@ def main():
     print('Time for GA to run (2000 sequences, 50 generations, 10 '
           'hyperparameter combinations, split propensity and BUDE '
           'measurements): {}'.format(end-start))
-
-    return (updated_sequences_dict, structures_list, bude_struct_energies_dict,
-            rosetta_struct_energies_dict, rosetta_res_energies_dict,
-            molp_struct_dict, molp_res_dict)
 
 
 # Calls main() function if betadesigner.py is run as a script

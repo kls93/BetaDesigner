@@ -20,58 +20,6 @@ else:
 # (e.g. int_-_z_-_-_indv_cont_propensity, ext_edg_-_-_vdw_pair_disc_frequency)
 
 
-def nansum_axis_1(input_array):
-    """
-    Overwrites behaviour of np.nansum to return np.nan instead of 0.0 when
-    summing an array along axis=1 (i.e. along a row, or the x-axis if you like)
-    consisting entirely of NaN values
-    """
-
-    output_array = []
-    for row in input_array:
-        if np.isnan(row).all():
-            output_array.append(np.nan)
-        else:
-            output_array.append(np.nansum(row))
-    output_array = np.array(output_array)
-
-    return output_array
-
-
-def combine_propensities(node_indv_propensities, node_indv_frequencies,
-                         sub_dicts, dict_weights, aa_list):
-    """
-    Sums weighted propensities across structural features considered
-    NOTE: must take -ve logarithm of each individual propensity
-    score before summing (rather than taking the -ve logarithm of
-    the summed propensities)
-    """
-
-    node_indv_propensities = np.negative(np.log(node_indv_propensities))
-
-    for index, dict_label in enumerate(list(sub_dicts.keys())):
-        dict_weight = dict_weights[dict_label]
-        node_indv_propensities[:,index] *= dict_weight
-        node_indv_frequencies[:,index] *= dict_weight
-
-    node_indv_propensities = nansum_axis_1(node_indv_propensities)
-    node_indv_frequencies = nansum_axis_1(node_indv_frequencies)
-
-    # Removes NaN values
-    filtered_aa_list = np.array(copy.deepcopy(aa_list))
-
-    nan_propensity = np.isnan(node_indv_propensities)
-    node_indv_propensities = node_indv_propensities[~nan_propensity]
-    node_indv_frequencies = node_indv_frequencies[~nan_propensity]
-    filtered_aa_list = filtered_aa_list[~nan_propensity]
-
-    nan_frequency = np.isnan(node_indv_frequencies)
-    node_indv_propensities = node_indv_propensities[~nan_frequency]
-    node_indv_frequencies = node_indv_frequencies[~nan_frequency]
-    filtered_aa_list = filtered_aa_list[~nan_frequency]
-
-    return node_indv_propensities, node_indv_frequencies, filtered_aa_list
-
 def random_shuffle(array_1, array_2, array_3):
     """
     Randomly shuffles arrays of network numbers, propensity and probability
@@ -88,7 +36,9 @@ def random_shuffle(array_1, array_2, array_3):
     return array_1, array_2, array_3
 
 
-def propensity_to_probability_distribution(index_num, node_indv_propensities):
+def propensity_to_probability_distribution(
+    index_num, node_indv_propensities, test=False
+):
     """
     Generates probability distribution from -ln(propensity) (~ free energy)
     differences
@@ -109,22 +59,24 @@ def propensity_to_probability_distribution(index_num, node_indv_propensities):
 
     # Randomly shuffles probability array, in order to avoid smallest
     # probabilities being grouped together at the beginning of the range
-    (index_num, node_indv_propensities, node_probabilities
-    ) = random_shuffle(
-        index_num, node_indv_propensities, node_probabilities
-    )
+    if test is False:
+        (index_num, node_indv_propensities, node_probabilities
+        ) = random_shuffle(
+            index_num, node_indv_propensities, node_probabilities
+        )
 
     return index_num, node_indv_propensities, node_probabilities
 
 
-def frequency_to_probability_distribution(index_num, node_indv_vals, prop_or_freq):
+def frequency_to_probability_distribution(
+    index_num, node_indv_vals, prop_or_freq, test=False
+):
     """
     Generates probability distribution in which networks are weighted in
     proportion to their rank propensity / frequency values
     """
 
     # Checks for NaN values
-
     if np.isnan(node_indv_vals).any():
         raise Exception('NaN value encountered in {} array'.format(prop_or_freq))
 
@@ -141,15 +93,16 @@ def frequency_to_probability_distribution(index_num, node_indv_vals, prop_or_fre
 
     # Randomly shuffles probability array, in order to avoid smallest
     # probabilities being grouped together at the beginning of the range
-    (index_num, node_indv_vals, node_probabilities) = random_shuffle(
-        index_num, node_indv_vals, node_probabilities
-    )
+    if test is False:
+        (index_num, node_indv_vals, node_probabilities) = random_shuffle(
+            index_num, node_indv_vals, node_probabilities
+        )
 
     return index_num, node_indv_vals, node_probabilities
 
 
-def calc_probability_distribution(sub_dicts, prop_freq_array, prop_or_freq,
-                                  raw_or_rank):
+def calc_probability_distribution(prop_freq_array, prop_or_freq, raw_or_rank,
+                                  test=False):
     """
     Converts array of propensity / frequency values into a probability
     distribution
@@ -167,14 +120,14 @@ def calc_probability_distribution(sub_dicts, prop_freq_array, prop_or_freq,
     if prop_or_freq == 'propensity' and raw_or_rank == 'raw':
         (prop_freq_array_indices, prop_freq_array, node_probabilities
         ) = propensity_to_probability_distribution(
-            prop_freq_array_indices, prop_freq_array
+            prop_freq_array_indices, prop_freq_array, test
         )
     elif (   (prop_or_freq == 'propensity' and raw_or_rank == 'rank')
           or (prop_or_freq == 'frequency')
     ):
         (prop_freq_array_indices, prop_freq_array, node_probabilities
         ) = frequency_to_probability_distribution(
-            prop_freq_array_indices, prop_freq_array, prop_or_freq
+            prop_freq_array_indices, prop_freq_array, prop_or_freq, test
         )
 
     return prop_freq_array_indices, prop_freq_array, node_probabilities
@@ -219,13 +172,17 @@ class gen_ga_input_calcs(initialise_ga_object):
         """
 
         # Defines dictionary of residue interaction types to include as network
-        # edges. NOTE might want to provide these interactions as a program
-        # input?
-        interactions_dict = {'hb': 'hb_pairs',
-                             'nhb': 'nhb_pairs',
-                             'plusminus2': 'minus_2',
-                             'plusminus1': 'minus_1',
-                             'vdw': 'van_der_waals'}
+        # edges.
+        #**N.B.** Might want to provide these interactions as a program input?
+        # **N.B.** 'intra' in the interaction names dict refers to interactions
+        # between residues in the same chain
+        interactions = [['hb', 'hb_pairs', 'hb_pairs_fasta_intra'],
+                        ['nhb', 'nhb_pairs', 'nhb_pairs_fasta_intra'],
+                        ['plusminus2', 'minus_2', 'minus_2_fasta'],
+                        ['plusminus2', 'plus_2', 'plus_2_fasta'],
+                        ['plusminus1', 'minus_1', 'minus_1_fasta'],
+                        ['plusminus1', 'plus_1', 'plus_1_fasta'],
+                        ['vdw', 'van_der_waals', 'van_der_waals_fasta_intra']]
 
         # Initialises MultiGraph (= undirected graph with self loops and
         # parallel edges) network of interacting residues
@@ -241,11 +198,14 @@ class gen_ga_input_calcs(initialise_ga_object):
                 aa_id = self.input_df['fasta_seq'][num]
                 int_or_ext = self.input_df['int_ext'][num][0:3]
                 z_coord = self.input_df['z_coords'][num]
-                phi_psi_class = self.input_df['phi_psi_class'][num]
-                if not int_or_ext in ['interior', 'exterior']:
+                try:
+                    phi_psi_class = self.input_df['phi_psi_class'][num]
+                except KeyError:
+                    phi_psi_class = '-'
+                if not int_or_ext in ['int', 'ext']:
                     raise ValueError('Residue {} has not been assigned to the '
                                      'interior or exterior surface of the input'
-                                     ' beta-barrel structure')
+                                     ' beta-barrel structure'.format(node))
                 G.add_node(node, type='strand', aa_id=aa_id, int_ext=int_or_ext,
                            eoc='-', z=z_coord, phipsi=phi_psi_class)
         elif self.barrel_or_sandwich == '2.60':
@@ -257,50 +217,64 @@ class gen_ga_input_calcs(initialise_ga_object):
                 z_strand_coord = self.input_df['strand_z_coords'][num]
                 buried_surface_area = self.input_df['buried_surface_area'][num]
                 edge_or_central = self.input_df['edge_or_central'][num]
-                phi_psi_class = self.input_df['phi_psi_class'][num]
-                if not int_or_ext in ['interior', 'exterior']:
+                try:
+                    phi_psi_class = self.input_df['phi_psi_class'][num]
+                except KeyError:
+                    phi_psi_class = '-'
+                if not int_or_ext in ['int', 'ext']:
                     raise ValueError('Residue {} has not been assigned to the '
                                      'interior or exterior surface of the input'
-                                     ' beta-barrel structure')
+                                     ' beta-barrel structure'.format(node))
                 G.add_node(node, type='strand', aa_id=aa_id, int_ext=int_or_ext,
                            zsandwich=z_sandwich_coord, zstrand=z_strand_coord,
                            bsa=buried_surface_area, eoc=edge_or_central,
                            phipsi=phi_psi_class)
 
-        domain_res_ids = list(G.nodes)
+        domain_res_ids = list(G.nodes())
 
         # Adds edges (= residue interactions) to MultiGraph, labelled by
         # interaction type. The interactions considered are defined in
         # interactions_dict.
-        for edge_label, interaction_type in interactions_dict.items():
+        for int_list in interactions:
+            edge_label = int_list[0]
+            int_name = int_list[1]
+            int_fasta = int_list[2]
+
             for num in range(self.input_df.shape[0]):
                 res_1 = self.input_df['domain_ids'][num] + self.input_df['res_ids'][num]
-                res_list = self.input_df[interaction_type][num]
+                res_list = self.input_df[int_name][num]
                 if type(res_list) != list:
                     res_list = [res_list]
 
-                for res_2 in res_list:
+                for res_index, res_2 in enumerate(res_list):
                     res_2 = self.input_df['domain_ids'][num] + res_2
                     # Accounts for interactions between residue pairs where one
                     # residue is in the beta-barrel/sandwich domain and the
                     # other is within a loop region
-                    if 'interactiontype' == 'minus_1':
-                        aa_id = self.input_df['minus_1_fasta'][num]
+                    aa_id = self.input_df[int_fasta][num][res_index]
+                    if not res_2 in list(G.nodes()):
                         G.add_node(res_2, type='loop', aa_id=aa_id)
+                    if aa_id != G.nodes()[res_2]['aa_id']:
+                        print(aa_id, G.nodes()[res_2]['aa_id'])
+                        raise ValueError(
+                            'Identity of node {} is inconsistent according to '
+                            'the pairwise interactions listed in {} '
+                            '{}'.format(res_2, self.input_df_path, edge_label)
+                        )
 
                     # Ensures interactions are only added to the network once
                     if G.has_edge(res_1, res_2) is False:
                         G.add_edge(res_1, res_2, interaction=edge_label)
                     elif G.has_edge(res_1, res_2) is True:
                         attributes = [val for label, sub_dict in
-                                      G[res_1][res_2].items() for key,
+                                      dict(G[res_1][res_2]).items() for key,
                                       val in sub_dict.items()]
                         if not edge_label in attributes:
                             G.add_edge(res_1, res_2, interaction=edge_label)
 
         return G
 
-    def add_random_initial_side_chains(self, G):
+    def add_random_initial_side_chains(self, G, test=False, input_aa={}):
         """
         For each network, assigns a random amino acid to each node in the
         network to generate an initial sequence. Repeats 2*pop_size times to
@@ -315,10 +289,13 @@ class gen_ga_input_calcs(initialise_ga_object):
             H = copy.deepcopy(G)
 
             new_node_aa_ids = OrderedDict()
-            for node in list(H.nodes):
-                if H.nodes[node]['type'] == 'loop':
+            for node in list(H.nodes()):
+                if H.nodes()[node]['type'] == 'loop':
                     continue
-                random_aa = self.aa_list[random.randint(0, (len(self.aa_list)-1))]
+                if test is False:
+                    random_aa = self.aa_list[random.randint(0, (len(self.aa_list)-1))]
+                elif test is True:
+                    random_aa = input_aa[node]
                 new_node_aa_ids[node] = {'aa_id': random_aa}
             nx.set_node_attributes(H, new_node_aa_ids)
 
@@ -331,7 +308,7 @@ class gen_ga_input_calcs(initialise_ga_object):
         return initial_networks
 
     def add_initial_side_chains_from_propensities(
-        self, G, raw_or_rank, test, input_num
+        self, G, raw_or_rank, test=False, input_num={}
     ):
         """
         For each network, assigns an amino acid to each node in the network to
@@ -357,6 +334,7 @@ class gen_ga_input_calcs(initialise_ga_object):
 
         # Extracts individual amino acid propensity scales for the surface
         intext_index = self.dict_name_indices['intorext']
+        eoc_index = self.dict_name_indices['edgeorcent']
         prop_index = self.dict_name_indices['prop1']
         pairindv_index = self.dict_name_indices['pairorindv']
         discorcont_index = self.dict_name_indices['discorcont']
@@ -364,39 +342,49 @@ class gen_ga_input_calcs(initialise_ga_object):
         dicts = OrderedDict({
             dict_label: scale_dict for dict_label, scale_dict in
             {**self.propensity_dicts, **self.frequency_dicts}.items()
-            if (dict_label.split('_')[intext_index] in [network_label[0:3], '-']
-            and dict_label.split('_')[pairindv_index] == 'indv')
+            if dict_label.split('_')[pairindv_index] == 'indv'
         })
 
-        for node in list(G.nodes):
-            if G.nodes[node]['type'] == 'loop':
+        for node_index, node in enumerate(list(G.nodes())):
+            if G.nodes()[node]['type'] == 'loop':
                 continue
 
+            int_ext = G.nodes()[node]['int_ext']
+            sub_dicts = OrderedDict(
+                {dict_label: scale_dict for dict_label, scale_dict in dicts.items()
+                 if dict_label.split('_')[intext_index] == int_ext}
+            )
             if self.barrel_or_sandwich == '2.60':
                 # Filters propensity and frequency scales depending upon
                 # whether the node is in an edge or a central strand
-                eoc = G.nodes[node]['eoc']
-                eoc_index = self.dict_name_indices['edgeorcent']
+                eoc = G.nodes()[node]['eoc']
                 sub_dicts = OrderedDict(
-                    {dict_label: scale_dict for dict_label, scale_dict in dicts.items()
+                    {dict_label: scale_dict for dict_label, scale_dict in sub_dicts.items()
                      if dict_label.split('_')[eoc_index] in [eoc, '-']}
                 )
-            else:
-                sub_dicts = dicts
+
+            if sub_dicts == {}:
+                if test is True:  # Avoids code crashing if e.g. there are no
+                # dicts for ext residues
+                    continue
+                else:
+                    raise ValueError('No propensity or scoring metrics '
+                                     'available for node {}'.format(node))
 
             # Calculates summed propensity for each amino acid across all
             # structural features considered in the design process
-            node_indv_propensities = np.full((len(self.aa_list), len(sub_dicts)), np.nan)
-            node_indv_frequencies = np.full((len(self.aa_list), len(sub_dicts)), np.nan)
+            node_indv_propensities = np.full((len(sub_dicts), len(self.aa_list)), np.nan)
+            node_indv_frequencies = np.full((len(sub_dicts), len(self.aa_list)), np.nan)
 
-            dict_index = 0
-            for dict_label, scale_dict in sub_dicts.items():
+            for dict_index, dict_label in enumerate(list(sub_dicts.keys())):
+                scale_dict = sub_dicts[dict_label]
+                dict_weight = self.dict_weights[dict_label]
                 node_prop = dict_label.split('_')[prop_index]
                 node_val = np.nan
 
                 if node_prop != '-':
                     try:
-                        node_val = G.nodes[node][node_prop]
+                        node_val = G.nodes()[node][node_prop]
                     except KeyError:
                         raise KeyError('{} not defined for node {}'.format(node_prop, node))
                 # Converts non-float values into np.nan
@@ -411,9 +399,11 @@ class gen_ga_input_calcs(initialise_ga_object):
                         value = linear_interpolation(node_val, aa_scale, dict_label)
 
                         if dict_label.split('_')[proporfreq_index] == 'propensity':
-                            node_indv_propensities[aa_index][dict_index] = value
+                            node_indv_propensities[dict_index][aa_index] = (
+                                dict_weight*np.negative(np.log(value))
+                            )
                         elif dict_label.split('_')[proporfreq_index] == 'frequency':
-                            node_indv_frequencies[aa_index][dict_index] = value
+                            node_indv_frequencies[dict_index][aa_index] = dict_weight*value
 
                 elif dict_label.split('_')[discorcont_index] == 'disc':
                     # Filter dataframe
@@ -432,49 +422,74 @@ class gen_ga_input_calcs(initialise_ga_object):
                                     raise Exception('{} not defined in {}'.format(aa, dict_label))
 
                         if dict_label.split('_')[proporfreq_index] == 'propensity':
-                            node_indv_propensities[aa_index][dict_index] = value
+                            node_indv_propensities[dict_index][aa_index] = (
+                                dict_weight*np.negative(np.log(value))
+                            )
                         elif dict_label.split('_')[proporfreq_index] == 'frequency':
-                            node_indv_frequencies[aa_index][dict_index] = value
+                            node_indv_frequencies[dict_index][aa_index] = dict_weight*value
 
-                dict_index += 1
+            # Sums propensity and frequency values, then filters to remove amino
+            # acids with a propensity / frequency of 0
+            node_indv_propensities = np.nansum(node_indv_propensities, axis=0)
+            node_indv_frequencies = np.nansum(node_indv_frequencies, axis=0)
 
-            (node_indv_propensities, node_indv_frequencies, filtered_aa_list
-            ) = combine_propensities(
-                node_indv_propensities, node_indv_frequencies, sub_dicts,
-                self.dict_weights, self.aa_list
-            )
+            if (
+                   set(node_indv_propensities) == {0}
+                or (self.frequency_dicts != {} and set(node_indv_frequencies) == {0})
+            ):
+                raise Exception('Cannot select side chain identity for node '
+                                '{}'.format(node))
 
-            if node_indv_propensities.size == 0:
-                raise Exception('Cannot select side chain identity for node {}'.format(node))
+            # Removes aas for which all propensity and/or frequency readings (as
+            # appropriate) are np.nan
+            filt_aa_list = []
+            filt_node_prop = []
+            filt_node_freq = []
+            for aa_index, aa in enumerate(self.aa_list):
+                prop = node_indv_propensities[aa_index]
+                freq = node_indv_frequencies[aa_index]
+                if (
+                       (self.frequency_dicts == {} and prop == 0)
+                    or (self.frequency_dicts != {} and prop == 0 and freq == 0)
+                ):
+                    continue
+                filt_aa_list.append(aa)
+                filt_node_prop.append(prop)
+                filt_node_freq.append(freq)
+            filt_aa_list = np.array(filt_aa_list)
+            filt_node_prop = np.array(filt_node_prop)
+            filt_node_freq = np.array(filt_node_freq)
 
             # Converts propensities and frequencies into probability
             # distributions
-            (node_indv_aa_index_propensity, node_indv_propensities,
-             node_propensity_probabilities) = calc_probability_distribution(
-                sub_dicts, node_indv_propensities, 'propensity', raw_or_rank
+            (node_prop_index, node_prop, node_prop_probabilities
+            ) = calc_probability_distribution(
+                node_indv_propensities, 'propensity', raw_or_rank, test
             )
+            node_prop_index = node_prop_index.astype(int)
             if self.frequency_dicts != {}:
-                (node_indv_aa_index_frequency, node_indv_frequencies,
-                 node_frequency_probabilities) = calc_probability_distribution(
-                     sub_dicts, node_indv_frequencies, 'frequency', raw_or_rank
+                (node_freq_index, node_freq, node_freq_probabilities
+                ) = calc_probability_distribution(
+                     filt_node_freq, 'frequency', raw_or_rank, test
                 )
             else:
-                node_indv_aa_index_frequency = copy.deepcopy(node_indv_aa_index_propensity)
-                node_indv_frequencies = np.full(node_indv_frequencies.shape, 0)
-                node_frequency_probabilities = np.full(node_indv_frequencies.shape, 0)
+                node_freq_index = copy.deepcopy(node_prop_index)
+                node_freq = np.full(filt_node_freq.shape, 0)
+                node_freq_probabilities = np.full(filt_node_freq.shape, 0)
+            node_freq_index = node_freq_index.astype(int)
 
-            node_probabilities = np.full(node_propensity_probabilities.shape, np.nan)
-            for prop_index in copy.deepcopy(node_indv_aa_index_propensity):
-                freq_index = np.where(node_indv_aa_index_frequency == index)[0][0]
-                propensity = node_propensity_probabilities[prop_index]
-                frequency = node_frequency_probabilities[freq_index]
+            node_probabilities = np.full(node_prop_probabilities.shape, np.nan)
+            for index_prop, aa in np.ndenumerate(copy.deepcopy(node_prop_index)):
+                index_freq = np.where(node_freq_index == aa)[0][0]
+                propensity = node_prop_probabilities[index_prop]
+                frequency = node_freq_probabilities[index_freq]
 
                 # Since propensity_weight is a hyperparameter to be optimised
                 # with hyperopt, for initial sequence generation the propensity
                 # and frequency scales are weighted equally
-                probability = propensity + frequency
-                node_probabilities[prop_index] = probability
-            filtered_aa_list = filtered_aa_list[node_indv_aa_index_propensity]
+                probability = (0.5*propensity) + (0.5*frequency)
+                node_probabilities[index_prop] = probability
+            filt_aa_list = filt_aa_list[node_prop_index]
             node_cumulative_probabilities = gen_cumulative_probabilities(
                 node_probabilities, node
             )
@@ -484,13 +499,13 @@ class gen_ga_input_calcs(initialise_ga_object):
                 if test is False:
                     random_number = random.uniform(0, 1)
                 elif test is True:
-                    random_number = input_num
+                    random_number = input_num[node]
                 nearest_index = (np.abs(node_cumulative_probabilities-random_number)).argmin()
 
                 if node_cumulative_probabilities[nearest_index] >= random_number:
-                    selected_aa = filtered_aa_list[nearest_index]
+                    selected_aa = filt_aa_list[nearest_index]
                 else:
-                    selected_aa = filtered_aa_list[nearest_index+1]
+                    selected_aa = filt_aa_list[nearest_index+1]
 
                 nx.set_node_attributes(
                     initial_networks[unique_id],
@@ -517,18 +532,18 @@ class gen_ga_input(initialise_ga_object):
         sheet_ids = list(set(self.input_df['sheet_number'].tolist()))
         if len(sheet_ids) != 2:
             raise Exception('Incorrect number of sheets in input beta-sandwich structure')
-        network = input_calcs.generate_networks()
+        initial_network = input_calcs.generate_networks()
 
         # Adds side-chains in order to generate a population of starting
         # sequences to be fed into the genetic algorithm
         initial_sequences_dict = OrderedDict()
         print('Generating initial sequence population for backbone model')
         if self.method_initial_side_chains == 'random':
-            initial_sequences_dict = input_calcs.add_random_initial_side_chains(network)
+            initial_sequences_dict = input_calcs.add_random_initial_side_chains(initial_network)
         elif self.method_initial_side_chains in ['rawpropensity', 'rankpropensity']:
             raw_or_rank = self.method_initial_side_chains.replace('propensity', '')
             initial_sequences_dict = input_calcs.add_initial_side_chains_from_propensities(
-                network, raw_or_rank, False, ''
+                initial_network, raw_or_rank, False, ''
             )
 
-        return initial_sequences_dict
+        return initial_network, initial_sequences_dict

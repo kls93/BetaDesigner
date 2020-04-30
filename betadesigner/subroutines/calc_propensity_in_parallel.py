@@ -135,8 +135,18 @@ def look_up_pair_propensity(G, node_1, scale, label, weight, label_indices):
 
     total_value = 0
 
-    # Loops through each node pair to sum pairwise propensity values
+    # G.edges(node_1) will list all edges from node_1 separately (i.e. if there
+    # are two egdes between node_1 and node_2, the pair (node_1, node_2) will be
+    # listed twice). Therefore, to prevent pairs from being counted more than
+    # once later in the code ("""for edge in G[node_1][node_2]"""), G.edges(node_1)
+    # is first filtered to ensure each node_pair is listed only once.
+    node_pairs = []
     for node_pair in G.edges(node_1):
+        if not node_pair in node_pairs:
+            node_pairs.append(node_pair)
+
+    # Loops through each node pair to sum pairwise propensity values
+    for node_pair in node_pairs:
         # No need to randomly order pair since each will be counted
         # twice in this analysis (once for node 1 and once for node 2)
         node_2 = node_pair[1]
@@ -194,7 +204,7 @@ def look_up_pair_propensity(G, node_1, scale, label, weight, label_indices):
 
 
 def measure_fitness_propensity(
-    num, G, dicts, label_indices, barrel_or_sandwich
+    num, G, dicts, label_indices, barrel_or_sandwich, test=False
 ):
     """
     Measures fitness of amino acid sequences from their propensities for
@@ -254,11 +264,17 @@ def measure_fitness_propensity(
                                  'or a frequency scale'.format(label))
 
     if propensity_count == 0 or np.isnan(propensity_count):
-        print('WARNING: propensity for network {} is '
-              '{}'.format(num, propensity_count))
+        if test is True:
+            pass
+        else:
+            raise ValueError('WARNING: propensity for network {} is '
+                            '{}'.format(num, propensity_count))
     if np.isnan(frequency_count):
-        print('WARNING: frequency count for network {} is '
-              '{}'.format(num, frequency_count))
+        if test is True:
+            pass
+        else:
+            raise ValueError('WARNING: frequency count for network {} is '
+                             '{}'.format(num, frequency_count))
 
     return [num, propensity_count, frequency_count]
 

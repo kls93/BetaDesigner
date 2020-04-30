@@ -104,7 +104,7 @@ def def_input_df_path(params, test=False):
 
 def def_input_df(params):
     """
-    Unpickled input dataframe.
+    Unpickles input dataframe.
     N.B. Must be run AFTER "inputdataframepath" and "phipsiclustercoords" have
     been defined.
     """
@@ -357,8 +357,7 @@ def convert_str_to_dict(dict_string, dict_id, int_or_float, test=False):
 def def_dict_naming_scheme(params):
     """
     Defines order of properties in names of input propensity / frequency
-    scales. For now this is fixed in the order below, update as necessary if
-    the current naming convention changes.
+    scales.
     """
 
     try:
@@ -1559,7 +1558,7 @@ def find_params(args):
     # out because 'equal' needs to be converted into numerical values by
     # def_prop_freq_scale_weights function
     # params['propensityweight'] = def_propensity_weight(params)  # Commented out
-    # because this hyperparameter has been selected fo optimisation with hyperopt
+    # because this hyperparameter has been selected for optimisation with hyperopt
     if 'propensityweight' in list(params.keys()):
         params.pop('propensityweight')
     params['phipsiclustercoords'] = def_phipsi_cluster_coords(params)
@@ -1678,8 +1677,10 @@ class initialise_ga_object():
         aa_code_dict = three_to_one_aa_dict()
         if params['barrelorsandwich'] == '2.40':
             aa_code_dict.pop('CYS')
-        params['aacodes'] = list(aa_code_dict.values())
+        if not params['aacodes']:
+            params['aacodes'] = list(aa_code_dict.values())
 
+        self.input_df_path = params['inputdataframepath']
         self.input_df = params['inputdataframe']
         self.input_pdb = params['inputpdb']
         self.propensity_dicts = params['propensityscales']

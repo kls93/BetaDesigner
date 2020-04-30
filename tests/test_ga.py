@@ -18,8 +18,9 @@ def define_params():
 
     prop_freq_dicts = gen_prop_and_freq_distributions()
 
-    params = {'inputdataframe': '',
-              'inputpdb': 'example_pdb.pdb',
+    params = {'inputdataframepath': '',
+              'inputdataframe': '',
+              'inputpdb': '',
               'propensityscales': {key: val for key, val in prop_freq_dicts.items()
                                    if 'propensity' in key},
               'frequencyscales': {key: val for key, val in prop_freq_dicts.items()
@@ -69,6 +70,24 @@ def gen_prop_and_freq_distributions():
                                                  'N_A': np.array([[-10, 0, 10], [2.0, 1.2, 0.4]]),
                                                  'N_R': np.array([[-10, 0, 10], [1.5, 1.2, 0.9]]),
                                                  'N_N': np.array([[-10, 0, 10], [0.6, 0.3, 1.7]])},
+             'ext_-_z_plusminus1_pair_cont_propensity': {'A_A': np.array([[-10, 0, 10], [0.6, 2.0, 0.4]]),
+                                                         'A_R': np.array([[-10, 0, 10], [2.5, 1.2, 0.4]]),
+                                                         'A_N': np.array([[-10, 0, 10], [0.5, 0.2, 1.4]]),
+                                                         'R_A': np.array([[-10, 0, 10], [0.6, 1.0, 1.2]]),
+                                                         'R_R': np.array([[-10, 0, 10], [1.4, 1.3, 0.6]]),
+                                                         'R_N': np.array([[-10, 0, 10], [0.3, 1.6, 0.7]]),
+                                                         'N_A': np.array([[-10, 0, 10], [2.1, 1.0, 1.0]]),
+                                                         'N_R': np.array([[-10, 0, 10], [1.9, 1.2, 0.1]]),
+                                                         'N_N': np.array([[-10, 0, 10], [0.8, 0.9, 1.0]])},
+             'ext_-_z_plusminus2_pair_cont_propensity': {'A_A': np.array([[-10, 0, 10], [1.0, 1.9, 0.6]]),
+                                                         'A_R': np.array([[-10, 0, 10], [2.2, 0.8, 1.9]]),
+                                                         'A_N': np.array([[-10, 0, 10], [1.7, 0.3, 1.9]]),
+                                                         'R_A': np.array([[-10, 0, 10], [2.0, 1.1, 1.6]]),
+                                                         'R_R': np.array([[-10, 0, 10], [1.4, 1.4, 1.5]]),
+                                                         'R_N': np.array([[-10, 0, 10], [1.2, 0.8, 0.1]]),
+                                                         'N_A': np.array([[-10, 0, 10], [1.2, 1.5, 1.0]]),
+                                                         'N_R': np.array([[-10, 0, 10], [0.8, 1.1, 0.2]]),
+                                                         'N_N': np.array([[-10, 0, 10], [0.6, 0.6, 0.4]])},
              'int_-_-_-_indv_disc_frequency': pd.DataFrame({'FASTA': ['A', 'R', 'N'],
                                                             'int': [0.8, 0.15, 0.05]})}
 
@@ -107,16 +126,28 @@ def gen_sequence_networks():
     network_4.add_edge(1, 2, interaction='hb')
     network_4.add_edge(2, 3, interaction='hb')
 
+    network_5 = nx.MultiGraph()
+    network_5.add_node(1, type='strand', aa_id='N', int_ext='int', eoc='-', z=-5)
+    network_5.add_node(2, type='strand', aa_id='A', int_ext='int', eoc='-', z=0)
+    network_5.add_node(3, type='loop', aa_id='N', int_ext='int', eoc='-', z=7)
+    network_5.add_edge(1, 2, interaction='hb')
+    network_5.add_edge(2, 3, interaction='hb')
 
-    fit_test_dict = {1: network_1,
-                     2: network_2}
+    network_6 = nx.MultiGraph()
+    network_6.add_node(1, type='loop', aa_id='A', int_ext='int', eoc='-', z=-5)
+    network_6.add_node(2, type='loop', aa_id='R', int_ext='int', eoc='-', z=0)
+    network_6.add_node(3, type='loop', aa_id='R', int_ext='int', eoc='-', z=7)
+    network_6.add_edge(1, 2, interaction='hb')
+    network_6.add_edge(2, 3, interaction='hb')
 
-    cross_test_dict = {1: network_1,
-                       2: network_2,
-                       3: network_3,
-                       4: network_4}
+    test_dict = {1: network_1,
+                 2: network_2,
+                 3: network_3,
+                 4: network_4,
+                 5: network_5,
+                 6: network_6}
 
-    return fit_test_dict, cross_test_dict
+    return test_dict
 
 
 class testGeneticAlgorithm(unittest.TestCase):
@@ -128,7 +159,7 @@ class testGeneticAlgorithm(unittest.TestCase):
         """
 
         params = define_params()
-        fit_test_dict, cross_test_dict = gen_sequence_networks()
+        test_dict = gen_sequence_networks()
         prop_freq_dicts = gen_prop_and_freq_distributions()
         prop_freq_list = []
         for label, scale in prop_freq_dicts.items():
@@ -137,9 +168,9 @@ class testGeneticAlgorithm(unittest.TestCase):
 
         network_prop = OrderedDict()
         network_freq = OrderedDict()
-        for num, network in fit_test_dict.items():
+        for num, network in test_dict.items():
             num, prop, freq = measure_fitness_propensity(
-                num, network, prop_freq_list, params['dictnameindices'], '2.60'
+                num, network, prop_freq_list, params['dictnameindices'], '2.60', True
             )
             network_prop[num] = prop
             network_freq[num] = freq
@@ -156,8 +187,16 @@ class testGeneticAlgorithm(unittest.TestCase):
 
         np.testing.assert_almost_equal(network_propensities[1], -0.887891, decimal=5)
         np.testing.assert_almost_equal(network_propensities[2], -3.222491, decimal=5)
+        np.testing.assert_almost_equal(network_propensities[3], -0.978747, decimal=5)
+        np.testing.assert_almost_equal(network_propensities[4], -1.560937, decimal=5)
+        np.testing.assert_almost_equal(network_propensities[5], -1.645576, decimal=5)
+        np.testing.assert_almost_equal(network_propensities[6], 0, decimal=5)
         np.testing.assert_almost_equal(network_frequencies[1], 2.4, decimal=5)
         np.testing.assert_almost_equal(network_frequencies[2], 1, decimal=5)
+        np.testing.assert_almost_equal(network_frequencies[3], 1, decimal=5)
+        np.testing.assert_almost_equal(network_frequencies[4], 0.25, decimal=5)
+        np.testing.assert_almost_equal(network_frequencies[5], 0.85, decimal=5)
+        np.testing.assert_almost_equal(network_frequencies[6], 0, decimal=5)
 
     def test_combine_prop_and_freq_scores(self):
         """
@@ -178,8 +217,12 @@ class testGeneticAlgorithm(unittest.TestCase):
         network_fitness_scores = ga_calcs.combine_prop_and_freq_scores(
             network_propensities, network_frequencies, 'raw'
         )
-        np.testing.assert_almost_equal(network_fitness_scores[1], 0.397089, decimal=5)
-        np.testing.assert_almost_equal(network_fitness_scores[2], 0.602910, decimal=5)
+        np.testing.assert_almost_equal(network_fitness_scores[1], 0.247723, decimal=5)
+        np.testing.assert_almost_equal(network_fitness_scores[2], 0.395932, decimal=5)
+        np.testing.assert_almost_equal(network_fitness_scores[3], 0.123260, decimal=5)
+        np.testing.assert_almost_equal(network_fitness_scores[4], 0.080633, decimal=5)
+        np.testing.assert_almost_equal(network_fitness_scores[5], 0.140294, decimal=5)
+        np.testing.assert_almost_equal(network_fitness_scores[6], 0.012156, decimal=5)
 
         # Test 2
         bayes_params = {'propensityweight': 0.8,
@@ -190,8 +233,12 @@ class testGeneticAlgorithm(unittest.TestCase):
         network_fitness_scores = ga_calcs.combine_prop_and_freq_scores(
             network_propensities, network_frequencies, 'raw'
         )
-        np.testing.assert_almost_equal(network_fitness_scores[1], 0.211814, decimal=5)
-        np.testing.assert_almost_equal(network_fitness_scores[2], 0.788185, decimal=5)
+        np.testing.assert_almost_equal(network_fitness_scores[1], 0.134538, decimal=5)
+        np.testing.assert_almost_equal(network_fitness_scores[2], 0.524400, decimal=5)
+        np.testing.assert_almost_equal(network_fitness_scores[3], 0.088125, decimal=5)
+        np.testing.assert_almost_equal(network_fitness_scores[4], 0.101741, decimal=5)
+        np.testing.assert_almost_equal(network_fitness_scores[5], 0.131743, decimal=5)
+        np.testing.assert_almost_equal(network_fitness_scores[6], 0.019451, decimal=5)
 
         # Test 3
         bayes_params = {'propensityweight': 1,
@@ -202,8 +249,12 @@ class testGeneticAlgorithm(unittest.TestCase):
         network_fitness_scores = ga_calcs.combine_prop_and_freq_scores(
             network_propensities, network_frequencies, 'raw'
         )
-        np.testing.assert_almost_equal(network_fitness_scores[1], 0.088297, decimal=5)
-        np.testing.assert_almost_equal(network_fitness_scores[2], 0.911702, decimal=5)
+        np.testing.assert_almost_equal(network_fitness_scores[1], 0.059082, decimal=5)
+        np.testing.assert_almost_equal(network_fitness_scores[2], 0.610045, decimal=5)
+        np.testing.assert_almost_equal(network_fitness_scores[3], 0.064701, decimal=5)
+        np.testing.assert_almost_equal(network_fitness_scores[4], 0.115813, decimal=5)
+        np.testing.assert_almost_equal(network_fitness_scores[5], 0.126042, decimal=5)
+        np.testing.assert_almost_equal(network_fitness_scores[6], 0.024313, decimal=5)
 
         # Test 4
         bayes_params = {'propensityweight': 0.6,
@@ -214,8 +265,12 @@ class testGeneticAlgorithm(unittest.TestCase):
         network_fitness_scores = ga_calcs.combine_prop_and_freq_scores(
             network_propensities, network_frequencies, 'rank'
         )
-        np.testing.assert_almost_equal(network_fitness_scores[1], 0.482352, decimal=5)
-        np.testing.assert_almost_equal(network_fitness_scores[2], 0.517647, decimal=5)
+        np.testing.assert_almost_equal(network_fitness_scores[1], 0.231688, decimal=5)
+        np.testing.assert_almost_equal(network_fitness_scores[2], 0.244155, decimal=5)
+        np.testing.assert_almost_equal(network_fitness_scores[3], 0.158441, decimal=5)
+        np.testing.assert_almost_equal(network_fitness_scores[4], 0.132467, decimal=5)
+        np.testing.assert_almost_equal(network_fitness_scores[5], 0.204675, decimal=5)
+        np.testing.assert_almost_equal(network_fitness_scores[6], 0.028571, decimal=5)
 
     def test_convert_energy_to_probability(self):
         """
@@ -306,7 +361,14 @@ class testGeneticAlgorithm(unittest.TestCase):
         """
         """
 
-        fit_test_dict, cross_test_dict = gen_sequence_networks()
+        test_dict = gen_sequence_networks()
+        test_sub_dict = {5: copy.deepcopy(test_dict[5]),
+                         6: copy.deepcopy(test_dict[6])}
+        test_dict[6].nodes[1]['type'] = 'strand'
+        test_dict[6].nodes[2]['type'] = 'strand'
+        test_dict[6].nodes[3]['type'] = 'loop'
+        sub_pairs = [(5, 6)]
+        pairs = [(1, 2), (3, 4), (5, 6)]
 
         params = define_params()
         bayes_params = {'propensityweight': 0.5,
@@ -314,18 +376,25 @@ class testGeneticAlgorithm(unittest.TestCase):
                         'crossoverprob': 0.1,
                         'mutationprob': 0.05}
 
-        # Tests uniform crossover
+        # Uniform crossover tests
         print('Testing uniform_crossover()')
 
         ga_calcs = run_ga_calcs({**params, **bayes_params}, test=True)
 
-        pairs = [(1, 2), (3, 4)]
+        # Checks networks with different strand / loop labelling of residues
+        # raise an error
+        with self.assertRaises(TypeError): ga_calcs.uniform_crossover(
+            test_sub_dict, test=True, pairs=sub_pairs,
+            crossover_prob={0: {1: 0.05, 2: 0.05, 3: 0.05}}
+            )
+
+        # Tests uniform crossover
         crossover_prob = {0: {1: 0.08, 2: 0.5, 3: 0.1},
-                          1: {1: 0.04, 2: 0, 3: 0.9}}
+                          1: {1: 0.04, 2: 0, 3: 0.9},
+                          2: {1: 0.05, 2: 0.05, 3: 0.05}}
 
         uniform_crossover_dict = ga_calcs.uniform_crossover(
-            cross_test_dict, test=True, pairs=pairs,
-            crossover_prob=crossover_prob
+            test_dict, test=True, pairs=pairs, crossover_prob=crossover_prob
         )
 
         uniform_sequences = {}
@@ -340,22 +409,31 @@ class testGeneticAlgorithm(unittest.TestCase):
         np.testing.assert_equal(uniform_sequences[2], 'ANA')
         np.testing.assert_equal(uniform_sequences[3], 'NRN')
         np.testing.assert_equal(uniform_sequences[4], 'RAN')
+        np.testing.assert_equal(uniform_sequences[5], 'ARN')
+        np.testing.assert_equal(uniform_sequences[6], 'NAR')
 
-        # Tests segmented crossover
+
+        # Segmented crossover tests
         print('Testing segmented_crossover()')
 
+        # Checks networks with different strand / loop labelling of residues
+        # raise an error
         params['crossovermethod'] = 'segmented'
         params['swapstartprob'] = 0.1
         params['swapstopprob'] = 0.4
         ga_calcs = run_ga_calcs({**params, **bayes_params}, test=True)
+        with self.assertRaises(TypeError): ga_calcs.segmented_crossover(
+            test_sub_dict, test=True, pairs=sub_pairs,
+            crossover_prob={0: {1: 0.05, 2: 0.5, 3: 0.8}}
+            )
 
-        pairs = [(1, 2), (3, 4)]
+        # Tests segmented crossover
         crossover_prob = {0: {1: 0.5, 2: 0.05, 3: 0.6},
-                          1: {1: 0.1, 2: 0.4, 3: 0.4}}
+                          1: {1: 0.1, 2: 0.4, 3: 0.4},
+                          2: {1: 0.05, 2: 0.5, 3: 0.8}}
 
         segmented_crossover_dict = ga_calcs.segmented_crossover(
-            cross_test_dict, test=True, pairs=pairs,
-            crossover_prob=crossover_prob
+            test_dict, test=True, pairs=pairs, crossover_prob=crossover_prob
         )
 
         segmented_sequences = {}
@@ -370,12 +448,14 @@ class testGeneticAlgorithm(unittest.TestCase):
         np.testing.assert_equal(segmented_sequences[2], 'AAA')
         np.testing.assert_equal(segmented_sequences[3], 'NAN')
         np.testing.assert_equal(segmented_sequences[4], 'RRN')
+        np.testing.assert_equal(segmented_sequences[5], 'ARN')
+        np.testing.assert_equal(segmented_sequences[6], 'NAR')
 
     def test_mutation(self):
         """
         """
 
-        fit_test_dict, mut_test_dict = gen_sequence_networks()
+        test_dict = gen_sequence_networks()
 
         params = define_params()
         bayes_params = {'propensityweight': 0.5,
@@ -386,7 +466,9 @@ class testGeneticAlgorithm(unittest.TestCase):
         mutation_prob = {1: {1: 0.2, 2: 0.5, 3: 0.3},
                          2: {1: 0.5, 2: 0.0, 3: 0.1},
                          3: {1: 0.7, 2: 0.6, 3: 0.9},
-                         4: {1: 0.4, 2: 0.2, 3: 0.1}}
+                         4: {1: 0.4, 2: 0.2, 3: 0.1},
+                         5: {1: 0.2, 2: 0.1, 3: 0.1},
+                         6: {1: 0.4, 2: 0.1, 3: 0.1}}
 
         ga_calcs = run_ga_calcs({**params, **bayes_params}, test=True)
 
@@ -395,49 +477,50 @@ class testGeneticAlgorithm(unittest.TestCase):
 
         random_aas = 'BCDEFGHIJKLMOPQSTUVWXYZ'
         swap_mutation_dict = ga_calcs.swap_mutate(
-            mut_test_dict, test=True, mutation_prob=mutation_prob,
+            test_dict, test=True, mutation_prob=mutation_prob,
             random_aas=random_aas
         )
 
         for network in swap_mutation_dict.keys():
             for node in swap_mutation_dict[network].nodes:
-                orig_aa_id = mut_test_dict[network].nodes[node]['aa_id']
+                orig_aa_id = test_dict[network].nodes[node]['aa_id']
                 new_aa_id = swap_mutation_dict[network].nodes[node]['aa_id']
                 mut_prob = mutation_prob[network][node]
-                if mut_prob <= 0.2:
-                    self.assertNotEqual(orig_aa_id, new_aa_id)
+                if swap_mutation_dict[network].nodes[node]['type'] == 'strand':
+                    if mut_prob <= 0.2:
+                        self.assertNotEqual(orig_aa_id, new_aa_id)
+                    else:
+                        self.assertEqual(orig_aa_id, new_aa_id)
                 else:
                     self.assertEqual(orig_aa_id, new_aa_id)
 
         # Tests scramble mutation
+        mutation_prob = {1: {1: 0.2, 2: 0.5, 3: 0.3},
+                         2: {1: 0.5, 2: 0.0, 3: 0.1},
+                         3: {1: 0.7, 2: 0.6, 3: 0.9},
+                         4: {1: 0.4, 2: 0.2, 3: 0.1},
+                         5: {1: 0.2, 2: 0.1, 3: 0.1},
+                         6: {1: 0.4, 2: 0.1, 3: 0.1}}
+
         print('Testing scramble_mutate()')
         scramble_mutation_dict = ga_calcs.scramble_mutate(
-            mut_test_dict, test=True, mutation_prob=mutation_prob
+            test_dict, test=True, mutation_prob=mutation_prob
         )
 
-        for network in scramble_mutation_dict.keys():
-            scrambled_aa_ids = []
+        scramble_sequences = {}
+        for i in list(scramble_mutation_dict.keys()):
+            scramble_seq = ''.join(
+                [scramble_mutation_dict[i].nodes[x]['aa_id']
+                 for x in scramble_mutation_dict[i].nodes]
+            )
+            scramble_sequences[i] = scramble_seq
 
-            for n in [0, 1]:
-                scrambled_aa_ids = scrambled_aa_ids[::-1]
-                count = 0
-
-                for index, node in enumerate(list(scramble_mutation_dict[network].nodes)):
-                    orig_aa_id = mut_test_dict[network].nodes[node]['aa_id']
-                    new_aa_id = scramble_mutation_dict[network].nodes[node]['aa_id']
-                    mut_prob = mutation_prob[network][node]
-
-                    if mut_prob <= 0.2:
-                        if n == 0:
-                            scrambled_aa_ids.append(orig_aa_id)
-                        if n == 1:
-                            exp_aa_id = scrambled_aa_ids[count]
-                            count += 1
-                            self.assertEqual(exp_aa_id, new_aa_id)
-
-                    else:
-                        if n == 1:
-                            self.assertEqual(orig_aa_id, new_aa_id)
+        np.testing.assert_equal(scramble_sequences[1], 'AAA')
+        np.testing.assert_equal(scramble_sequences[2], 'ARN')
+        np.testing.assert_equal(scramble_sequences[3], 'RAN')
+        np.testing.assert_equal(scramble_sequences[4], 'NNR')
+        np.testing.assert_equal(scramble_sequences[5], 'ANN')
+        np.testing.assert_equal(scramble_sequences[6], 'ARR')
 
     def test_add_children_to_parents(self):
         """

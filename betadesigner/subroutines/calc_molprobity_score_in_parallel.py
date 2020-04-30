@@ -97,7 +97,7 @@ def parse_molprobity_res_output(molp_stdout_res, stdout_res_header, pdb_path):
     for res in molp_stdout_res:
         res_data = res.split(',')
         res_id = res_data[res_id_index].strip().split()
-        res_id = '{}_{}_{}_{}'.format(pdb_path, res_id[2], res_id[0], res_id[1])
+        res_id = '{}_{}_{}'.format(res_id[2], res_id[0], res_id[1])
         try:
             cbeta_dev = float(res_data[cbeta_dev_index])
         except ValueError:

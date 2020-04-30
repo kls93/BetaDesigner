@@ -75,7 +75,7 @@ if __name__ == '__main__':
     wd = vars(args)['output']
 
     updated_sequences_dict = OrderedDict()
-    structures_list = []
+    structures_out = []
     bude_energies_dict = OrderedDict()
 
     # Loads backbone model into ISAMBARD. NOTE must have been pre-processed
@@ -87,12 +87,12 @@ if __name__ == '__main__':
     ampal_pdb_list = [copy.deepcopy(ampal_pdb) for n in range(len(sequences_dict))]
     pdb_list = [copy.deepcopy(pdb) for n in range(len(sequences_dict))]
 
-    structures_list = futures.map(
+    structures = futures.map(
         write_pdb, list(sequences_dict.keys()), list(sequences_dict.values()),
         wd_list, ampal_pdb_list, pdb_list
     )
 
-    for index, tup in enumerate(structures_list):
+    for index, tup in enumerate(structures):
         struct_name = tup[0]
         num = tup[1]
         network = tup[2]
@@ -100,7 +100,7 @@ if __name__ == '__main__':
         orig_struct_energy = tup[4]
 
         bude_energies_dict[struct_name] = new_struct_energy
-        structures_list.append(struct_name)
+        structures_out.append(struct_name)
         updated_sequences_dict[struct_name] = network
 
         if index == 0:
@@ -110,4 +110,4 @@ if __name__ == '__main__':
             f.write('{}: {}\n'.format(num, new_struct_energy))
 
     with open('{}/BUDE_energies.pkl'.format(wd), 'wb') as f:
-        pickle.dump((updated_sequences_dict, structures_list, bude_energies_dict), f)
+        pickle.dump((updated_sequences_dict, structures_out, bude_energies_dict), f)

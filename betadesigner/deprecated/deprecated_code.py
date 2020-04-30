@@ -91,3 +91,56 @@ def test_write_output_pdb(self):
             fasta_lines = f.readlines()
         self.assertEqual(fasta_lines[0], '>{}'.format(model))
         self.assertEqual(fasta_lines[1], exp_model_info['sequence'][model_index])
+
+
+def nansum_axis_1(input_array):
+    """
+    Overwrites behaviour of np.nansum to return np.nan instead of 0.0 when
+    summing an array along axis=1 (i.e. along a row, or the x-axis if you like)
+    consisting entirely of NaN values
+    """
+
+    output_array = []
+    for row in input_array:
+        if np.isnan(row).all():
+            output_array.append(np.nan)
+        else:
+            output_array.append(np.nansum(row))
+    output_array = np.array(output_array)
+
+    return output_array
+
+
+def combine_propensities(node_indv_propensities, node_indv_frequencies,
+                         sub_dicts, dict_weights, aa_list):
+    """
+    Sums weighted propensities across structural features considered
+    NOTE: must take -ve logarithm of each individual propensity
+    score before summing (rather than taking the -ve logarithm of
+    the summed propensities)
+    """
+
+    node_indv_propensities = np.negative(np.log(node_indv_propensities))
+
+    for index, dict_label in enumerate(list(sub_dicts.keys())):
+        dict_weight = dict_weights[dict_label]
+        node_indv_propensities[:,index] *= dict_weight
+        node_indv_frequencies[:,index] *= dict_weight
+
+    node_indv_propensities = nansum_axis_1(node_indv_propensities)
+    node_indv_frequencies = nansum_axis_1(node_indv_frequencies)
+
+    # Removes NaN values
+    filtered_aa_list = np.array(copy.deepcopy(aa_list))
+
+    nan_propensity = np.isnan(node_indv_propensities)
+    node_indv_propensities = node_indv_propensities[~nan_propensity]
+    node_indv_frequencies = node_indv_frequencies[~nan_propensity]
+    filtered_aa_list = filtered_aa_list[~nan_propensity]
+
+    nan_frequency = np.isnan(node_indv_frequencies)
+    node_indv_propensities = node_indv_propensities[~nan_frequency]
+    node_indv_frequencies = node_indv_frequencies[~nan_frequency]
+    filtered_aa_list = filtered_aa_list[~nan_frequency]
+
+    return node_indv_propensities, node_indv_frequencies, filtered_aa_list

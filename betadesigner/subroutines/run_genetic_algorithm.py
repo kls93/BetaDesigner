@@ -345,7 +345,15 @@ class run_ga_calcs(initialise_ga_object):
             mate_2 = copy.deepcopy(mating_pop_dict[network_num_2])
 
             for node in list(mate_1.nodes):
-                if mate_1.nodes[node]['type'] == 'loop':
+                type_1 = mate_1.nodes()[node]['type']
+                type_2 = mate_2.nodes()[node]['type']
+                if type_1 != type_2:
+                    raise TypeError(
+                        'Difference between type of {} in {} ({} = {}; {} ='
+                        ' {}) - should be identical'.format(node, network_pair,
+                        network_num_1, type_1, network_num_2, type_2)
+                    )
+                if type_1 == 'loop':
                     continue
 
                 if test is False:
@@ -359,14 +367,14 @@ class run_ga_calcs(initialise_ga_object):
                     # both nodes will be assigned the same identity as the node
                     # in mate_1, instead of the node identities being crossed
                     # over)
-                    mate_1_node_attributes = copy.deepcopy(mate_1.nodes[node])
-                    mate_2_node_attributes = copy.deepcopy(mate_2.nodes[node])
-                    # mate_1.nodes[node] = {} does not work, get
+                    mate_1_node_attributes = copy.deepcopy(mate_1.nodes()[node])
+                    mate_2_node_attributes = copy.deepcopy(mate_2.nodes()[node])
+                    # mate_1.nodes()[node] = {} does not work, get
                     # TypeError: 'NodeView' object does not support item assignment
-                    for attribute in list(mate_1.nodes[node].keys()):
-                        del mate_1.nodes[node][attribute]
-                    for attribute in list(mate_2.nodes[node].keys()):
-                        del mate_2.nodes[node][attribute]
+                    for attribute in list(mate_1.nodes()[node].keys()):
+                        del mate_1.nodes()[node][attribute]
+                    for attribute in list(mate_2.nodes()[node].keys()):
+                        del mate_2.nodes()[node][attribute]
                     nx.set_node_attributes(mate_1, values={node: mate_2_node_attributes})
                     nx.set_node_attributes(mate_2, values={node: mate_1_node_attributes})
 
@@ -407,7 +415,15 @@ class run_ga_calcs(initialise_ga_object):
 
             swap = False
             for node in list(mate_1.nodes):
-                if mate_1.nodes[node]['type'] == 'loop':
+                type_1 = mate_1.nodes()[node]['type']
+                type_2 = mate_2.nodes()[node]['type']
+                if type_1 != type_2:
+                    raise TypeError(
+                        'Difference between type of {} in {} ({} = {}; {} ='
+                        ' {}) - should be identical'.format(node, network_pair,
+                        network_num_1, type_1, network_num_2, type_2)
+                    )
+                if type_1 == 'loop':
                     continue
 
                 if test is False:
@@ -432,14 +448,14 @@ class run_ga_calcs(initialise_ga_object):
                     # both nodes will be assigned the same identity as the node
                     # in mate_1, instead of the node identities being crossed
                     # over)
-                    mate_1_attributes = copy.deepcopy(mate_1.nodes[node])
-                    mate_2_attributes = copy.deepcopy(mate_2.nodes[node])
-                    # mate_1.nodes[node] = {} does not work, get
+                    mate_1_attributes = copy.deepcopy(mate_1.nodes()[node])
+                    mate_2_attributes = copy.deepcopy(mate_2.nodes()[node])
+                    # mate_1.nodes()[node] = {} does not work, get
                     # TypeError: 'NodeView' object does not support item assignment
-                    for attribute in list(mate_1.nodes[node].keys()):
-                        del mate_1.nodes[node][attribute]
-                    for attribute in list(mate_2.nodes[node].keys()):
-                        del mate_2.nodes[node][attribute]
+                    for attribute in list(mate_1.nodes()[node].keys()):
+                        del mate_1.nodes()[node][attribute]
+                    for attribute in list(mate_2.nodes()[node].keys()):
+                        del mate_2.nodes()[node][attribute]
                     nx.set_node_attributes(mate_1, values={node: mate_2_attributes})
                     nx.set_node_attributes(mate_2, values={node: mate_1_attributes})
 
@@ -466,7 +482,7 @@ class run_ga_calcs(initialise_ga_object):
             G = copy.deepcopy(crossover_pop_dict[network_num])
 
             for node in list(G.nodes):
-                if G.nodes[node]['type'] == 'loop':
+                if G.nodes()[node]['type'] == 'loop':
                     continue
 
                 if test is False:
@@ -475,7 +491,7 @@ class run_ga_calcs(initialise_ga_object):
                     random_number = mutation_prob[network_num][node]
                 if random_number <= self.mutation_prob:
                     if test is False:
-                        orig_aa = G.nodes[node]['aa_id']
+                        orig_aa = G.nodes()[node]['aa_id']
                         poss_aas = copy.deepcopy(self.aa_list)
                         poss_aas.remove(orig_aa)
                         new_aa = poss_aas[random.randint(0, (len(poss_aas)-1))]
@@ -509,7 +525,7 @@ class run_ga_calcs(initialise_ga_object):
             scrambled_nodes = []
             aa_ids = []
             for node in list(G.nodes):
-                if G.nodes[node]['type'] == 'loop':
+                if G.nodes()[node]['type'] == 'loop':
                     continue
 
                 if test is False:
@@ -518,7 +534,7 @@ class run_ga_calcs(initialise_ga_object):
                     random_number = mutation_prob[network_num][node]
                 if random_number <= self.mutation_prob:
                     scrambled_nodes.append(node)
-                    aa_ids.append(G.nodes[node]['aa_id'])
+                    aa_ids.append(G.nodes()[node]['aa_id'])
 
             if test is False:
                 random.shuffle(aa_ids)
@@ -592,24 +608,24 @@ def run_genetic_algorithm(bayes_params):
 
     if params['fitnessscoremethod'] != 'allatom':
         (network_propensity_scores, network_frequency_scores
-        ) = ga_calcs.measure_fitness_propensity(params['initialsequencesdict'])
+        ) = ga_calcs.measure_fitness_propensity(params['initialnetwork'])
 
         with open('{}/Program_output/Sequence_track.txt'.format(
             bayes_params['workingdirectory']), 'a') as f:
-            for network, G in params['initialsequencesdict'].items():
-                sequence = ''.join([G.nodes[node]['aa_id'] for node in G.nodes])
+            for network, G in params['initialnetwork'].items():
+                sequence = ''.join([G.nodes()[node]['aa_id'] for node in G.nodes()])
                 propensity = network_propensity_scores[network]
                 frequency = network_frequency_scores[network]
                 f.write('{}, {}, {}, {}\n'.format(network, sequence, propensity, frequency))
             f.write('\n')
 
     elif params['fitnessscoremethod'] == 'allatom':
-        network_energies = ga_calcs.measure_fitness_allatom(params['initialsequencesdict'])
+        network_energies = ga_calcs.measure_fitness_allatom(params['initialnetwork'])
 
         with open('{}/Program_output/Sequence_track.txt'.format(
             bayes_params['workingdirectory']), 'a') as f:
-            for network, G in params['initialsequencesdict'].items():
-                sequence = ''.join([G.nodes[node]['aa_id'] for node in G.nodes])
+            for network, G in params['initialnetwork'].items():
+                sequence = ''.join([G.nodes()[node]['aa_id'] for node in G.nodes()])
                 energy = network_energies[network]
                 f.write('{}, {}, {}, {}\n'.format(network, sequence, energy))
             f.write('\n')
@@ -668,7 +684,7 @@ def run_genetic_algorithm(bayes_params):
                     bayes_params['workingdirectory']), 'a') as f:
                     f.write('network, sequence, propensity, frequency')
                     for network, G in networks_dict.items():
-                        sequence = ''.join([G.nodes[node]['aa_id'] for node in G.nodes])
+                        sequence = ''.join([G.nodes()[node]['aa_id'] for node in G.nodes()])
                         propensity = network_propensity_scores[network]
                         frequency = network_frequency_scores[network]
                         f.write('{}, {}, {}, {}\n'.format(
@@ -697,7 +713,7 @@ def run_genetic_algorithm(bayes_params):
                     bayes_params['workingdirectory']), 'a') as f:
                     f.write('network, sequence, BUDE score')
                     for network, G in networks_dict.items():
-                        sequence = ''.join([G.nodes[node]['aa_id'] for node in G.nodes])
+                        sequence = ''.join([G.nodes()[node]['aa_id'] for node in G.nodes()])
                         energy = network_energies[network]
                         f.write('{}, {}, {}\n'.format(network, sequence, energy))
                     f.write('Total: {}'.format(sum(network_energies.values())))
@@ -777,7 +793,7 @@ def run_genetic_algorithm(bayes_params):
         elif params['fitnessscoremethod'] == 'allatom':
             f.write('network, sequence, BUDE score')
         for network, G in params['sequencesdict'].items():
-            sequence = ''.join([G.nodes[node]['aa_id'] for node in G.nodes])
+            sequence = ''.join([G.nodes()[node]['aa_id'] for node in G.nodes()])
             if params['fitnessscoremethod'] != 'allatom':
                 propensity = network_propensity_scores[network]
                 frequency = network_frequency_scores[network]
