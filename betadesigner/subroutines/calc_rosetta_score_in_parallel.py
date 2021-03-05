@@ -9,6 +9,7 @@ import os
 import pickle
 import random
 import string
+import numpy as np
 import pandas as pd
 from collections import OrderedDict
 from scoop import futures
@@ -18,8 +19,11 @@ def parse_rosetta_score_file(score_file_lines):
     """
     """
 
-    total_energy_index = score_file_lines[1].split().index('total_score')
-    total_energy = float(score_file_lines[2].split()[total_energy_index])
+    if not type(score_file_lines) is list:
+        total_energy = np.nan
+    else:
+        total_energy_index = score_file_lines[1].split().index('total_score')
+        total_energy = float(score_file_lines[2].split()[total_energy_index])
 
     return total_energy
 
@@ -40,6 +44,11 @@ def parse_rosetta_pdb_file(pdb_path, rosetta_lines, pdb_lines):
         res_id = '{}_{}_{}'.format(line[17:20], line[21:22], line[22:26].strip())
         if line[0:6].strip() in ['ATOM', 'HETATM'] and not res_id in pdb_res_list:
             pdb_res_list.append(res_id)
+
+    if not type(rosetta_lines) is list:
+        for res_id in pdb_res_list:
+            res_energies_dict[res_id] = np.nan
+        return res_energies_dict
 
     start = False
     res_energy_index = ''
@@ -88,9 +97,8 @@ def score_pdb_rosetta(pdb_path, cwd, barrel_or_sandwich):
     nwd = '{}/{}_rosetta_results'.format(nwd, pdb)
     if not os.path.isdir(nwd):
         os.mkdir(nwd)
-    os.chdir(nwd)  # Need to change directory so that when running RosettaMP
-    # output spanfile is written here (unfortunately can't specify location
-    # with flag)
+    os.chdir(nwd)  # Need to change directory so that when running RosettaMP output
+    # spanfile is written here (unfortunately can't specify location with flag)
 
     # Relaxes a beta-sandwich structure and calculates the total energy of the
     # structure (in Rosetta Energy Units)
@@ -122,15 +130,16 @@ def score_pdb_rosetta(pdb_path, cwd, barrel_or_sandwich):
         # First generate spanfile if doesn't already exist (to avoid
         # interference between parallel processes)
         if not os.path.isfile('{}/{}.span'.format(nwd, pdb)):
+            os.system('cp {} {}/{}.pdb'.format(pdb_path, nwd, pdb))
             os.system(
-                'mp_span_from_pdb.linuxgccrelease -in:file:s {}'.format(pdb_path)
+                'mp_span_from_pdb.linuxgccrelease -in:file:s {}/{}.pdb'.format(nwd, pdb)
             )
+            os.system('rm {}/{}.pdb'.format(nwd, pdb))
 
         # Then relax structure with RosettaMP. Use mp_relax protocol updated for
         # ROSETTA3.
-        with open('{}/RosettaMPRelaxInputs{}'.format(cwd, unique_id), 'w') as f:
-            f.write('-parser:protocol '
-                    '$ROSETTA3/src/apps/public/membrane/mp_relax_updated.xml\n'
+        with open('{}/RosettaMPRelaxInputs{}'.format(nwd, unique_id), 'w') as f:
+            f.write('-parser:protocol /home/shared/rosetta/main/source/src/apps/public/membrane/mp_relax_updated.xml\n'
                     '-in:file:s {}\n'
                     '-nstruct 1\n'
                     '-mp:setup:spanfiles {}/{}.span\n'
@@ -143,21 +152,27 @@ def score_pdb_rosetta(pdb_path, cwd, barrel_or_sandwich):
                         pdb_path, nwd, pdb, nwd, nwd, pdb
                     ))
         os.system('rosetta_scripts.linuxgccrelease @{}/RosettaMPRelaxInputs'
-                  '{}'.format(cwd, unique_id))
-        os.remove('{}/RosettaMPRelaxInputs{}'.format(cwd, unique_id))
+                  '{}'.format(nwd, unique_id))
+        os.remove('{}/RosettaMPRelaxInputs{}'.format(nwd, unique_id))
 
     # N.B. Good total score value = < -2 x number of residues
-    with open('{}/{}_score.sc'.format(nwd, pdb), 'r') as f:
-        score_file_lines = f.readlines()
-    total_energy = parse_rosetta_score_file(score_file_lines)
+    try:
+        with open('{}/{}_score.sc'.format(nwd, pdb), 'r') as f:
+            score_file_lines = f.readlines()
+        total_energy = parse_rosetta_score_file(score_file_lines)
+    except FileNotFoundError:
+        total_energy = np.nan
 
     # Extracts per-residue energy values from the previously generated Rosetta
     # output files
-    with open('{}/{}_0001.pdb'.format(nwd, pdb), 'r') as f:
-        rosetta_lines = ('#BEGIN_POSE_ENERGIES_TABLE'
-                         + f.read().split('#BEGIN_POSE_ENERGIES_TABLE')[1])
-        rosetta_lines = [line for line in rosetta_lines.split('\n')
-                         if line.strip() != '']
+    try:
+        with open('{}/{}_0001.pdb'.format(nwd, pdb), 'r') as f:
+            rosetta_lines = ('#BEGIN_POSE_ENERGIES_TABLE'
+                             + f.read().split('#BEGIN_POSE_ENERGIES_TABLE')[1])
+            rosetta_lines = [line for line in rosetta_lines.split('\n')
+                             if line.strip() != '']
+    except FileNotFoundError:
+        rosetta_lines = np.nan
     with open(pdb_path, 'r') as f:
         pdb_lines = [line for line in f.readlines() if line.strip() != '']
 

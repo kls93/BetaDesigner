@@ -214,8 +214,8 @@ class gen_ga_input_calcs(initialise_ga_object):
                 aa_id = self.input_df['fasta_seq'][num]
                 int_or_ext = self.input_df['int_ext'][num][0:3]
                 z_sandwich_coord = self.input_df['sandwich_z_coords'][num]
-                z_strand_coord = self.input_df['strand_z_coords'][num]
-                buried_surface_area = self.input_df['buried_surface_area'][num]
+                #z_strand_coord = self.input_df['strand_z_coords'][num]
+                #buried_surface_area = self.input_df['buried_surface_area'][num]
                 edge_or_central = self.input_df['edge_or_central'][num]
                 try:
                     phi_psi_class = self.input_df['phi_psi_class'][num]
@@ -226,8 +226,9 @@ class gen_ga_input_calcs(initialise_ga_object):
                                      'interior or exterior surface of the input'
                                      ' beta-barrel structure'.format(node))
                 G.add_node(node, type='strand', aa_id=aa_id, int_ext=int_or_ext,
-                           zsandwich=z_sandwich_coord, zstrand=z_strand_coord,
-                           bsa=buried_surface_area, eoc=edge_or_central,
+                           zsandwich=z_sandwich_coord,
+                           #zstrand=z_strand_coord, bsa=buried_surface_area,
+                           eoc=edge_or_central,
                            phipsi=phi_psi_class)
 
         domain_res_ids = list(G.nodes())
@@ -352,7 +353,7 @@ class gen_ga_input_calcs(initialise_ga_object):
             int_ext = G.nodes()[node]['int_ext']
             sub_dicts = OrderedDict(
                 {dict_label: scale_dict for dict_label, scale_dict in dicts.items()
-                 if dict_label.split('_')[intext_index] == int_ext}
+                 if dict_label.split('_')[intext_index] in [int_ext, '-']}
             )
             if self.barrel_or_sandwich == '2.60':
                 # Filters propensity and frequency scales depending upon
@@ -529,9 +530,12 @@ class gen_ga_input(initialise_ga_object):
         input_calcs = gen_ga_input_calcs(self.params)
 
         # Creates networks of interacting residues from input dataframe
-        sheet_ids = list(set(self.input_df['sheet_number'].tolist()))
-        if len(sheet_ids) != 2:
-            raise Exception('Incorrect number of sheets in input beta-sandwich structure')
+        if self.barrel_or_sandwich == '2.60':
+            sheet_ids = list(set(self.input_df['sheet_number'].tolist()))
+            if len(sheet_ids) != 2:
+                raise Exception(
+                    'Incorrect number of sheets in input beta-sandwich structure'
+                )
         initial_network = input_calcs.generate_networks()
 
         # Adds side-chains in order to generate a population of starting

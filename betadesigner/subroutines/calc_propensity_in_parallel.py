@@ -233,10 +233,9 @@ def measure_fitness_propensity(
             dict_strand = label.split('_')[label_indices['edgeorcent']]
             node_strand = G.nodes[node_1]['eoc']
             if (
-                   (dict_surf != node_surf)
-                or (dict_strand != '-' and dict_strand != node_strand)
-            ):  # Can't just be dict_strand != node_strand because there will
-            # be some strand-generic dictionaries that you won't want to exclude
+                   (dict_surf not in [node_surf, '-'])
+                or (dict_strand not in [node_strand, '-'])
+            ):
                 continue
 
             # Looks up propensity / frequency of node in dictionary

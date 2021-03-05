@@ -26,7 +26,8 @@ def calc_parent_voronoi_cluster(input_df, cluster_coords):
 
     for row in range(input_df.shape[0]):
         try:
-            int_or_ext = input_df['int_ext'][row]
+            #int_or_ext = input_df['int_ext'][row]
+            int_or_ext = 'all_surfaces'
             phi = input_df['phi'][row]
             psi = input_df['psi'][row]
 
@@ -1295,10 +1296,8 @@ def def_mutation_prob(params, test=False):
             mut_prob = float(mut_prob)
             if 0 > mut_prob or mut_prob > 1:
                 mut_prob = ''
-            else:
                 print('Probability of mutation not recognised - please enter '
                       'a value between 0 and 1')
-                mut_prob = ''
         except ValueError:
             print('Probability of mutation not recognised - please enter a '
                   'value between 0 and 1')
@@ -1499,7 +1498,7 @@ def def_num_gens(params, test=False):
     return num_gens
 
 
-def find_params(args):
+def find_params(args, param_opt):
     """
     Defines program parameter values. If an input file is provided, the code
     first tries to extract program params from this file. It then
@@ -1557,10 +1556,11 @@ def find_params(args):
     params['scaleweights'] = def_prop_freq_scale_weights(params)  # Not commented
     # out because 'equal' needs to be converted into numerical values by
     # def_prop_freq_scale_weights function
-    # params['propensityweight'] = def_propensity_weight(params)  # Commented out
-    # because this hyperparameter has been selected for optimisation with hyperopt
-    if 'propensityweight' in list(params.keys()):
-        params.pop('propensityweight')
+    if param_opt is True:
+        if 'propensityweight' in list(params.keys()):
+            params.pop('propensityweight')
+    else:
+        params['propensityweight'] = def_propensity_weight(params)
     params['phipsiclustercoords'] = def_phipsi_cluster_coords(params)
     params['inputdataframe'] = def_input_df(params)
     params['workingdirectory'] = def_working_directory(params)
@@ -1569,33 +1569,36 @@ def find_params(args):
     # params['initialseqmethod'] = def_method_initial_seq(params)
     params['initialseqmethod'] = 'random'  # Currently set to "random" by default
     # params['fitnessscoremethod'] = def_method_fitness_scoring(params)
-    params['fitnessscoremethod'] = 'split'  # Currently set to "split" by default
-    # params['splitfraction'] = def_split_fraction(params)
-    params['splitfraction'] = 0.5  # Currently set as 50:50 by default (in my
+    params['fitnessscoremethod'] = 'alternate'  # Currently set to "alternate" by default
+    params['splitfraction'] = def_split_fraction(params)
+    #params['splitfraction'] = 0.5  # Currently set as 50:50 by default (in my
     # opinion variation of this hyperparameter is probably an "optimisation too far")
     # params['matingpopmethod'] = def_method_select_mating_pop(params)
     params['matingpopmethod'] = 'fittest'  # Currently set as "fittest" (with the
     # value of the hyperparameter "unfitfraction" being optimised with hyperopt)
-    # params['unfitfraction'] = def_unfit_fraction(params)  # Commented out
-    # because this hyperparameter has been selected to be optimised with hyperopt
-    if 'unfitfraction' in list(params.keys()):
-        params.pop('unfitfraction')
+    if param_opt is True:
+        if 'unfitfraction' in list(params.keys()):
+            params.pop('unfitfraction')
+    else:
+        params['unfitfraction'] = def_unfit_fraction(params)
     # params['crossovermethod'] = def_method_crossover(params)
     params['crossovermethod'] = 'uniform'  # Currently set to uniform crossover
     # (with the value of the hyperparameter "crossoverprob" being optimised with
     # hyperopt)
-    # params['crossoverprob'] = def_crossover_prob(params)  # Commented out
-    # because this hyperparameter has been selected to be optimised with hyperopt
-    if 'crossoverprob' in list(params.keys()):
-        params.pop('crossoverprob')
+    if param_opt is True:
+        if 'crossoverprob' in list(params.keys()):
+            params.pop('crossoverprob')
+    else:
+        params['crossoverprob'] = def_crossover_prob(params)
     params['swapstartprob'] = def_swap_stop_prob(params)
     params['swapstopprob'] = def_swap_stop_prob(params)
     # params['mutationmethod'] = def_method_mutation(params)
     params['mutationmethod'] = 'swap'  # Currently set as "swap" by default
-    # params['mutationprob'] = def_mutation_prob(params)  # Commented out
-    # because this parameter has been selected to be optimised with hyperopt
-    if 'mutationprob' in list(params.keys()):
-        params.pop('mutationprob')
+    if param_opt is True:
+        if 'mutationprob' in list(params.keys()):
+            params.pop('mutationprob')
+    else:
+        params['mutationprob'] = def_mutation_prob(params)
     params['populationsize'] = def_pop_size(params)
     if params['fitnessscoremethod'] == 'split':
         params['propensitypopsize'] = params['populationsize']*params['splitfraction']
@@ -1677,7 +1680,7 @@ class initialise_ga_object():
         aa_code_dict = three_to_one_aa_dict()
         if params['barrelorsandwich'] == '2.40':
             aa_code_dict.pop('CYS')
-        if not params['aacodes']:
+        if not 'aacodes' in list(params.keys()):
             params['aacodes'] = list(aa_code_dict.values())
 
         self.input_df_path = params['inputdataframepath']
@@ -1688,7 +1691,8 @@ class initialise_ga_object():
         self.aa_list = params['aacodes']
         self.dict_weights = params['scaleweights']
         self.dict_name_indices = params['dictnameindices']
-        # self.propensity_weight = params['propensityweight']  To be optimised with hyperopt
+        if params['paramopt'] is False:
+            self.propensity_weight = params['propensityweight']
         self.working_directory = params['workingdirectory']
         self.barrel_or_sandwich = params['barrelorsandwich']
         self.job_id = params['jobid']
@@ -1696,13 +1700,16 @@ class initialise_ga_object():
         self.method_fitness_score = params['fitnessscoremethod']
         self.split_fraction = params['splitfraction']
         self.method_select_mating_pop = params['matingpopmethod']
-        # self.unfit_fraction = params['unfitfraction']  To be optimised with hyperopt
+        if params['paramopt'] is False:
+            self.unfit_fraction = params['unfitfraction']
         self.method_crossover = params['crossovermethod']
-        # self.crossover_prob = params['crossoverprob']  To be optimised with hyperopt
+        if params['paramopt'] is False:
+            self.crossover_prob = params['crossoverprob']
         self.swap_start_prob = params['swapstartprob']
         self.swap_stop_prob = params['swapstopprob']
         self.method_mutation = params['mutationmethod']
-        # self.mutation_prob = params['mutationprob']  To be optimised with hyperopt
+        if params['paramopt'] is False:
+            self.mutation_prob = params['mutationprob']
         self.pop_size = params['populationsize']
         self.propensity_pop_size = params['propensitypopsize']
         self.num_gens = params['maxnumgenerations']

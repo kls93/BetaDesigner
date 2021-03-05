@@ -1,4 +1,7 @@
 
+# If want to change run parameters, set param_opt, orig_sub_gen and max_evals
+# parameters - all other parameters controlling the GA are set in the input file
+
 import argparse
 import copy
 import math
@@ -37,17 +40,23 @@ def main():
                         'params')
     args = parser.parse_args()
 
+    # Determines whether or not automatic parameter optimisation with hyperopt
+    # is performed
+    param_opt = False
+
     # Defines program params from input file / user input
-    params = find_params(args)
+    params = find_params(args, param_opt)
+    params['paramopt'] = param_opt
 
     # Checks none of the hyperparameters to be optimised with hyperopt have
     # been defined as fixed values
-    if any(
-        x in params.keys() for x in ['unfitfraction', 'crossoverprob',
-        'mutationprob', 'propensityweight']
-    ):
-        raise Exception('Parameter set aside for Bayesian optimisation has '
-                        'been defined in the program input')
+    if param_opt is True:
+        if any(
+            x in params.keys() for x in ['unfitfraction', 'crossoverprob',
+            'mutationprob', 'propensityweight']
+        ):
+            raise Exception('Parameter set aside for Bayesian optimisation has '
+                            'been defined in the program input')
 
     # Checks that only one structure is listed in the input dataframe
     if len(set(params['inputdataframe']['domain_ids'].tolist())) != 1:
@@ -68,31 +77,35 @@ def main():
     params['initialnetwork'] = {'initial_network': initial_network}
 
     run_ga = True
-    run_opt = True
-    max_evals = [2]  # Number of
-    # hyperparameter combinations for hyperopt to try
-    sub_gen = 2  # Number of generations to run the GA with a particular
-    # combination of hyperparameters
-    # max_gen = copy.copy(params['maxnumgenerations'])  # Total number of
+    max_evals = []  #[10, 30, 100, 300, 1000]  # Number of
+    # parameter combinations for hyperopt to try - set to non-empty list if
+    # running parameter optimisation
+    orig_sub_gen = 10
+    sub_gen = copy.deepcopy(orig_sub_gen)  # Number of generations to run the GA
+    # with a particular combination of hyperparameters
+    max_gen = copy.copy(params['maxnumgenerations'])  # Total number of
     # generations GA can be run for (changing hyperparameters every sub_gen
     # generations)
-    max_gen = 2
-    params['maxnumgenerations'] = sub_gen
 
-    opt_cycle_count = 0
+    opt_cycle_count = 1
+    start_gen = 0
+    stop_gen = orig_sub_gen
     # Runs GA in subsets of sub_gen generations, until either the output fitness
     # score has converged (to within 1%) or the number of generations exceeds
     # the user-defined threshold
     while run_ga is True:
-        opt_cycle_count += 1
-
         orig_sequences_dict = copy.deepcopy(new_sequences_dict)
 
         # Runs hyperparameter optimisation in increments of sqrt(10) evaluations,
         # until either the selected hyperparameter values have converged (to
-        # within 1%) or the number of combinations of hyperparameters tested
-        # exceeds 10000
-        hyperparam_count = max_evals[0]
+        # within 5%) or the number of combinations of hyperparameters tested
+        # exceeds 1000
+        if param_opt is True:
+            hyperparam_count = max_evals[0]
+            run_opt = True
+        else:
+            hyperparam_count = ''
+            run_opt = False
 
         while run_opt is True:
             # Sets the hyperparams unfit_fraction, crossover_probability,
@@ -100,7 +113,7 @@ def main():
             # propensity_weights to uniform ranges between 0 and 1 for optimisation
             # via a tree parzen estimator with hyperopt
             bayes_params = {}
-            bayes_params['crossoverprob'] = hp.uniform('crossoverprob', 0, 1)
+            bayes_params['crossoverprob'] = hp.uniform('crossoverprob', 0, 0.5)
             bayes_params['mutationprob'] = hp.uniform('mutationprob', 0, 1)
             bayes_params['propensityweight'] = hp.uniform('propensityweight', 0, 1)
             bayes_params['unfitfraction'] = hp.uniform('unfitfraction', 0, 1)
@@ -119,6 +132,8 @@ def main():
             bayes_params['workingdirectory'] = updated_params['workingdirectory']
 
             updated_params['sequencesdict'] = copy.deepcopy(orig_sequences_dict)
+            updated_params['startgen'] = start_gen
+            updated_params['stopgen'] = stop_gen
             with open('{}/Program_input/Input_params.pkl'.format(
                 bayes_params['workingdirectory']), 'wb'
             ) as f:
@@ -154,8 +169,14 @@ def main():
                     prop_weight = trial['misc']['vals']['propensityweight'][0]
                     unfit_frac = trial['misc']['vals']['unfitfraction'][0]
                     out = trial['result']['loss']
+                    if not os.path.isfile('{}/Program_output/Hyperparameter_track.txt'.format(
+                        updated_params['workingdirectory']
+                    )):
+                        with open('{}/Program_output/Hyperparameter_track.txt'.format(
+                            updated_params['workingdirectory']), 'w') as f:
+                            f.write('')
                     with open('{}/Program_output/Hyperparameter_track.txt'.format(
-                        updated_params['workingdirectory']), 'a') as f:
+                        updated_params['workingdirectory']), 'a+') as f:
                         current_lines = f.readlines()
                         if trial['tid'] == 0:
                             f.write('\n\n\nHyperparameter cycle {}\n'.format(hyperparam_count))
@@ -175,20 +196,19 @@ def main():
                 f.write('propensity_weight: {}\n'.format(best_params['propensityweight']))
                 f.write('unfit_fraction: {}\n'.format(best_params['unfitfraction']))
 
-            if hyperparam_count == 2:
-                run_opt = False  # DELETE ME!
-                break  # DELETE ME!
+            if hyperparam_count == max_evals[0]:
                 current_best = copy.deepcopy(best_params)
                 hyperparam_count = max_evals[max_evals.index(hyperparam_count)+1]
             else:
-                # If best values are within 5% of previous OR number of trials >= 10000
+                # If best values are within 5% of previous OR number of
+                # trials == maximum number specified
                 similarity_dict = {}
                 for key in list(best_params.keys()):
                     if key in ['unfitfraction', 'crossoverprob', 'mutationprob', 'propensityweight']:
                         if (
                                ((0.95*current_best[key]) <= best_params[key]
                                  <= (1.05*current_best[key]))
-                            or hyperparam_count == 10000
+                            or hyperparam_count == max_evals[-1]
                         ):
                             similarity_dict[key] = True
                         else:
@@ -199,8 +219,12 @@ def main():
                     current_best = copy.deepcopy(best_params)
                     hyperparam_count = max_evals[max_evals.index(hyperparam_count)+1]
 
+        if param_opt is False:
+            best_params = copy.deepcopy(params)
         best_params['optimisationcycle'] = opt_cycle_count
-        best_params['hyperparam_count'] = '{}_final_run'.format(hyperparam_count)
+        best_params['startgen'] = start_gen
+        best_params['stopgen'] = stop_gen
+        best_params['hyperparam_count'] = '{}final_run'.format(hyperparam_count)
         updated_params = setup_input_output(
             copy.deepcopy(params), opt_cycle_count, best_params['hyperparam_count']
         )
@@ -221,11 +245,17 @@ def main():
         ) as f:
             new_sequences_dict = pickle.load(f)
 
-        if max_gen == sub_gen:
+        if max_gen <= sub_gen:  # Breaks without comparing fitness scores of
+        # current and previous sub-generations (necessary if sub_gens == max_gens)
+            run_ga = False
             break
 
-        if sub_gen == 10:  # Optimises hyperparameters for minimum of 20 generations
+        if sub_gen == orig_sub_gen:  # Optimises hyperparameters for minimum of 2*orig_sub_gen generations
             current_fitness = copy.deepcopy(fitness)
+            start_gen = copy.deepcopy(sub_gen)
+            sub_gen += orig_sub_gen
+            stop_gen = copy.deepcopy(sub_gen)
+            opt_cycle_count += 1
         else:
             # If updated fitness is within 5% of previous fitness score OR
             # number of generations > user-defined limit
@@ -237,11 +267,15 @@ def main():
                 break
             else:
                 current_fitness = copy.deepcopy(fitness)
-                sub_gen *= 2
+                start_gen = copy.deepcopy(sub_gen)
+                sub_gen += orig_sub_gen
+                stop_gen = copy.deepcopy(sub_gen)
+                opt_cycle_count += 1
 
     # Uses SCWRL4 within ISAMBARD to pack the output sequences onto the
     # backbone model, and writes the resulting model to a PDB file. Also
-    # returns each model's total energy within BUDEFF.
+    # returns each model's total energy within BUDEFF. Currently Rosetta
+    # fragment picking is not run.
     with open('{}/Program_output/GA_output_sequences_dict.pkl'.format(
         updated_params['workingdirectory']), 'rb') as f:
         sequences_dict = pickle.load(f)
@@ -262,7 +296,7 @@ def main():
     (molp_struct_df, molp_res_dict
     ) = output.score_pdb_molprobity(structures_list)
 
-    with open('{}/Program_output/GA_output_sequences_full_name_dict.pkl'.format(
+    with open('{}/Program_output/GA_output_sequences_program_output.pkl'.format(
         updated_params['workingdirectory']), 'wb') as f:
         pickle.dump(updated_sequences_dict, f)
     with open('{}/BetaDesigner_results/{}/GA_output_sequences_dict.pkl'.format(
@@ -319,9 +353,9 @@ def main():
         pickle.dump(per_res_scores_dict, f)
 
     end = time.time()
-    print('Time for GA to run (2000 sequences, 50 generations, 10 '
+    print('Time for GA to run ({} sequences, {} generations, {} '
           'hyperparameter combinations, split propensity and BUDE '
-          'measurements): {}'.format(end-start))
+          'measurements): {}'.format(len(updated_sequences_dict), sub_gen, hyperparam_count, end-start))
 
 
 # Calls main() function if betadesigner.py is run as a script

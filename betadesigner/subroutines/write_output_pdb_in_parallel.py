@@ -11,7 +11,7 @@ import os
 import pickle
 from collections import OrderedDict
 from scoop import futures
-from betadesigner.subroutines.calc_bude_energy_in_parallel import pack_side_chains
+from calc_bude_energy_in_parallel import pack_side_chains
 
 def write_pdb(num, G, wd, ampal_pdb, pdb):
     """
@@ -48,8 +48,8 @@ def write_pdb(num, G, wd, ampal_pdb, pdb):
 
     # Writes FASTA sequence of model
     fasta_seq = ''
-    for res_id in list(G.nodes):
-        fasta_seq += G.nodes[res_id]['aa_id']
+    for res_id in new_pdb[0]:
+        fasta_seq += res_id.mol_letter
     fasta_name = struct_name.replace('.pdb', '.fasta')
     with open(fasta_name, 'w') as f:
         f.write('>{}\n'.format(num))

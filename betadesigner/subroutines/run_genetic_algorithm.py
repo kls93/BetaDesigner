@@ -631,8 +631,8 @@ def run_genetic_algorithm(bayes_params):
             f.write('\n')
 
     # Runs GA cycles
-    gen = 0
-    while gen < params['maxnumgenerations']:
+    gen = params['startgen']
+    while gen < params['stopgen']:
         gen += 1
         print('Generation {}'.format(gen))
         with open('{}/Program_output/Sequence_track.txt'.format(
@@ -682,7 +682,7 @@ def run_genetic_algorithm(bayes_params):
                 # associated fitnesses
                 with open('{}/Program_output/Sequence_track.txt'.format(
                     bayes_params['workingdirectory']), 'a') as f:
-                    f.write('network, sequence, propensity, frequency')
+                    f.write('network, sequence, propensity, frequency\n')
                     for network, G in networks_dict.items():
                         sequence = ''.join([G.nodes()[node]['aa_id'] for node in G.nodes()])
                         propensity = network_propensity_scores[network]
@@ -711,7 +711,7 @@ def run_genetic_algorithm(bayes_params):
                 # associated fitnesses
                 with open('{}/Program_output/Sequence_track.txt'.format(
                     bayes_params['workingdirectory']), 'a') as f:
-                    f.write('network, sequence, BUDE score')
+                    f.write('network, sequence, BUDE score\n')
                     for network, G in networks_dict.items():
                         sequence = ''.join([G.nodes()[node]['aa_id'] for node in G.nodes()])
                         energy = network_energies[network]
@@ -789,9 +789,9 @@ def run_genetic_algorithm(bayes_params):
     with open('{}/Program_output/Sequence_track.txt'.format(
         bayes_params['workingdirectory']), 'a') as f:
         if params['fitnessscoremethod'] != 'allatom':
-            f.write('network, sequence, propensity, frequency')
+            f.write('network, sequence, propensity, frequency\n')
         elif params['fitnessscoremethod'] == 'allatom':
-            f.write('network, sequence, BUDE score')
+            f.write('network, sequence, BUDE score\n')
         for network, G in params['sequencesdict'].items():
             sequence = ''.join([G.nodes()[node]['aa_id'] for node in G.nodes()])
             if params['fitnessscoremethod'] != 'allatom':

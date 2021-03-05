@@ -1,10 +1,14 @@
 
+# Run with isambard_dev (since DataGen requires isambard_dev). All other scripts
+# in BetaDesigner are run with isambardv2.
+
 import os
 import pickle
 import shutil
 import pandas as pd
 from collections import OrderedDict
 
+"""
 barrel_or_sandwich = input('Barrel or sandwich? ').lower()
 if barrel_or_sandwich == 'barrel':
     barrel_or_sandwich = '2.40'
@@ -15,21 +19,22 @@ pdb_code = pdb_code.lower()  # Needs to be lower case to be recognised in the OP
 input_pdb_file = input('Specify absolute file path of PDB coordinates of backbone structure: ')
 datagen_file_path = input('Specify absolute file path of DataGen wrapper script (datagen.py): ')
 output_directory = input('Specify absolute path of output directory: ')
-
+opm_directory = input('Specify absolute path of OPM database: ')
 """
+
 # Defines input params, sets up directory framework and writes input file
 # for DataGen
 barrel_or_sandwich = '2.40'
-pdb_code = '2fgr'  # Needs to be lower case to be recognised in the OPM
+pdb_code = '2jmm'  # Needs to be lower case to be recognised in the OPM
 pdb_code = pdb_code.lower()
-input_pdb_file = '/BetaDesigner_results/Program_input/2fgr.pdb'
-datagen_file_path = '/DataGen/datagen/datagen.py'
-output_directory = '/BetaDesigner_results/Program_output'
-"""
+input_pdb_file = '/home/ks17361/isambard2/Test_design_results/Barrel_designs/2jmm.pdb'
+datagen_file_path = '/home/ks17361/isambard_dev/DataGen/datagen/datagen.py'
+output_directory = '/home/ks17361/isambard2/Test_design_results/Barrel_designs/DataGen_output/'
+opm_directory = '/home/shared/structural_bioinformatics/DataGen_repositories/opm/'
 
 if os.path.isdir('{}/Parent_assemblies'.format(output_directory)):
     shutil.rmtree('{}/Parent_assemblies'.format(output_directory))
-os.mkdirs('{}/Parent_assemblies'.format(output_directory))
+os.makedirs('{}/Parent_assemblies'.format(output_directory))
 os.system('cp {} {}/Parent_assemblies/{}.pdb'.format(input_pdb_file, output_directory, pdb_code))
 
 # Writes input dataframes for DataGen
@@ -95,24 +100,38 @@ df_dict = {pdb_code: pdb_df}
 cdhit_df = pd.DataFrame({'PDB_CODE': ['{}'.format(pdb_code)],
                          'DOMAIN_ID': ['{}'.format(pdb_code)],
                          'CHAIN_NUM': [list(set(pdb_df['RES_ID'].tolist()))]})
-dataframe_loc = '{}/DataGen_stage_2_input_dataframes.pkl'.format(output_directory)
+dataframe_loc = '{}DataGen_stage_2_input_dataframes.pkl'.format(output_directory)
 with open(dataframe_loc, 'wb') as pickle_file:
     pickle.dump((df_dict, cdhit_df), pickle_file)
 
-# Writes input file for DataGen (stage 2 of analysis)
-datagen_input_file = '{}/DataGen_Input.txt'.format(output_directory)
+# generate_initial_sequences DataGen (stage 2 of analysis)
+datagen_input_file = '{}/DataGen_Input_stage_2.txt'.format(output_directory)
 with open(datagen_input_file, 'w') as f:
     f.write('Stage: 2\n' +
             'Structure database: CATH\n' +
             'ID: {}\n'.format(barrel_or_sandwich) +
             'Working directory: {}\n'.format(output_directory) +
-            'OPM database: /Volumes/Seagate_Backup_Plus_Drive/opm/\n' +
-            'Beta Designer: True\n' +
+            'OPM database: {}\n'.format(opm_directory) +
             'Dataframes: {}\n'.format(dataframe_loc))
-
-# Runs DataGen (stage 2 of analysis)
 os.system('python {} -i {} --betadesigner'.format(datagen_file_path, datagen_input_file))
 
-# Then need to run stages 3 and 4 - will need to run NACCESS on local machine
-# to be able to run these programmatically within BetaDesigner, otherwise will
-# have to run within DataGen.
+# Runs DataGen (stage 3 of analysis)
+datagen_input_file = '{}/DataGen_Input_stage_3.txt'.format(output_directory)
+with open(datagen_input_file, 'w') as f:
+    f.write('Stage: 3\n' +
+            'Structure database: CATH\n' +
+            'ID: {}\n'.format(barrel_or_sandwich) +
+            'Working directory: {}\n'.format(output_directory) +
+            'OPM database: {}\n'.format(opm_directory) +
+            'Radius: 5\n')
+os.system('python {} -i {} --betadesigner'.format(datagen_file_path, datagen_input_file))
+
+# Runs DataGen (stage 4 of analysis)
+datagen_input_file = '{}/DataGen_Input_stage_3.txt'.format(output_directory)
+with open(datagen_input_file, 'w') as f:
+    f.write('Stage: 4\n' +
+            'Structure database: CATH\n' +
+            'ID: {}\n'.format(barrel_or_sandwich) +
+            'Working directory: {}\n'.format(output_directory) +
+            'OPM database: {}\n'.format(opm_directory))
+os.system('python {} -i {} --betadesigner'.format(datagen_file_path, datagen_input_file))
