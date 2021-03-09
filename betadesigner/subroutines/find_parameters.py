@@ -1,4 +1,6 @@
 
+import budeff
+import isambard
 import os
 import pickle
 import random
@@ -1713,5 +1715,18 @@ class initialise_ga_object():
         self.pop_size = params['populationsize']
         self.propensity_pop_size = params['propensitypopsize']
         self.num_gens = params['maxnumgenerations']
+
+        # Calculates total energy of input PDB structure within BUDE (note that
+        # this does not include the interaction of the object with its
+        # surrounding environment, hence hydrophobic side chains will not be
+        # penalised on the surface of a globular protein and vice versa for
+        # membrane proteins). Hence this is just a rough measure of side-chain
+        # clashes.
+        input_ampal_pdb = isambard.ampal.load_pdb(params['inputpdb'])
+        self.input_pdb_energy = budeff.get_internal_energy(
+            input_ampal_pdb
+        ).total_energy
+        params['inputpdbenergy'] = self.input_pdb_energy
+
         self.test = test
         self.params = params

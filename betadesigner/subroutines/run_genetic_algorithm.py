@@ -74,11 +74,11 @@ class run_ga_calcs(initialise_ga_object):
 
         os.system('python -m scoop {}/calc_propensity_in_parallel.py '
                   '-net {}/Networks_dict.pkl -dicts {}/Prop_freq_dicts.pkl '
-                  '-indices {}/Dict_name_indices.pkl -bos {} -o {}'.format(
+                  '-indices {}/Dict_name_indices.pkl -bos {} -o {} -aa {}'.format(
                   os.path.dirname(os.path.abspath(__file__)),
                   self.working_directory, self.working_directory,
                   self.working_directory, self.barrel_or_sandwich,
-                  self.working_directory))
+                  self.working_directory, ','.join(self.aa_list)))
 
         os.remove('{}/Networks_dict.pkl'.format(self.working_directory))
         os.remove('{}/Prop_freq_dicts.pkl'.format(self.working_directory))
@@ -109,6 +109,11 @@ class run_ga_calcs(initialise_ga_object):
                     ))
             elif index == 1:
                 prop_or_freq = 'frequency'
+                # Lower scores are more likely (smaller difference between
+                # actual and expected frequency distribution)
+                network_score_dict = OrderedDict(sorted(
+                    network_score_dict.items(), key=itemgetter(1), reverse=True
+                ))
 
             network_num = np.array(list(network_score_dict.keys()))
             network_scores = np.array(list(network_score_dict.values()))
@@ -127,8 +132,8 @@ class run_ga_calcs(initialise_ga_object):
                 if self.frequency_dicts != {}:
                     (network_num, network_scores, network_prob
                     ) = frequency_to_probability_distribution(
-                        network_num, network_scores, prop_or_freq
-                    )
+                        network_num, network_scores, 'propensity'
+                    )  # Set to "propensity" to make sure converts frequency scores into rank values
                 else:
                     network_prob = np.full(network_num.shape, 0)
 
@@ -177,31 +182,25 @@ class run_ga_calcs(initialise_ga_object):
 
     def convert_energies_to_probabilities(self, network_energies):
         """
-        Converts energy values output from BUDE into probabilities
+        Converts energy values output from BUDE into probabilities.
+        Unfortunately can't use the Boltzmann distribution (e^(ΔE / kT)) because
+        values output are too large to be handled by numpy, so instead have to
+        compare score rankings
         """
 
-        network_fitness_scores = OrderedDict()
-        for network_num in list(network_energies.keys()):
-            energy = network_energies[network_num]  # Energies output from BUDE
-            # are in units of kJ/mol, Boltzmann equation = e^-(ΔE / kT)
-            energy = (energy*1000) / (8.314*293)
-            eqm_constant = np.exp(np.negative(energy))
-            network_fitness_scores[network_num] = eqm_constant
-        total = np.sum(list(network_fitness_scores.values()))
+        # Lower scores are more likely
+        network_energies = OrderedDict(sorted(
+            network_energies.items(), key=itemgetter(1), reverse=True
+        ))
+        network_num = np.array(list(network_energies.keys()))
+        network_scores = np.array(list(network_energies.values()))
 
-        for network_num in list(network_energies.keys()):
-            eqm_constant = network_fitness_scores[network_num]
-            network_fitness_scores[network_num] = eqm_constant / total
-
-        # Equivalent shuffling of the networks as occurs in the propensity /
-        # frequency measures of fitness
-        network_fitness_keys = np.array(list(network_fitness_scores.keys()))
-        network_fitness_vals = np.array(list(network_fitness_scores.values()))
-        dummy_array = np.full(network_fitness_keys.shape, np.nan)
-        network_fitness_keys, network_fitness_vals, dummy_array = random_shuffle(
-            network_fitness_keys, network_fitness_vals, dummy_array
+        (network_num, network_scores, network_prob
+        ) = frequency_to_probability_distribution(
+            network_num, network_scores, 'propensity'
         )
-        network_fitness_scores = OrderedDict(zip(network_fitness_keys, network_fitness_vals))
+
+        network_fitness_scores = OrderedDict(zip(network_num, network_prob))
 
         return network_fitness_scores
 
@@ -596,10 +595,17 @@ def run_genetic_algorithm(bayes_params):
 
     ga_calcs = run_ga_calcs(params)
 
+    # Defines whether sequences are compared by their raw or rank propensities.
+    # Since BUDE scores and frequency values have to be compared by their rank
+    # values, have made the decision to also compare propensity values by their
+    # rankings.
+    """
     if params['matingpopmethod'] in ['fittest', 'roulettewheel']:
         raw_or_rank = 'raw'
-    elif params['matingpopmethod'] == 'rankroulettewheel':
+    elif params['matingpopmethod'] in ['rankroulettewheel']:
         raw_or_rank = 'rank'
+    """
+    raw_or_rank = 'rank'
 
     # Calculates propensity and/or BUDE energy of input structure
     with open('{}/Program_output/Sequence_track.txt'.format(
@@ -612,11 +618,14 @@ def run_genetic_algorithm(bayes_params):
 
         with open('{}/Program_output/Sequence_track.txt'.format(
             bayes_params['workingdirectory']), 'a') as f:
+            f.write('network_id, sequence, propensity_score, frequency_score, BUDE energy\n')
             for network, G in params['initialnetwork'].items():
                 sequence = ''.join([G.nodes()[node]['aa_id'] for node in G.nodes()])
                 propensity = network_propensity_scores[network]
                 frequency = network_frequency_scores[network]
-                f.write('{}, {}, {}, {}\n'.format(network, sequence, propensity, frequency))
+                f.write('{}, {}, {}, {}, {}\n'.format(
+                    network, sequence, propensity, frequency, params['inputpdbenergy'])
+                )
             f.write('\n')
 
     elif params['fitnessscoremethod'] == 'allatom':
@@ -624,10 +633,11 @@ def run_genetic_algorithm(bayes_params):
 
         with open('{}/Program_output/Sequence_track.txt'.format(
             bayes_params['workingdirectory']), 'a') as f:
+            f.write('network_id, sequence, BUDE energy\n')
             for network, G in params['initialnetwork'].items():
                 sequence = ''.join([G.nodes()[node]['aa_id'] for node in G.nodes()])
                 energy = network_energies[network]
-                f.write('{}, {}, {}, {}\n'.format(network, sequence, energy))
+                f.write('{}, {}, {}\n'.format(network, sequence, energy))
             f.write('\n')
 
     # Runs GA cycles
@@ -682,17 +692,19 @@ def run_genetic_algorithm(bayes_params):
                 # associated fitnesses
                 with open('{}/Program_output/Sequence_track.txt'.format(
                     bayes_params['workingdirectory']), 'a') as f:
-                    f.write('network, sequence, propensity, frequency\n')
+                    f.write('network, sequence, propensity, frequency, probability\n')
                     for network, G in networks_dict.items():
                         sequence = ''.join([G.nodes()[node]['aa_id'] for node in G.nodes()])
                         propensity = network_propensity_scores[network]
                         frequency = network_frequency_scores[network]
-                        f.write('{}, {}, {}, {}\n'.format(
-                            network, sequence, propensity, frequency
+                        probability = network_fitness_scores[network]
+                        f.write('{}, {}, {}, {}, {}\n'.format(
+                            network, sequence, propensity, frequency, probability
                         ))
-                    f.write('Total: {}, {}'.format(
+                    f.write('Total: {}, {}, {}'.format(
                         sum(network_propensity_scores.values()),
-                        sum(network_frequency_scores.values())
+                        sum(network_frequency_scores.values()),
+                        sum(network_fitness_scores.values())
                     ))
                     f.write('\n')
             elif (
@@ -711,12 +723,18 @@ def run_genetic_algorithm(bayes_params):
                 # associated fitnesses
                 with open('{}/Program_output/Sequence_track.txt'.format(
                     bayes_params['workingdirectory']), 'a') as f:
-                    f.write('network, sequence, BUDE score\n')
+                    f.write('network, sequence, BUDE score, probability\n')
                     for network, G in networks_dict.items():
                         sequence = ''.join([G.nodes()[node]['aa_id'] for node in G.nodes()])
                         energy = network_energies[network]
-                        f.write('{}, {}, {}\n'.format(network, sequence, energy))
-                    f.write('Total: {}'.format(sum(network_energies.values())))
+                        probability = network_fitness_scores[network]
+                        f.write('{}, {}, {}, {}\n'.format(
+                            network, sequence, energy, probability
+                        ))
+                    f.write('Total: {}, {}'.format(
+                        sum(network_energies.values()),
+                        sum(network_fitness_scores.values())
+                    ))
                     f.write('\n')
 
             # Selects subpopulation for mating

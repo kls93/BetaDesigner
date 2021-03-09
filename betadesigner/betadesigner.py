@@ -257,10 +257,10 @@ def main():
             stop_gen = copy.deepcopy(sub_gen)
             opt_cycle_count += 1
         else:
-            # If updated fitness is within 5% of previous fitness score OR
+            # If updated fitness is within 0.1% of previous fitness score OR
             # number of generations > user-defined limit
             if (
-                   ((0.95*current_fitness) <= fitness <= (1.05*current_fitness))
+                   ((0.999*current_fitness) <= fitness <= (1.001*current_fitness))
                 or sub_gen >= max_gen
             ):
                 run_ga = False

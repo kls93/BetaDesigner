@@ -4,7 +4,6 @@
 # executed within an if __name__ == '__main__' clause
 
 import argparse
-import budeff
 import copy
 import isambard
 import os
@@ -27,15 +26,12 @@ def write_pdb(num, G, wd, ampal_pdb, pdb):
     struct_name = '{}/Program_output/{}/{}.pdb'.format(wd, num, num)
 
     # Packs network side chains onto the model with SCWRL4 and calculates model
-    # energies in BUDE
+    # energies in BUDE. (Note that this does not include the interaction of the
+    # object with its surrounding environment, hence hydrophobic side chains
+    # will not be penalised on the surface of a globular protein and vice versa
+    # for membrane proteins). Hence this is just a rough measure of side-chain
+    # clashes.)
     new_pdb, new_energy = pack_side_chains(ampal_pdb, G, False)
-    # Calculates total energy of input PDB structure within BUDE (note that this
-    # does not include the interaction of the object with its surrounding
-    # environment, hence hydrophobic side chains will not be penalised on the
-    # surface of a globular protein and vice versa for membrane proteins).
-    # Hence this is just a rough measure of side-chain clashes.
-    orig_ampal_pdb = isambard.ampal.load_pdb(pdb)
-    orig_energy = budeff.get_internal_energy(orig_ampal_pdb).total_energy
 
     # Writes PDB file of model. N.B. Currently code only designs
     # sequences containing the 20 canonical amino acids, but have
@@ -55,7 +51,7 @@ def write_pdb(num, G, wd, ampal_pdb, pdb):
         f.write('>{}\n'.format(num))
         f.write('{}\n'.format(fasta_seq))
 
-    return [struct_name, num, G, new_energy, orig_energy]
+    return [struct_name, num, G, new_energy]
 
 
 if __name__ == '__main__':
@@ -97,15 +93,11 @@ if __name__ == '__main__':
         num = tup[1]
         network = tup[2]
         new_struct_energy = tup[3]
-        orig_struct_energy = tup[4]
 
         bude_energies_dict[struct_name] = new_struct_energy
         structures_out.append(struct_name)
         updated_sequences_dict[struct_name] = network
 
-        if index == 0:
-            with open('{}/Program_output/Model_energies.txt'.format(wd), 'a') as f:
-                f.write('\nInput structure: {}\n\n\n'.format(orig_struct_energy))
         with open('{}/Program_output/Model_energies.txt'.format(wd), 'a') as f:
             f.write('{}: {}\n'.format(num, new_struct_energy))
 

@@ -70,6 +70,14 @@ def look_up_indv_propensity(G, node_1, scale, label, weight, label_indices):
     """
     """
 
+    # Remove if statement below if start to use this function for parsing
+    # frequency dictionaries once again
+    if label.split('_')[label_indices['proporfreq']] == 'frequency':
+        raise Exception(
+            '"look_up_indv_propensity" should not be called for a frequency '
+            'dictionary'
+        )
+
     aa_1 = G.nodes[node_1]['aa_id']
 
     node_prop = label.split('_')[label_indices['prop1']]
@@ -111,20 +119,25 @@ def look_up_indv_propensity(G, node_1, scale, label, weight, label_indices):
         raise ValueError('Scale {} not labelled as being continuous or '
                          'discrete'.format(label))
 
-    if value < 0:
+    if value <= 0 and label.split('_')[label_indices['proporfreq']] == 'propensity':
         raise ValueError('{} returned after interpolation of {} for node '
                          '{}'.format(value, label, node_1))
-    elif not np.isnan(value) and value != 0:
+
+    if np.isnan(value):
         if label.split('_')[label_indices['proporfreq']] == 'propensity':
-            # NOTE: Must take -ve logarithm of each
-            # individual propensity score before summing
-            # (rather than taking the -ve logarithm of the
-            # summed propensities)
-            value = weight*np.negative(np.log(value))
-        elif label.split('_')[label_indices['proporfreq']] == 'frequency':
-            value *= weight
-    else:
-        value = 0
+            value = 0.0001  # Since dataset used to generate prop and freq dicts
+            # is ~10,000 aas => smallest propensity could be is
+            # ((1/5000)/(5001/10000) = 0.0004 (for a discrete propensity))
+        else:
+            value = 0
+
+    if label.split('_')[label_indices['proporfreq']] == 'propensity':
+        # NOTE: Must take -ve logarithm of each individual propensity score
+        # before summing (rather than taking the -ve logarithm of the summed
+        # propensities)
+        value = weight*np.negative(np.log(value))
+    elif label.split('_')[label_indices['proporfreq']] == 'frequency':
+        value *= weight
 
     return value
 
@@ -132,6 +145,14 @@ def look_up_indv_propensity(G, node_1, scale, label, weight, label_indices):
 def look_up_pair_propensity(G, node_1, scale, label, weight, label_indices):
     """
     """
+
+    # Remove if statement below if start to use this function for parsing
+    # frequency dictionaries once again
+    if label.split('_')[label_indices['proporfreq']] == 'frequency':
+        raise Exception(
+            '"look_up_pair_propensity" should not be called for a frequency '
+            'dictionary'
+        )
 
     total_value = 0
 
@@ -188,23 +209,75 @@ def look_up_pair_propensity(G, node_1, scale, label, weight, label_indices):
                     raise ValueError('Scale {} not labelled as being continuous'
                                      ' or discrete'.format(label))
 
-                if not np.isnan(value):
+                if value <= 0 and label.split('_')[label_indices['proporfreq']] == 'propensity':
+                    raise ValueError('{} returned after interpolation of {} for'
+                                     ' node {}'.format(value, label, node_1))
+
+                if np.isnan(value):
                     if label.split('_')[label_indices['proporfreq']] == 'propensity':
-                        # NOTE: Must take -ve logarithm of each
-                        # individual propensity score before
-                        # summing (rather than taking the -ve
-                        # logarithm of the summed propensities)
-                        value = weight*np.negative(np.log(value))
-                        total_value += value
-                    elif label.split('_')[label_indices['proporfreq']] == 'frequency':
-                        value *= weight
-                        total_value += value
+                        value = 0.0001  # Since dataset used to generate prop
+                        # and freq dicts is ~10,000 aas => smallest propensity
+                        # could be is ((1/5000)/(5001/10000) = 0.0004 (for a
+                        # discrete propensity))
+                    else:
+                        value = 0
+
+                if label.split('_')[label_indices['proporfreq']] == 'propensity':
+                    # NOTE: Must take -ve logarithm of each individual
+                    # propensity score before summing (rather than taking the
+                    # -ve logarithm of the summed propensities)
+                    value = weight*np.negative(np.log(value))
+                    total_value += value
+                elif label.split('_')[label_indices['proporfreq']] == 'frequency':
+                    value *= weight
+                    total_value += value
 
     return total_value
 
 
+def look_up_frequency(aa_freqs, dicts, aa_list):
+    """
+    """
+
+    if label.split('_')[label_indices['proporfreq']] == 'propensity':
+        raise Exception(
+            '"look_up_frequency" should not be called for a propensity dictionary'
+        )
+
+    normed_aa_freqs = {}
+    for label, score_dict in aa_freqs.items():
+        normed_aa_freqs[label] = {}
+        total = sum(score_dict.values())
+        for aa, score in score_dict.items():
+            normed_aa_freqs[label][aa] = score / total
+
+
+    freq_diffs = np.full((len(normed_aa_freqs), len(aa_list)), np.nan)
+    dict_index = -1
+    for label, obs_freq_dict in normed_aa_freqs.items():
+        dict_index +=1
+        weight = ''
+        exp_freq_dict = ''
+        for tup in dicts:
+            if tup[0] == label:
+                weight = tup[1]
+                exp_freq_dict = tup[2]
+                exp_freq_dict = copy.deepcopy(exp_freq_dict).set_index(
+                    'FASTA', drop=True
+                )
+                break
+        for aa_index, aa in enumerate(aa_list):
+            obs_count = obs_freq_dict[aa]
+            exp_count = exp_freq_dict.iloc[:,0][aa]
+            percentage_diff = ((obs_count - exp_count) / exp_count)
+            freq_diffs[dict_index][aa_index] = abs(percentage_diff)*weight
+    frequency_count = np.nansum(freq_diffs)
+
+    return frequency_count
+
+
 def measure_fitness_propensity(
-    num, G, dicts, label_indices, barrel_or_sandwich, test=False
+    num, G, dicts, label_indices, barrel_or_sandwich, aa_list, test=False
 ):
     """
     Measures fitness of amino acid sequences from their propensities for
@@ -213,7 +286,14 @@ def measure_fitness_propensity(
 
     # Total propensity count (across all nodes in network)
     propensity_count = 0
-    frequency_count = 0
+    # Records frequencies of all amino acids (for later comparisons with
+    # frequency dicts)
+    freq_dicts = [(label, weight, scores) for label, weight, scores in dicts
+                  if label.split('_')[label_indices['proporfreq']] == 'frequency']
+    aa_freqs = {label: {} for label, weight, scores in freq_dicts}
+    for label in aa_freqs.keys():
+        for aa in aa_list:
+            aa_freqs[label][aa] = 0
 
     for node_1 in list(G.nodes):
         # Calculates interpolated propensity of each node for all individual
@@ -238,26 +318,37 @@ def measure_fitness_propensity(
             ):
                 continue
 
-            # Looks up propensity / frequency of node in dictionary
+            # Looks up propensity of node in dictionary
             dict_indv_pair = label.split('_')[label_indices['pairorindv']]
-            if dict_indv_pair == 'indv':
-                value = look_up_indv_propensity(
-                    G, node_1, scale, label, weight, label_indices
-                )
-            elif dict_indv_pair == 'pair':
-                value = look_up_pair_propensity(
-                    G, node_1, scale, label, weight, label_indices
-                )
-            else:
-                raise ValueError('Scale {} not labelled as being for individual'
-                                 ' or pairs of amino acids'.format(label))
-
-            # Adds propensity/ frequency score to total
-            dict_prop_freq = label.split('_')[label_indices['proporfreq']]
-            if dict_prop_freq == 'propensity':
+            if label.split('_')[label_indices['proporfreq']] == 'propensity':
+                if dict_indv_pair == 'indv':
+                    value = look_up_indv_propensity(
+                        G, node_1, scale, label, weight, label_indices
+                    )
+                elif dict_indv_pair == 'pair':
+                    value = look_up_pair_propensity(
+                        G, node_1, scale, label, weight, label_indices
+                    )
+                else:
+                    raise ValueError(
+                        'Scale {} not labelled as being for individual or pairs'
+                        ' of amino acids'.format(label)
+                    )
                 propensity_count += value
-            elif dict_prop_freq == 'frequency':
-                frequency_count += value
+
+            # Counts frequency of different amino acids for different structural
+            # features
+            elif label.split('_')[label_indices['proporfreq']] == 'frequency':
+                dict_disc_cont = label.split('_')[label_indices['discorcont']]
+                if dict_disc_cont == 'disc':
+                    aa = G.nodes[node_1]['aa_id']
+                    aa_freqs[label][aa] += 1
+                elif dict_disc_cont == 'cont':
+                    raise Exception(
+                        'Unexpected dictionary {} - do not expect a '
+                        'continuous frequency dictionary'.format(dict_label)
+                    )
+
             else:
                 raise ValueError('Scale {} not labelled as either a propensity '
                                  'or a frequency scale'.format(label))
@@ -268,7 +359,9 @@ def measure_fitness_propensity(
         else:
             raise ValueError('WARNING: propensity for network {} is '
                             '{}'.format(num, propensity_count))
-    if np.isnan(frequency_count):
+
+    frequency_count = look_up_frequency(aa_freqs, dicts, aa_list)
+    if frequency_count == 0 or np.isnan(frequency_count):
         if test is True:
             pass
         else:
@@ -294,6 +387,8 @@ if __name__ == '__main__':
     parser.add_argument('-o', '--output', help='Location to which to save the '
                         'output pickled dictionary of propensity and frequency '
                         'scores')
+    parser.add_argument('-aa', '--aminoacids', help='List of amino acids to be '
+                        'included in the designs')
     args = parser.parse_args()
 
     networks_dict = vars(args)['net']
@@ -302,22 +397,22 @@ if __name__ == '__main__':
     dicts_list = vars(args)['dicts']
     with open(dicts_list, 'rb') as f:
         dicts_list = pickle.load(f)
-    dicts_list = [copy.deepcopy(dicts_list)
-                  for n in range(len(networks_dict))]
+    dicts_list = [copy.deepcopy(dicts_list) for n in range(len(networks_dict))]
     label_indices = vars(args)['indices']
     with open(label_indices, 'rb') as f:
         label_indices = pickle.load(f)
-    label_indices = [copy.deepcopy(label_indices)
-                     for n in range(len(networks_dict))]
+    label_indices = [copy.deepcopy(label_indices) for n in range(len(networks_dict))]
     barrel_or_sandwich = vars(args)['bos']
     barrel_or_sandwich = [copy.deepcopy(barrel_or_sandwich)
                           for n in range(len(networks_dict))]
+    aa_list = vars(args)['aminoacids'].split(',')
+    aa_list = [copy.deepcopy(aa_list) for n in range(len(networks_dict))]
     wd = vars(args)['output']
 
     network_fitness_list = futures.map(
         measure_fitness_propensity, list(networks_dict.keys()),
         list(networks_dict.values()), dicts_list, label_indices,
-        barrel_or_sandwich
+        barrel_or_sandwich, aa_list
     )
 
     network_propensity_scores = OrderedDict()

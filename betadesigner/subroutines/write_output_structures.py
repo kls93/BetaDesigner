@@ -35,6 +35,9 @@ class gen_output(initialise_ga_object):
         with open('{}/Sequences_dict.pkl'.format(self.working_directory), 'wb') as f:
             pickle.dump(sequences_dict, f)
 
+        with open('{}/Program_output/Model_energies.txt'.format(self.working_directory), 'a') as f:
+            f.write('\nInput structure: {}\n\n\n'.format(self.input_pdb_energy))
+
         os.system('python -m scoop {}/write_output_pdb_in_parallel.py '
                   '-s {}/Sequences_dict.pkl -pdb {} -o {}'.format(
                   os.path.dirname(os.path.abspath(__file__)),

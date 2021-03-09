@@ -26,12 +26,16 @@ def random_shuffle(array_1, array_2, array_3):
     values
     """
 
+    type_array_1 = array_1.dtype
+    type_array_2 = array_2.dtype
+    type_array_3 = array_3.dtype
+
     probability_array = np.transpose(np.array([array_1, array_2, array_3]))
     np.random.shuffle(probability_array)
     probability_array = np.transpose(probability_array)
-    array_1 = probability_array[0]
-    array_2 = probability_array[1]
-    array_3 = probability_array[2]
+    array_1 = probability_array[0].astype(type_array_1)
+    array_2 = probability_array[1].astype(type_array_2)
+    array_3 = probability_array[2].astype(type_array_3)
 
     return array_1, array_2, array_3
 
@@ -394,17 +398,34 @@ class gen_ga_input_calcs(initialise_ga_object):
 
                 value = np.nan
                 if dict_label.split('_')[discorcont_index] == 'cont' and not np.isnan(node_val):
+                    if dict_label.split('_')[proporfreq_index] != 'propensity':
+                        raise Exception(
+                            'Unexpected dictionary {} - expect only continuous '
+                            'propensity dictionaries'.format(dict_label)
+                        )
+
                     # Interpolate dictionary
                     for aa, aa_scale in scale_dict.items():
                         aa_index = self.aa_list.index(aa)
                         value = linear_interpolation(node_val, aa_scale, dict_label)
 
+                        if value <= 0:
+                            raise ValueError(
+                                '{} returned after interpolation of {} for node'
+                                ' {}'.format(value, dict_label, node)
+                            )
+
+                        if np.isnan(value):
+                            if dict_label.split('_')[proporfreq_index] == 'propensity':
+                                value = 0.0001   # Since dataset used to generate
+                                # prop and freq dicts is ~10,000 aas => smallest
+                                # propensity could be is ((1/5000)/(5001/10000)
+                                # = 0.0004 (for a discrete propensity))
+
                         if dict_label.split('_')[proporfreq_index] == 'propensity':
                             node_indv_propensities[dict_index][aa_index] = (
                                 dict_weight*np.negative(np.log(value))
                             )
-                        elif dict_label.split('_')[proporfreq_index] == 'frequency':
-                            node_indv_frequencies[dict_index][aa_index] = dict_weight*value
 
                 elif dict_label.split('_')[discorcont_index] == 'disc':
                     # Filter dataframe
@@ -420,7 +441,24 @@ class gen_ga_input_calcs(initialise_ga_object):
                                 try:
                                     value = scale_dict_copy[node_val][aa]
                                 except KeyError:
-                                    raise Exception('{} not defined in {}'.format(aa, dict_label))
+                                    raise Exception('{},{} not defined in {}'.format(
+                                        node_val, aa, dict_label
+                                    ))
+
+                        if value <= 0:
+                            raise ValueError(
+                                '{} returned after interpolation of {} for node'
+                                ' {}'.format(value, dict_label, node)
+                            )
+
+                        if np.isnan(value):
+                            if dict_label.split('_')[proporfreq_index] == 'propensity':
+                                value = 0.0001  # Since dataset used to generate
+                                # prop and freq dicts is ~10,000 aas => smallest
+                                # propensity could be is ((1/5000)/(5001/10000)
+                                # = 0.0004 (for a discrete propensity))
+                            else:
+                                value = 0
 
                         if dict_label.split('_')[proporfreq_index] == 'propensity':
                             node_indv_propensities[dict_index][aa_index] = (
@@ -487,8 +525,16 @@ class gen_ga_input_calcs(initialise_ga_object):
 
                 # Since propensity_weight is a hyperparameter to be optimised
                 # with hyperopt, for initial sequence generation the propensity
-                # and frequency scales are weighted equally
-                probability = (0.5*propensity) + (0.5*frequency)
+                # and frequency scales are weighted equally (unless not
+                # performing hyperparameter optimisation, in which case use the
+                # propensity_weight specified in the input file)
+                try:
+                    prop_weight = self.propensity_weight
+                    freq_weight = 1 - self.propensity_weight
+                except AttributeError:
+                    prop_weight = 0.5
+                    freq_weight = 0.5
+                probability = (prop_weight*propensity) + (freq_weight*frequency)
                 node_probabilities[index_prop] = probability
             filt_aa_list = filt_aa_list[node_prop_index]
             node_cumulative_probabilities = gen_cumulative_probabilities(
