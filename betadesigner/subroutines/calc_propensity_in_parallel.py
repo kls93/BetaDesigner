@@ -286,8 +286,9 @@ def measure_fitness_propensity(
     surfaces = ['-']
     edges = ['-']
     for node_1 in list(G.nodes):
-        surfaces.append(G.nodes[node_1]['int_ext'])
-        edges.append(G.nodes[node_1]['eoc'])
+        if G.nodes[node_1]['type'] == 'strand':
+            surfaces.append(G.nodes[node_1]['int_ext'])
+            edges.append(G.nodes[node_1]['eoc'])
     surfaces = list(set(surfaces))
     edges = list(set(edges))
     dicts = [(label, weight, scale) for (label, weight, scale) in dicts
