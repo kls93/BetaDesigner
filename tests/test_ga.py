@@ -164,13 +164,18 @@ class testGeneticAlgorithm(unittest.TestCase):
     """
     """
 
-    def gen_network_prop_and_freq(self):
+    def gen_network_prop_and_freq(
+        self, network_num=[1, 2, 3, 4, 5, 6], extra_dicts={}
+    ):
         """
         """
 
         params = define_params()
         test_dict = gen_sequence_networks()
+        test_dict = {num: test_dict[num] for num in network_num}
         prop_freq_dicts = gen_prop_and_freq_distributions()
+        for label, prop_dict in extra_dicts.items():
+            prop_freq_dicts[label] = prop_dict
         prop_freq_list = []
         for label, scale in prop_freq_dicts.items():
             weight = params['scaleweights'][label]
@@ -180,7 +185,8 @@ class testGeneticAlgorithm(unittest.TestCase):
         network_freq = OrderedDict()
         for num, network in test_dict.items():
             num, prop, freq = measure_fitness_propensity(
-                num, network, prop_freq_list, params['dictnameindices'], '2.60', True
+                num, network, prop_freq_list, params['dictnameindices'], '2.60',
+                params['aacodes'], True
             )
             network_prop[num] = prop
             network_freq[num] = freq
@@ -193,20 +199,48 @@ class testGeneticAlgorithm(unittest.TestCase):
 
         print('Testing measure_fitness_propensity()')
 
-        network_propensities, network_frequencies = self.gen_network_prop_and_freq()
+        # Tests propensity and frequency scoring
+        network_propensities_1, network_frequencies_1 = self.gen_network_prop_and_freq(
+            network_num=[1, 2, 3, 4, 5]
+        )
 
-        np.testing.assert_almost_equal(network_propensities[1], -0.887891, decimal=5)
-        np.testing.assert_almost_equal(network_propensities[2], -3.222491, decimal=5)
-        np.testing.assert_almost_equal(network_propensities[3], -0.978747, decimal=5)
-        np.testing.assert_almost_equal(network_propensities[4], -1.560937, decimal=5)
-        np.testing.assert_almost_equal(network_propensities[5], -1.645576, decimal=5)
-        np.testing.assert_almost_equal(network_propensities[6], 0, decimal=5)
-        np.testing.assert_almost_equal(network_frequencies[1], 2.4, decimal=5)
-        np.testing.assert_almost_equal(network_frequencies[2], 1, decimal=5)
-        np.testing.assert_almost_equal(network_frequencies[3], 1, decimal=5)
-        np.testing.assert_almost_equal(network_frequencies[4], 0.25, decimal=5)
-        np.testing.assert_almost_equal(network_frequencies[5], 0.85, decimal=5)
-        np.testing.assert_almost_equal(network_frequencies[6], 0, decimal=5)
+        np.testing.assert_almost_equal(network_propensities_1[1], 2.809020, decimal=5)
+        np.testing.assert_almost_equal(network_propensities_1[2], -1.360738, decimal=5)
+        np.testing.assert_almost_equal(network_propensities_1[3], 0.892055, decimal=5)
+        np.testing.assert_almost_equal(network_propensities_1[4], -0.501065, decimal=5)
+        np.testing.assert_almost_equal(network_propensities_1[5], 0.657008, decimal=5)
+        np.testing.assert_almost_equal(network_frequencies_1[1], 2.25, decimal=5)
+        np.testing.assert_almost_equal(network_frequencies_1[2], 7.472222, decimal=5)
+        np.testing.assert_almost_equal(network_frequencies_1[3], 7.472222, decimal=5)
+        np.testing.assert_almost_equal(network_frequencies_1[4], 14.555555, decimal=5)
+        np.testing.assert_almost_equal(network_frequencies_1[5], 10.375, decimal=5)
+
+        # Tests propensity and frequency scoring with np.nan values
+        network_propensities_2, network_frequencies_2 = self.gen_network_prop_and_freq(
+            network_num=[1, 2, 3, 4, 5],
+            extra_dicts={
+                'int_-_z_-_indv_cont_propensity': {
+                    'A': np.array([[-10, 0, 10], [2.5, 1.5, 0.5]]),
+                    'R': np.array([[-10, 0, 10], [0.5, 1.5, np.nan]]),
+                    'N': np.array([[-10, 0, 10], [0.5, 2.5, 0.5]])
+                },
+                'int_-_-_-_indv_disc_frequency': pd.DataFrame({
+                    'FASTA': ['A', 'R', 'N'],
+                    'int': [np.nan, 0.8, 0.2]
+                })
+            }
+        )
+
+        np.testing.assert_almost_equal(network_propensities_2[1], 2.809020, decimal=5)
+        np.testing.assert_almost_equal(network_propensities_2[2], 8.638058, decimal=5)
+        np.testing.assert_almost_equal(network_propensities_2[3], 0.892055, decimal=5)
+        np.testing.assert_almost_equal(network_propensities_2[4], -0.501065, decimal=5)
+        np.testing.assert_almost_equal(network_propensities_2[5],0.657008 , decimal=5)
+        np.testing.assert_almost_equal(network_frequencies_2[1], 10001.0, decimal=5)
+        np.testing.assert_almost_equal(network_frequencies_2[2], 3333.583333, decimal=5)
+        np.testing.assert_almost_equal(network_frequencies_2[3], 3333.583333, decimal=5)
+        np.testing.assert_almost_equal(network_frequencies_2[4], 3.916666, decimal=5)
+        np.testing.assert_almost_equal(network_frequencies_2[5], 5001.5, decimal=5)
 
     def test_combine_prop_and_freq_scores(self):
         """
@@ -215,7 +249,9 @@ class testGeneticAlgorithm(unittest.TestCase):
         print('Testing combine_prop_and_freq_scores()')
 
         params = define_params()
-        network_propensities, network_frequencies = self.gen_network_prop_and_freq()
+        network_propensities, network_frequencies = self.gen_network_prop_and_freq(
+            network_num=[1, 2, 3, 4, 5]
+        )
 
         # Test 1
         bayes_params = {'propensityweight': 0.5,
@@ -227,12 +263,11 @@ class testGeneticAlgorithm(unittest.TestCase):
         network_fitness_scores = ga_calcs.combine_prop_and_freq_scores(
             network_propensities, network_frequencies, 'raw'
         )
-        np.testing.assert_almost_equal(network_fitness_scores[1], 0.247723, decimal=5)
-        np.testing.assert_almost_equal(network_fitness_scores[2], 0.395932, decimal=5)
-        np.testing.assert_almost_equal(network_fitness_scores[3], 0.123260, decimal=5)
-        np.testing.assert_almost_equal(network_fitness_scores[4], 0.080633, decimal=5)
-        np.testing.assert_almost_equal(network_fitness_scores[5], 0.140294, decimal=5)
-        np.testing.assert_almost_equal(network_fitness_scores[6], 0.012156, decimal=5)
+        np.testing.assert_almost_equal(network_fitness_scores[1], 0.171275, decimal=5)
+        np.testing.assert_almost_equal(network_fitness_scores[2], 0.398184, decimal=5)
+        np.testing.assert_almost_equal(network_fitness_scores[3], 0.164674, decimal=5)
+        np.testing.assert_almost_equal(network_fitness_scores[4], 0.159554, decimal=5)
+        np.testing.assert_almost_equal(network_fitness_scores[5], 0.106311, decimal=5)
 
         # Test 2
         bayes_params = {'propensityweight': 0.8,
@@ -243,12 +278,11 @@ class testGeneticAlgorithm(unittest.TestCase):
         network_fitness_scores = ga_calcs.combine_prop_and_freq_scores(
             network_propensities, network_frequencies, 'raw'
         )
-        np.testing.assert_almost_equal(network_fitness_scores[1], 0.134538, decimal=5)
-        np.testing.assert_almost_equal(network_fitness_scores[2], 0.524400, decimal=5)
-        np.testing.assert_almost_equal(network_fitness_scores[3], 0.088125, decimal=5)
-        np.testing.assert_almost_equal(network_fitness_scores[4], 0.101741, decimal=5)
-        np.testing.assert_almost_equal(network_fitness_scores[5], 0.131743, decimal=5)
-        np.testing.assert_almost_equal(network_fitness_scores[6], 0.019451, decimal=5)
+        np.testing.assert_almost_equal(network_fitness_scores[1], 0.074040, decimal=5)
+        np.testing.assert_almost_equal(network_fitness_scores[2], 0.517094, decimal=5)
+        np.testing.assert_almost_equal(network_fitness_scores[3], 0.103478, decimal=5)
+        np.testing.assert_almost_equal(network_fitness_scores[4], 0.215287, decimal=5)
+        np.testing.assert_almost_equal(network_fitness_scores[5], 0.090098, decimal=5)
 
         # Test 3
         bayes_params = {'propensityweight': 1,
@@ -259,12 +293,11 @@ class testGeneticAlgorithm(unittest.TestCase):
         network_fitness_scores = ga_calcs.combine_prop_and_freq_scores(
             network_propensities, network_frequencies, 'raw'
         )
-        np.testing.assert_almost_equal(network_fitness_scores[1], 0.059082, decimal=5)
-        np.testing.assert_almost_equal(network_fitness_scores[2], 0.610045, decimal=5)
-        np.testing.assert_almost_equal(network_fitness_scores[3], 0.064701, decimal=5)
-        np.testing.assert_almost_equal(network_fitness_scores[4], 0.115813, decimal=5)
-        np.testing.assert_almost_equal(network_fitness_scores[5], 0.126042, decimal=5)
-        np.testing.assert_almost_equal(network_fitness_scores[6], 0.024313, decimal=5)
+        np.testing.assert_almost_equal(network_fitness_scores[1], 0.009217, decimal=5)
+        np.testing.assert_almost_equal(network_fitness_scores[2], 0.596368, decimal=5)
+        np.testing.assert_almost_equal(network_fitness_scores[3], 0.062681, decimal=5)
+        np.testing.assert_almost_equal(network_fitness_scores[4], 0.252442, decimal=5)
+        np.testing.assert_almost_equal(network_fitness_scores[5], 0.079289, decimal=5)
 
         # Test 4
         bayes_params = {'propensityweight': 0.6,
@@ -275,12 +308,11 @@ class testGeneticAlgorithm(unittest.TestCase):
         network_fitness_scores = ga_calcs.combine_prop_and_freq_scores(
             network_propensities, network_frequencies, 'rank'
         )
-        np.testing.assert_almost_equal(network_fitness_scores[1], 0.231688, decimal=5)
-        np.testing.assert_almost_equal(network_fitness_scores[2], 0.244155, decimal=5)
-        np.testing.assert_almost_equal(network_fitness_scores[3], 0.158441, decimal=5)
-        np.testing.assert_almost_equal(network_fitness_scores[4], 0.132467, decimal=5)
-        np.testing.assert_almost_equal(network_fitness_scores[5], 0.204675, decimal=5)
-        np.testing.assert_almost_equal(network_fitness_scores[6], 0.028571, decimal=5)
+        np.testing.assert_almost_equal(network_fitness_scores[1], 0.173333, decimal=5)
+        np.testing.assert_almost_equal(network_fitness_scores[2], 0.28, decimal=5)
+        np.testing.assert_almost_equal(network_fitness_scores[3], 0.186666, decimal=5)
+        np.testing.assert_almost_equal(network_fitness_scores[4], 0.186666, decimal=5)
+        np.testing.assert_almost_equal(network_fitness_scores[5], 0.173333, decimal=5)
 
     def test_convert_energy_to_probability(self):
         """
@@ -298,11 +330,11 @@ class testGeneticAlgorithm(unittest.TestCase):
                             3: 0,
                             4: 7,
                             5: -16}
-        expected_network_prob = {1: 0.0783821,
-                                 2: 0.0000000451189,
-                                 3: 0.00129241,
-                                 4: 0.0000730178,
-                                 5: 0.920252}
+        expected_network_prob = {1: 0.266666,
+                                 2: 0.066666,
+                                 3: 0.2,
+                                 4: 0.133333,
+                                 5: 0.333333}
 
         ga_calcs = run_ga_calcs({**params, **bayes_params}, test=True)
         network_fitness_scores = ga_calcs.convert_energies_to_probabilities(
@@ -310,16 +342,16 @@ class testGeneticAlgorithm(unittest.TestCase):
         )
 
         np.testing.assert_almost_equal(
-            network_fitness_scores[1], expected_network_prob[1], decimal=6
+            network_fitness_scores[1], expected_network_prob[1], decimal=5
         )
         np.testing.assert_almost_equal(
-            network_fitness_scores[2], expected_network_prob[2], decimal=12
+            network_fitness_scores[2], expected_network_prob[2], decimal=5
         )
         np.testing.assert_almost_equal(
-            network_fitness_scores[3], expected_network_prob[3], decimal=7
+            network_fitness_scores[3], expected_network_prob[3], decimal=5
         )
         np.testing.assert_almost_equal(
-            network_fitness_scores[4], expected_network_prob[4], decimal=9
+            network_fitness_scores[4], expected_network_prob[4], decimal=5
         )
         np.testing.assert_almost_equal(
             network_fitness_scores[5], expected_network_prob[5], decimal=5
@@ -396,7 +428,7 @@ class testGeneticAlgorithm(unittest.TestCase):
         with self.assertRaises(TypeError): ga_calcs.uniform_crossover(
             test_sub_dict, test=True, pairs=sub_pairs,
             crossover_prob={0: {1: 0.05, 2: 0.05, 3: 0.05}}
-            )
+        )
 
         # Tests uniform crossover
         crossover_prob = {0: {1: 0.08, 2: 0.5, 3: 0.1},
@@ -435,7 +467,7 @@ class testGeneticAlgorithm(unittest.TestCase):
         with self.assertRaises(TypeError): ga_calcs.segmented_crossover(
             test_sub_dict, test=True, pairs=sub_pairs,
             crossover_prob={0: {1: 0.05, 2: 0.5, 3: 0.8}}
-            )
+        )
 
         # Tests segmented crossover
         crossover_prob = {0: {1: 0.5, 2: 0.05, 3: 0.6},

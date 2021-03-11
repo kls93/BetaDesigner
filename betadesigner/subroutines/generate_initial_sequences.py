@@ -242,7 +242,7 @@ class gen_ga_input_calcs(initialise_ga_object):
                                      'interior or exterior surface of the input'
                                      ' beta-barrel structure'.format(node))
                 G.add_node(node, type='strand', aa_id=aa_id, int_ext=int_or_ext,
-                           zsandwich=z_sandwich_coord,
+                           z=z_sandwich_coord,
                            #zstrand=z_strand_coord, bsa=buried_surface_area,
                            eoc=edge_or_central,
                            phipsi=phi_psi_class)

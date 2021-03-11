@@ -38,20 +38,27 @@ def linear_interpolation(node_val, aa_propensity_scale, dict_label):
 
     else:
         node_val_scale = aa_propensity_scale[0]
+        if np.isnan(np.sum(node_val_scale)):
+            raise ValueError(
+                'NaN value recorded in {}:\n{}'.format(label, node_val_scale)
+            )
         propensity_scale = aa_propensity_scale[1]
         if node_val_scale[0] <= node_val <= node_val_scale[-1]:
             index_1 = (np.abs(node_val_scale-node_val)).argmin()
             prop_val_1 = node_val_scale[index_1]
             propensity_1 = propensity_scale[index_1]
 
-            index_2 = find_indices(index_1, prop_val_1, node_val, node_val_scale)
-            prop_val_2 = node_val_scale[index_2]
-            propensity_2 = propensity_scale[index_2]
+            if node_val == prop_val_1:
+                propensity = propensity_1
+            else:
+                index_2 = find_indices(index_1, prop_val_1, node_val, node_val_scale)
+                prop_val_2 = node_val_scale[index_2]
+                propensity_2 = propensity_scale[index_2]
 
-            # Linear interpolation
-            weight_1 = abs(prop_val_2 - node_val) / abs(prop_val_2 - prop_val_1)
-            weight_2 = abs(prop_val_1 - node_val) / abs(prop_val_2 - prop_val_1)
-            propensity = (propensity_1*weight_1) + (propensity_2*weight_2)
+                # Linear interpolation
+                weight_1 = abs(prop_val_2 - node_val) / abs(prop_val_2 - prop_val_1)
+                weight_2 = abs(prop_val_1 - node_val) / abs(prop_val_2 - prop_val_1)
+                propensity = (propensity_1*weight_1) + (propensity_2*weight_2)
 
         else:
             propensity = np.nan
@@ -234,9 +241,12 @@ def look_up_frequency(aa_freqs, dicts, label_indices, aa_list):
             )
         normed_aa_freqs[label] = {}
         total = sum(score_dict.values())
+        if total == 0:
+            raise Exception(
+                'No amino acids counted for {}'.format(label)
+            )
         for aa, score in score_dict.items():
             normed_aa_freqs[label][aa] = score / total
-
 
     freq_diffs = np.full((len(normed_aa_freqs), len(aa_list)), np.nan)
     dict_index = -1
@@ -272,11 +282,23 @@ def measure_fitness_propensity(
     the structural features of the input backbone structure.
     """
 
+    # Filters input dictionaries to remove dictionaries that aren't called at all
+    surfaces = ['-']
+    edges = ['-']
+    for node_1 in list(G.nodes):
+        surfaces.append(G.nodes[node_1]['int_ext'])
+        edges.append(G.nodes[node_1]['eoc'])
+    surfaces = list(set(surfaces))
+    edges = list(set(edges))
+    dicts = [(label, weight, scale) for (label, weight, scale) in dicts
+             if (    label.split('_')[label_indices['intorext']] in surfaces
+                 and label.split('_')[label_indices['edgeorcent']] in edges)]
+
     # Total propensity count (across all nodes in network)
     propensity_count = 0
     # Records frequencies of all amino acids (for later comparisons with
     # frequency dicts)
-    freq_dicts = [(label, weight, scores) for label, weight, scores in dicts
+    freq_dicts = [(label, weight, scores) for (label, weight, scores) in dicts
                   if label.split('_')[label_indices['proporfreq']] == 'frequency']
     aa_freqs = {label: {} for label, weight, scores in freq_dicts}
     for label in aa_freqs.keys():
