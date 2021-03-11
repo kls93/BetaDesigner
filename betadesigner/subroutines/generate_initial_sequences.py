@@ -146,6 +146,18 @@ def gen_cumulative_probabilities(node_probabilities, node, adjust_scale=False):
     if node_probabilities.size == 0:
         raise Exception('No probability values calculated for {}'.format(node))
 
+    if not all(type(val) == np.float64 for val in node_probabilities):
+        raise TypeError(
+            'Unexpected type encountered in node probability distribution '
+            '{}'.format(node_probabilities)
+        )
+
+    if np.isnan(np.sum(node_probabilities)):
+        raise ValueError(
+            'NaN encountered in node probability distribution '
+            '{}'.format(node_probabilities)
+        )
+
     if adjust_scale is True:
         total = np.sum(node_probabilities)
         node_probabilities = node_probabilities / total
@@ -167,8 +179,8 @@ def gen_cumulative_probabilities(node_probabilities, node, adjust_scale=False):
 
 class gen_ga_input_calcs(initialise_ga_object):
 
-    def __init__(self, params):
-        initialise_ga_object.__init__(self, params)
+    def __init__(self, params, test=False):
+        initialise_ga_object.__init__(self, params, test)
 
     def generate_networks(self):
         """

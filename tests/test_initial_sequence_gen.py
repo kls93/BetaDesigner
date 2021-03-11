@@ -265,20 +265,34 @@ class test_initial_sequence_generation(unittest.TestCase):
         Tests calculation of cumulative probability scale
         """
 
-        probability_arrays = np.array([[], [1.0], [0.1, 0.2, 0.3, 0.4],
-                                       [0.4, 0.5], [0.6, 0.5]])
-        exp_cum_prob_vals = np.array([[], [1.0], [0.1, 0.3, 0.6, 1.0], [], []])
-        exp_fail_arrays = [np.array([]), np.array([0.4, 0.5]), np.array([0.6, 0.5])]
+        probability_arrays = [
+            [], [1.0], [0.1, 0.2, 0.3, 0.4], [0.4, 0.5], [0.6, 0.5],
+            [0.2, 0.3, np.nan], [0.1, 'a']
+        ]
+        exp_cum_prob_vals = [
+            [], [1.0], [0.1, 0.3, 0.6, 1.0], [], [], [], [], []
+        ]
 
         index = 0
-        for array in probability_arrays:
-            array = np.array(array)
-            if any(np.array_equal(array, x) for x in exp_fail_arrays):
-                self.assertRaises(Exception, gen_cumulative_probabilities, [array, ''])
+        while index < 7:
+            array = np.array(probability_arrays[index])
+            if index in [0, 3, 4, 5, 6]:
+                if index == 5:
+                    self.assertRaises(
+                        ValueError, gen_cumulative_probabilities, array, ''
+                    )
+                elif index == 6:
+                    self.assertRaises(
+                        TypeError, gen_cumulative_probabilities, array, ''
+                    )
+                else:
+                    self.assertRaises(
+                        Exception, gen_cumulative_probabilities, array, ''
+                    )
             else:
                 calc_array = gen_cumulative_probabilities(array, '')
                 np.testing.assert_array_almost_equal(
-                    calc_array, exp_cum_prob_vals[index], decimal=1
+                    calc_array, np.array(exp_cum_prob_vals[index]), decimal=1
                 )
             index += 1
 
@@ -291,7 +305,7 @@ class test_initial_sequence_generation(unittest.TestCase):
         params = define_params()
         params['inputdataframepath'] = 'tests/test_files/example_barrel_input_df.pkl'
         params['inputdataframe'] = pd.read_pickle(params['inputdataframepath'])
-        input_calcs = gen_ga_input_calcs(params)
+        input_calcs = gen_ga_input_calcs(params, test=True)
 
         # Tests parsing of input dataframe into network
         G = input_calcs.generate_networks()
@@ -316,19 +330,58 @@ class test_initial_sequence_generation(unittest.TestCase):
         self.assertDictEqual(obs_edge_properties, exp_edge_properties)
 
         # Tests that input graph is scored correctly based upon its properties
-        prop_freq_dicts = gen_prop_and_freq_distributions()
-        prop_freq_dicts = [[key, 1, val] for key, val in prop_freq_dicts.items()]
-        num, obs_prop_count, obs_freq_count = measure_fitness_propensity(
-            1, G, prop_freq_dicts, params['dictnameindices'],
-            params['barrelorsandwich']
+        prop_freq_dicts_1 = gen_prop_and_freq_distributions()
+        prop_freq_dicts_1 = [[key, 1, val] for key, val in prop_freq_dicts_1.items()]
+        num_1, obs_prop_count_1, obs_freq_count_1 = measure_fitness_propensity(
+            1, G, prop_freq_dicts_1, params['dictnameindices'],
+            params['barrelorsandwich'], params['aacodes']
         )
 
-        exp_prop_count = -1.3712914
-        exp_freq_count = 1.75
+        exp_prop_count_1 = 5.7992442
+        exp_freq_count_1 = 20.2111111
 
-        np.testing.assert_equal(num, 1)
-        np.testing.assert_almost_equal(obs_prop_count, exp_prop_count, decimal=6)
-        np.testing.assert_almost_equal(obs_freq_count, exp_freq_count, decimal=6)
+        np.testing.assert_equal(num_1, 1)
+        np.testing.assert_almost_equal(obs_prop_count_1, exp_prop_count_1, decimal=6)
+        np.testing.assert_almost_equal(obs_freq_count_1, exp_freq_count_1, decimal=6)
+
+        # Tests that np.nan is handled properly in propensity dicts when scoring
+        prop_freq_dicts_2 = gen_prop_and_freq_distributions()
+        prop_freq_dicts_2['-_-_z_-_indv_cont_propensity'] = {
+            'A': np.array([[-10, 0, 10], [0.2, 0.2, 0.8]]),
+            'R': np.array([[-10, 0, 10], [1.1, 0.9, 1.2]]),
+            'N': np.array([[-10, 0, 10], [np.nan, 0.7, 0.8]])
+        }
+        prop_freq_dicts_2 = [[key, 1, val] for key, val in prop_freq_dicts_2.items()]
+        num_2, obs_prop_count_2, obs_freq_count_2 = measure_fitness_propensity(
+            2, G, prop_freq_dicts_2, params['dictnameindices'],
+            params['barrelorsandwich'], params['aacodes']
+        )
+
+        exp_prop_count_2 = 39.0194597
+        exp_freq_count_2 = 20.2111111
+
+        np.testing.assert_equal(num_2, 2)
+        np.testing.assert_almost_equal(obs_prop_count_2, exp_prop_count_2, decimal=6)
+        np.testing.assert_almost_equal(obs_freq_count_2, exp_freq_count_2, decimal=6)
+
+        # Tests that np.nan is handled properly in frequency dicts when scoring
+        prop_freq_dicts_3 = gen_prop_and_freq_distributions()
+        prop_freq_dicts_3['int_-_-_-_indv_disc_frequency'] = pd.DataFrame(
+            {'FASTA': ['A', 'R', 'N'],
+             'int': [np.nan, 0.15, 0.05]
+        })
+        prop_freq_dicts_3 = [[key, 1, val] for key, val in prop_freq_dicts_3.items()]
+        num_3, obs_prop_count_3, obs_freq_count_3 = measure_fitness_propensity(
+            3, G, prop_freq_dicts_3, params['dictnameindices'],
+            params['barrelorsandwich'], params['aacodes']
+        )
+
+        exp_prop_count_3 = 5.7992442
+        exp_freq_count_3 = 4018.7111111
+
+        np.testing.assert_equal(num_3, 3)
+        np.testing.assert_almost_equal(obs_prop_count_3, exp_prop_count_3, decimal=6)
+        np.testing.assert_almost_equal(obs_freq_count_3, exp_freq_count_3, decimal=6)
 
     def test_add_random_initial_side_chains(self):
         """
@@ -339,7 +392,7 @@ class test_initial_sequence_generation(unittest.TestCase):
         params = define_params()
         params['inputdataframepath'] = 'tests/test_files/example_barrel_input_df.pkl'
         params['inputdataframe'] = pd.read_pickle(params['inputdataframepath'])
-        input_calcs = gen_ga_input_calcs(params)
+        input_calcs = gen_ga_input_calcs(params, test=True)
 
         # Tests parsing of input dataframe into network
         G = input_calcs.generate_networks()
@@ -374,31 +427,32 @@ class test_initial_sequence_generation(unittest.TestCase):
                   self.assertTrue(H.nodes()[node]['aa_id'] == input_aa[node])
 
     def test_add_initial_side_chains_from_propensities(self):
-          """
-          Tests that aa_ids of non-strand residues are not varied when adding
-          initial side chains using propensity scores
-          """
+        """
+        Tests that aa_ids of non-strand residues are not varied when adding
+        initial side chains using propensity scores
+        """
 
-          params = define_params()
-          params['inputdataframepath'] = 'tests/test_files/example_barrel_input_df.pkl'
-          params['inputdataframe'] = pd.read_pickle(params['inputdataframepath'])
-          input_calcs = gen_ga_input_calcs(params)
+        # Tests propensity and frequency scoring
+        params_1 = define_params()
+        params_1['inputdataframepath'] = 'tests/test_files/example_barrel_input_df.pkl'
+        params_1['inputdataframe'] = pd.read_pickle(params_1['inputdataframepath'])
+        input_calcs_1 = gen_ga_input_calcs(params_1, test=True)
 
-          G = input_calcs.generate_networks()
-          networks_dict = input_calcs.add_initial_side_chains_from_propensities(
-              G, 'raw', test=True, input_num={'test_domain-4': 0.633,
+        G_1 = input_calcs_1.generate_networks()
+        networks_dict_1 = input_calcs_1.add_initial_side_chains_from_propensities(
+            G_1, 'raw', test=True, input_num={'test_domain-4': 0.633,
                                               'test_domain-3': 0.164,
                                               'test_domain-2': 0.887,
                                               'test_domain-1': 0.636,
                                               'test_domain0': 0.284,
                                               'test_domain1': 0.788,
                                               'test_domain2': 0.458,
-                                              'test_domain3': 0.752,
-                                              'test_domain4': 0.618,
+                                              'test_domain3': 0.516,
+                                              'test_domain4': 0.628,
                                               'test_domain5': 0.933,
                                               'test_domain6': 0.071,
                                               'test_domain7': 0.871,
-                                              'test_domain8': 0.542,
+                                              'test_domain8': 0.357,
                                               'test_domain9': 0.050,
                                               'test_domain10': 0.998,
                                               'test_domain11': 0.861,
@@ -406,32 +460,99 @@ class test_initial_sequence_generation(unittest.TestCase):
                                               'test_domain13': 0.754,
                                               'test_domain14': 0.546,
                                               'test_domain15': 0.999}
-          )
-          self.assertTrue(len(networks_dict) == (params['populationsize']*2))
+        )
+        self.assertTrue(len(networks_dict_1) == (params_1['populationsize']*2))
 
-          exp_aa_ids = {'test_domain-4': 'A',
+        exp_aa_ids_1 = {'test_domain-4': 'A',
                         'test_domain-3': 'R',
                         'test_domain-2': 'N',
                         'test_domain-1': 'R',
                         'test_domain0': 'R',
                         'test_domain1': 'R',
-                        'test_domain2': 'N',
-                        'test_domain3': 'R',
+                        'test_domain2': 'R',
+                        'test_domain3': 'A',
                         'test_domain4': 'N',
                         'test_domain5': 'N',
-                        'test_domain6': 'R',
+                        'test_domain6': 'A',
                         'test_domain7': 'N',
                         'test_domain8': 'A',
                         'test_domain9': 'A',
-                        'test_domain10': 'R',
+                        'test_domain10': 'N',
                         'test_domain11': 'N',
                         'test_domain12': 'R',
                         'test_domain13': 'A',
                         'test_domain14': 'A',
                         'test_domain15': 'N'}
-          for num, H in networks_dict.items():
-            for node in list(H.nodes()):
-                if H.nodes()[node]['type'] == 'loop':
-                    self.assertEqual(H.nodes()[node]['aa_id'], G.nodes()[node]['aa_id'])
-                else:
-                    self.assertTrue(H.nodes()[node]['aa_id'] == exp_aa_ids[node])
+        for num, H in networks_dict_1.items():
+          for node in list(H.nodes()):
+              if H.nodes()[node]['type'] == 'loop':
+                  self.assertEqual(H.nodes()[node]['aa_id'], G_1.nodes()[node]['aa_id'])
+              else:
+                  self.assertTrue(H.nodes()[node]['aa_id'] == exp_aa_ids_1[node])
+
+        # Tests propensity and frequency scoring with np.nan scores
+        params_2 = define_params()
+        params_2['propensityscales']['int_-_z_-_indv_cont_propensity'] = {
+            'A': np.array([[-10, 0, 10], [2.5, 1.5, 0.5]]),
+            'R': np.array([[-10, 0, 10], [0.5, 1.5, np.nan]]),
+            'N': np.array([[-10, 0, 10], [0.5, 2.5, 0.5]])
+        }
+        params_2['frequencyscales']['ext_-_-_-_indv_disc_frequency'] = pd.DataFrame(
+            {'FASTA': ['A', 'R', 'N'],
+             'ext': [np.nan, 0.8, 0.2]
+        })
+        params_2['inputdataframepath'] = 'tests/test_files/example_barrel_input_df.pkl'
+        params_2['inputdataframe'] = pd.read_pickle(params_2['inputdataframepath'])
+        input_calcs_2 = gen_ga_input_calcs(params_2, test=True)
+
+        G_2 = input_calcs_2.generate_networks()
+        networks_dict_2 = input_calcs_2.add_initial_side_chains_from_propensities(
+            G_2, 'raw', test=True, input_num={'test_domain-4': 0.633,
+                                              'test_domain-3': 0.164,
+                                              'test_domain-2': 0.887,
+                                              'test_domain-1': 0.636,
+                                              'test_domain0': 0.284,
+                                              'test_domain1': 0.788,
+                                              'test_domain2': 0.060,
+                                              'test_domain3': 0.852,
+                                              'test_domain4': 0.059,
+                                              'test_domain5': 0.933,
+                                              'test_domain6': 0.071,
+                                              'test_domain7': 0.591,
+                                              'test_domain8': 0.100,
+                                              'test_domain9': 0.585,
+                                              'test_domain10': 0.998,
+                                              'test_domain11': 0.861,
+                                              'test_domain12': 0.213,
+                                              'test_domain13': 0.754,
+                                              'test_domain14': 0.546,
+                                              'test_domain15': 0.999}
+        )
+        self.assertTrue(len(networks_dict_2) == (params_2['populationsize']*2))
+
+        exp_aa_ids_2 = {'test_domain-4': 'A',
+                        'test_domain-3': 'R',
+                        'test_domain-2': 'N',
+                        'test_domain-1': 'R',
+                        'test_domain0': 'R',
+                        'test_domain1': 'R',
+                        'test_domain2': 'A',
+                        'test_domain3': 'N',
+                        'test_domain4': 'R',
+                        'test_domain5': 'N',
+                        'test_domain6': 'R',
+                        'test_domain7': 'N',
+                        'test_domain8': 'A',
+                        'test_domain9': 'R',
+                        'test_domain10': 'N',
+                        'test_domain11': 'N',
+                        'test_domain12': 'R',
+                        'test_domain13': 'A',
+                        'test_domain14': 'A',
+                        'test_domain15': 'N'}
+        for num, H in networks_dict_2.items():
+          for node in list(H.nodes()):
+              if H.nodes()[node]['type'] == 'loop':
+                  self.assertEqual(H.nodes()[node]['aa_id'], G_2.nodes()[node]['aa_id'])
+              else:
+                  self.assertTrue(H.nodes()[node]['aa_id'] == exp_aa_ids_2[node])

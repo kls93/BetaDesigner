@@ -36,18 +36,30 @@ class testParameterParsing(unittest.TestCase):
             'phi': [-10, 0, -9, 1, -12, 2],
             'psi': [-10, 2, -7, 0, -7, 1]
         })
-        cluster_coords = {'int': np.array([[-11, -9], [1, 1]]),
+        cluster_coords = {'all_surfaces': np.array([[-1, -9.5], [-9.5, -7]]),
+                          'int': np.array([[-11, -9], [1, 1]]),
                           'ext': np.array([[-11, -10], [0, 1]])}
 
-        exp_output = pd.DataFrame({
+        # Tests two separate cluster coord dictionaries, one for interior
+        # residues and one for exterior residues
+        exp_output_1 = pd.DataFrame({
             'int_ext': ['int', 'ext', 'int', 'int', 'ext', 'int'],
             'phi': [-10, 0, -9, 1, -12, 2],
             'psi': [-10, 2, -7, 0, -7, 1],
             'phi_psi_class': [0, 1, 0, 1, 0, 1]
         })
-        act_output = calc_parent_voronoi_cluster(input_df, cluster_coords)
+        act_output_1 = calc_parent_voronoi_cluster(input_df, cluster_coords, False)
+        pd.testing.assert_frame_equal(exp_output_1, act_output_1)
 
-        pd.testing.assert_frame_equal(exp_output, act_output)
+        # Tests a single cluster coord dictionary for both residues
+        exp_output_2 = pd.DataFrame({
+            'int_ext': ['int', 'ext', 'int', 'int', 'ext', 'int'],
+            'phi': [-10, 0, -9, 1, -12, 2],
+            'psi': [-10, 2, -7, 0, -7, 1],
+            'phi_psi_class': [1, 0, 1, 0, 1, 0]
+        })
+        act_output_2 = calc_parent_voronoi_cluster(input_df, cluster_coords)
+        pd.testing.assert_frame_equal(exp_output_2, act_output_2)
 
     def test_input_df(self):
         """

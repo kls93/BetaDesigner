@@ -18,7 +18,8 @@ def define_params():
 
     prop_freq_dicts = gen_prop_and_freq_distributions()
 
-    params = {'inputdataframepath': '',
+    params = {'paramopt': False,
+              'inputdataframepath': '',
               'inputdataframe': '',
               'inputpdb': '',
               'propensityscales': {key: val for key, val in prop_freq_dicts.items()
@@ -34,6 +35,7 @@ def define_params():
                                   'pairorindv': 4,
                                   'discorcont': 5,
                                   'proporfreq': 6},
+              'propensityweight': 0.5,
               'workingdirectory': '',
               'uniworkdir': '',
               'barrelorsandwich': '2.40',
@@ -42,10 +44,13 @@ def define_params():
               'fitnessscoremethod': 'split',
               'splitfraction': 0.5,
               'matingpopmethod': '',
+              'unfitfraction': 0.5,
               'crossovermethod': '',
+              'crossoverprob': 0.5,
               'swapstartprob': '',
               'swapstopprob': '',
               'mutationmethod': '',
+              'mutationprob': 0.5,
               'populationsize': 2,
               'propensitypopsize': 2*0.5,
               'maxnumgenerations': 10}
@@ -58,7 +63,10 @@ def gen_prop_and_freq_distributions():
     Defines example propensity and frequency dictionaries
     """
 
-    dicts = {'int_-_z_-_indv_cont_propensity': {'A': np.array([[-10, 0, 10], [2.5, 1.5, 0.5]]),
+    dicts = {'-_-_z_-_indv_cont_propensity': {'A': np.array([[-10, 0, 10], [0.2, 0.2, 0.8]]),
+                                              'R': np.array([[-10, 0, 10], [1.1, 0.9, 1.2]]),
+                                              'N': np.array([[-10, 0, 10], [0.3, 0.7, 0.8]])},
+             'int_-_z_-_indv_cont_propensity': {'A': np.array([[-10, 0, 10], [2.5, 1.5, 0.5]]),
                                                 'R': np.array([[-10, 0, 10], [0.5, 1.5, 2.5]]),
                                                 'N': np.array([[-10, 0, 10], [0.5, 2.5, 0.5]])},
              'int_-_z_hb_pair_cont_propensity': {'A_A': np.array([[-10, 0, 10], [0.5, 1.0, 1.5]]),
@@ -89,7 +97,9 @@ def gen_prop_and_freq_distributions():
                                                          'N_R': np.array([[-10, 0, 10], [0.8, 1.1, 0.2]]),
                                                          'N_N': np.array([[-10, 0, 10], [0.6, 0.6, 0.4]])},
              'int_-_-_-_indv_disc_frequency': pd.DataFrame({'FASTA': ['A', 'R', 'N'],
-                                                            'int': [0.8, 0.15, 0.05]})}
+                                                            'int': [0.8, 0.15, 0.05]}),
+             'ext_-_-_-_indv_disc_frequency': pd.DataFrame({'FASTA': ['A', 'R', 'N'],
+                                                            'ext': [0.5, 0.05, 0.45]})}
 
     return dicts
 

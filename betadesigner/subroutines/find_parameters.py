@@ -18,7 +18,7 @@ else:
 prompt = '> '
 
 
-def calc_parent_voronoi_cluster(input_df, cluster_coords):
+def calc_parent_voronoi_cluster(input_df, cluster_coords, all_surfaces=True):
     """
     Calculates to which discrete bins in Ramachandran (phi psi) space the
     residues in the input structure belong
@@ -27,9 +27,12 @@ def calc_parent_voronoi_cluster(input_df, cluster_coords):
     phi_psi_list = ['']*input_df.shape[0]
 
     for row in range(input_df.shape[0]):
+        int_or_ext = np.nan
         try:
-            #int_or_ext = input_df['int_ext'][row]
-            int_or_ext = 'all_surfaces'
+            if all_surfaces is True:
+                int_or_ext = 'all_surfaces'
+            else:
+                int_or_ext = input_df['int_ext'][row]
             phi = input_df['phi'][row]
             psi = input_df['psi'][row]
 
@@ -1572,8 +1575,9 @@ def find_params(args, param_opt):
     params['initialseqmethod'] = 'random'  # Currently set to "random" by default
     # params['fitnessscoremethod'] = def_method_fitness_scoring(params)
     params['fitnessscoremethod'] = 'alternate'  # Currently set to "alternate" by default
-    params['splitfraction'] = def_split_fraction(params)
-    #params['splitfraction'] = 0.5  # Currently set as 50:50 by default (in my
+    params['splitfraction'] = def_split_fraction(params)  # Uncomment if change
+    # fitnessscoremethod to something other than "alternate"
+    # params['splitfraction'] = 0.5  # Currently set as 50:50 by default (in my
     # opinion variation of this hyperparameter is probably an "optimisation too far")
     # params['matingpopmethod'] = def_method_select_mating_pop(params)
     params['matingpopmethod'] = 'fittest'  # Currently set as "fittest" (with the
@@ -1668,6 +1672,8 @@ def setup_input_output(params, opt_cycle, hyperopt_cycle):
             with open('{}/Ramachandran_voronoi_cluster_coords.pkl'.format(
                 uwd), 'wb') as pickle_file:
                 pickle.dump((params['phipsiclustercoords']), pickle_file)
+        with open('Input_program_parameters.pkl', 'wb') as f:
+            pickle.dump((params), f)
 
     # Creates directories for input and output data
     os.mkdir('{}/Program_input'.format(params['workingdirectory']))
@@ -1722,11 +1728,14 @@ class initialise_ga_object():
         # penalised on the surface of a globular protein and vice versa for
         # membrane proteins). Hence this is just a rough measure of side-chain
         # clashes.
-        input_ampal_pdb = isambard.ampal.load_pdb(params['inputpdb'])
-        self.input_pdb_energy = budeff.get_internal_energy(
-            input_ampal_pdb
-        ).total_energy
-        params['inputpdbenergy'] = self.input_pdb_energy
+        if test is False:
+            input_ampal_pdb = isambard.ampal.load_pdb(params['inputpdb'])
+            self.input_pdb_energy = budeff.get_internal_energy(
+                input_ampal_pdb
+            ).total_energy
+            params['inputpdbenergy'] = self.input_pdb_energy
+        else:
+            params['inputpdbenergy'] = np.nan
 
         self.test = test
         self.params = params
