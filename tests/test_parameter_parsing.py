@@ -13,10 +13,9 @@ from betadesigner.subroutines.find_parameters import (
     def_prop_freq_scale_weights, def_propensity_weight,
     def_phipsi_cluster_coords, def_working_directory, def_barrel_or_sandwich,
     def_jobid, def_method_initial_seq, def_method_fitness_scoring,
-    def_split_fraction, def_method_select_mating_pop, def_unfit_fraction,
-    def_method_crossover, def_crossover_prob, def_swap_start_prob,
-    def_swap_stop_prob, def_method_mutation, def_mutation_prob, def_pop_size,
-    def_num_gens
+    def_method_select_mating_pop, def_unfit_fraction, def_method_crossover,
+    def_crossover_prob, def_swap_start_prob, def_swap_stop_prob,
+    def_method_mutation, def_mutation_prob, def_pop_size, def_num_gens
 )
 
 
@@ -421,14 +420,13 @@ class testParameterParsing(unittest.TestCase):
         expected_vals = [
             [{},
              ('Method not recognised - please select one of "propensity", '
-              '"allatom", "alternate", "split"')],
+              '"allatom" or "alternate"')],
             [{'fitnessscoremethod': 'mistake'},
              ('Method not recognised - please select one of "propensity", '
-              '"allatom", "alternate", "split"')],
+              '"allatom" or "alternate"')],
             [{'fitnessscoremethod': 'propensity'}, 'propensity'],
             [{'fitnessscoremethod': 'allatom'}, 'allatom'],
-            [{'fitnessscoremethod': 'alternate'}, 'alternate'],
-            [{'fitnessscoremethod': 'split'}, 'split']
+            [{'fitnessscoremethod': 'alternate'}, 'alternate']
         ]
 
         for index, pair in enumerate(expected_vals):
@@ -436,43 +434,6 @@ class testParameterParsing(unittest.TestCase):
             exp_output = pair[1]
             self.assertEqual(
                 def_method_fitness_scoring(params, test=True), exp_output
-            )
-
-    def test_split_fraction(self):
-        """
-        Tests that fraction of samples to have their fitness scored using
-        propensity scales is parsed correctly
-        """
-
-        sub1_params = {'fitnessscoremethod': 'split'}
-
-        expected_vals = [
-            [{},
-             ('Fraction of samples to be optimised against propensity not '
-              'recognised - please enter a value between 0 and 1')],
-            [{'splitfraction': 'mistake'},
-             ('Fraction of samples to be optimised against propensity not '
-              'recognised - please enter a value between 0 and 1')],
-            [{'splitfraction': '2'},
-             ('Fraction of samples to be optimised against propensity not '
-              'recognised - please enter a value between 0 and 1')],
-            [{'splitfraction': '-1'},
-             ('Fraction of samples to be optimised against propensity not '
-              'recognised - please enter a value between 0 and 1')],
-            [{'splitfraction': '1'},
-             1.0],
-            [{'splitfraction': '0'},
-             0.0],
-            [{'splitfraction': '0.42'},
-             0.42]
-        ]
-
-        for pair in expected_vals:
-            sub2_params = pair[0]
-            all_params = {**sub1_params, **sub2_params}
-            exp_output = pair[1]
-            self.assertEqual(
-                def_split_fraction(all_params, test=True), exp_output
             )
 
     def test_method_select_mating_pop(self):
@@ -729,55 +690,26 @@ class testParameterParsing(unittest.TestCase):
         """
 
         expected_vals = [
-            [{'fitnessscoremethod': 'propensity',
-              'splitfraction': ''},
+            [{},
              ('Population size not recognised - please enter a positive even '
               'integer')],
-            [{'fitnessscoremethod': 'propensity',
-              'splitfraction': '',
-              'populationsize': 'mistake'},
+            [{'populationsize': 'mistake'},
              ('Population size not recognised - please enter a positive even '
               'integer')],
-            [{'fitnessscoremethod': 'propensity',
-              'splitfraction': '',
-              'populationsize': '4.2'},
+            [{'populationsize': '4.2'},
              ('Population size not recognised - please enter a positive even '
               'integer')],
-            [{'fitnessscoremethod': 'propensity',
-              'splitfraction': '',
-              'populationsize': '0'},
+            [{'populationsize': '0'},
              ('Population size not recognised - please enter a positive even '
               'integer')],
-            [{'fitnessscoremethod': 'propensity',
-              'splitfraction': '',
-              'populationsize': '-10'},
+            [{'populationsize': '-10'},
              ('Population size not recognised - please enter a positive even '
               'integer')],
-            [{'fitnessscoremethod': 'propensity',
-              'splitfraction': '',
-              'populationsize': '13'},
+            [{'populationsize': '13'},
              ('Population size not recognised - please enter a positive even '
               'integer')],
-            [{'fitnessscoremethod': 'propensity',
-              'splitfraction': '',
-              'populationsize': '42'},
-             (42)],
-            [{'fitnessscoremethod': 'split',
-              'splitfraction': 0.5,
-              'populationsize': '0'},
-             ('Population size not recognised - please enter a positive integer'
-              ' that when multiplied by 0.5x the fraction of samples to be '
-              'optimised against propensity gives an integer value')],
-            [{'fitnessscoremethod': 'split',
-              'splitfraction': 0.5,
-              'populationsize': '42'},
-             ('Population size not recognised - please enter a positive integer'
-              ' that when multiplied by 0.5x the fraction of samples to be '
-              'optimised against propensity gives an integer value')],
-            [{'fitnessscoremethod': 'split',
-              'splitfraction': 0.7,
-              'populationsize': '20'},
-             (20)],
+            [{'populationsize': '42'},
+             (42)]
         ]
 
         for pair in expected_vals:

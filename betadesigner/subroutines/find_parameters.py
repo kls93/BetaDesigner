@@ -799,16 +799,15 @@ def def_method_fitness_scoring(params, test=False):
 
     try:
         fit_method = params['fitnessscoremethod']
-        if not fit_method in ['propensity', 'allatom', 'alternate', 'split']:
+        if not fit_method in ['propensity', 'allatom', 'alternate']:
             print('Method for measuring sequence fitness not recognised - '
-                  'please select one of "propensity", "allatom", "alternate" '
-                  'or "split"')
+                  'please select one of "propensity", "allatom" or "alternate"')
             fit_method = ''
     except KeyError:
         fit_method = ''
 
     if fit_method == '':
-        while not fit_method in ['propensity', 'allatom', 'alternate', 'split']:
+        while not fit_method in ['propensity', 'allatom', 'alternate']:
             stdout = 'Specify method for measuring sequence fitnesses:'
             print(stdout)
 
@@ -820,88 +819,18 @@ def def_method_fitness_scoring(params, test=False):
                 except KeyError:
                     fit_method = ''
 
-            if fit_method in ['propensity', 'allatom', 'alternate', 'split']:
+            if fit_method in ['propensity', 'allatom', 'alternate']:
                 stdout = 'Method for measuring sequence fitnesses  recognised'
                 print(stdout)
                 break
             else:
                 stdout = ('Method not recognised - please select one of '
-                          '"propensity", "allatom", "alternate", "split"')
+                          '"propensity", "allatom" or "alternate"')
 
             if test is True:
                 return stdout
 
     return fit_method
-
-
-def def_split_fraction(params, test=False):
-    """
-    Defines fraction of samples to be optimised against propensity in each
-    generation of the genetic algorithm.
-    N.B. Must be run AFTER "fitnessscoremethod" has been defined.
-    N.B. Have left this hyperparameter in for now in case I want to use it in
-    the future, but in general, and certainly in the case of my initial
-    design run, I think this is "an optimisation too far".
-    """
-
-    if params['fitnessscoremethod'] != 'split':
-        split_frac = ''
-
-    elif params['fitnessscoremethod'] == 'split':
-        try:
-            split_frac = params['splitfraction']
-            try:
-                split_frac = float(split_frac)
-                if 0 > split_frac or split_frac > 1:
-                    print('Fraction of samples to be optimised against '
-                          'propensity not recognised - please enter a value '
-                          'between 0 and 1')
-                    split_frac = ''
-            except ValueError:
-                print('Fraction of samples to be optimised against propensity '
-                      'not recognised - please enter a value between 0 and 1')
-                split_frac = ''
-        except KeyError:
-            split_frac = ''
-
-        if split_frac == '':
-            while not type(split_frac) == float:
-                stdout = ('Specify fraction of samples to be optimised against '
-                          'propensity:')
-                print(stdout)
-
-                if test is False:
-                    split_frac = input(prompt)
-                elif test is True:
-                    try:
-                        split_frac = params['splitfraction']
-                    except KeyError:
-                        split_frac = ''
-
-                try:
-                    split_frac = float(split_frac)
-                    if 0 <= split_frac <= 1:
-                        stdout = ('Fraction of samples to be optimised '
-                                  'against propensity recognised')
-                        print(stdout)
-                        break
-                    else:
-                        stdout = ('Fraction of samples to be optimised against '
-                                  'propensity not recognised - please enter a '
-                                  'value between 0 and 1')
-                        print(stdout)
-                        split_frac = ''
-                except ValueError:
-                    stdout = ('Fraction of samples to be optimised against '
-                              'propensity not recognised - please enter a value'
-                              ' between 0 and 1')
-                    print(stdout)
-                    split_frac = ''
-
-                if test is True:
-                    return stdout
-
-    return split_frac
 
 
 def def_method_select_mating_pop(params, test=False):
@@ -1351,8 +1280,6 @@ def def_pop_size(params, test=False):
     Defines the size of the population of sequences to be optimised by the
     genetic algorithm. The population size should be an even number, in order
     that all parent sequences can be paired off for crossover (mating).
-    N.B. must be run AFTER "fitnessscoremethod" and "splitfraction" have been
-    defined.
     """
 
     try:
@@ -1371,22 +1298,12 @@ def def_pop_size(params, test=False):
             error = True
         else:
             pop_size = pop_size_int
-            if params['fitnessscoremethod'] == 'split':
-                pop_frac = pop_size_int * 0.5 * params['splitfraction']
-                if not float(pop_frac).is_integer():
-                    error = True
     except ValueError:
         error = True
 
     if error is True:
-        if params['fitnessscoremethod'] != 'split':
-            print('Population size not recognised - please enter a '
-                  'positive even integer')
-        else:
-            print('Population size not recognised - please enter a '
-                  'positive integer that when multiplied by 0.5x the '
-                  'fraction of samples to be optimised against propensity '
-                  'gives an integer value')
+        print('Population size not recognised - please enter a positive even '
+              'integer')
         pop_size = ''
 
     if pop_size == '':
@@ -1409,33 +1326,18 @@ def def_pop_size(params, test=False):
                     and pop_size_int > 0
                     and pop_size_int % 2 == 0
                 ):
-                    if params['fitnessscoremethod'] != 'split':
-                        pop_size = pop_size_int
-                        stdout = 'Population size recognised'
-                        print(stdout)
-                        break
-                    elif params['fitnessscoremethod'] == 'split':
-                        pop_frac = pop_size_int * 0.5 * params['splitfraction']
-                        if float(pop_frac).is_integer():
-                            pop_size = pop_size_int
-                            stdout = 'Population size recognised'
-                            print(stdout)
-                            break
+                    pop_size = pop_size_int
+                    stdout = 'Population size recognised'
+                    print(stdout)
+                    break
             except ValueError:
                 pass
 
             # No need to set e.g. error = True / False, since if input is
             # correct will break from while loop
-            if params['fitnessscoremethod'] != 'split':
-                stdout = ('Population size not recognised - please enter '
-                          'a positive even integer')
-                print(stdout)
-            elif params['fitnessscoremethod'] == 'split':
-                stdout = ('Population size not recognised - please enter a '
-                          'positive integer that when multiplied by 0.5x the '
-                          'fraction of samples to be optimised against '
-                          'propensity gives an integer value')
-                print(stdout)
+            stdout = ('Population size not recognised - please enter '
+                      'a positive even integer')
+            print(stdout)
             pop_size = ''
 
             if test is True:
@@ -1533,10 +1435,10 @@ def find_params(args, param_opt):
                         value = value.replace(' ', '')
                     elif key in [
                         'propensityweight', 'barrelorsandwich', 'initialseqmethod',
-                        'fitnessscoremethod', 'splitfraction', 'matingpopmethod',
-                        'unfitfraction', 'crossovermethod', 'crossoverprob',
-                        'swapstartprob', 'swapstopprob', 'mutationmethod',
-                        'mutationprob', 'populationsize', 'maxnumgenerations'
+                        'fitnessscoremethod', 'matingpopmethod', 'unfitfraction',
+                        'crossovermethod', 'crossoverprob', 'swapstartprob',
+                        'swapstopprob', 'mutationmethod', 'mutationprob',
+                        'populationsize', 'maxnumgenerations'
                     ]:
                         value = value.lower().replace(' ', '')
 
@@ -1575,10 +1477,6 @@ def find_params(args, param_opt):
     params['initialseqmethod'] = 'random'  # Currently set to "random" by default
     # params['fitnessscoremethod'] = def_method_fitness_scoring(params)
     params['fitnessscoremethod'] = 'alternate'  # Currently set to "alternate" by default
-    params['splitfraction'] = def_split_fraction(params)  # Uncomment if change
-    # fitnessscoremethod to something other than "alternate"
-    # params['splitfraction'] = 0.5  # Currently set as 50:50 by default (in my
-    # opinion variation of this hyperparameter is probably an "optimisation too far")
     # params['matingpopmethod'] = def_method_select_mating_pop(params)
     params['matingpopmethod'] = 'fittest'  # Currently set as "fittest" (with the
     # value of the hyperparameter "unfitfraction" being optimised with hyperopt)
@@ -1606,10 +1504,6 @@ def find_params(args, param_opt):
     else:
         params['mutationprob'] = def_mutation_prob(params)
     params['populationsize'] = def_pop_size(params)
-    if params['fitnessscoremethod'] == 'split':
-        params['propensitypopsize'] = params['populationsize']*params['splitfraction']
-    else:
-        params['propensitypopsize'] = ''
     params['maxnumgenerations'] = def_num_gens(params)
 
     return params
@@ -1672,7 +1566,7 @@ def setup_input_output(params, opt_cycle, hyperopt_cycle):
             with open('{}/Ramachandran_voronoi_cluster_coords.pkl'.format(
                 uwd), 'wb') as pickle_file:
                 pickle.dump((params['phipsiclustercoords']), pickle_file)
-        with open('Input_program_parameters.pkl', 'wb') as f:
+        with open('{}/Input_program_parameters.pkl'.format(uwd), 'wb') as f:
             pickle.dump((params), f)
 
     # Creates directories for input and output data
@@ -1706,7 +1600,6 @@ class initialise_ga_object():
         self.job_id = params['jobid']
         self.method_initial_side_chains = params['initialseqmethod']
         self.method_fitness_score = params['fitnessscoremethod']
-        self.split_fraction = params['splitfraction']
         self.method_select_mating_pop = params['matingpopmethod']
         if params['paramopt'] is False:
             self.unfit_fraction = params['unfitfraction']
@@ -1719,7 +1612,6 @@ class initialise_ga_object():
         if params['paramopt'] is False:
             self.mutation_prob = params['mutationprob']
         self.pop_size = params['populationsize']
-        self.propensity_pop_size = params['propensitypopsize']
         self.num_gens = params['maxnumgenerations']
 
         # Calculates total energy of input PDB structure within BUDE (note that
@@ -1736,6 +1628,25 @@ class initialise_ga_object():
             params['inputpdbenergy'] = self.input_pdb_energy
         else:
             params['inputpdbenergy'] = np.nan
+        # Calculates input structure clashscore with MolProbity.
+        if test is False:
+            os.mkdir('temp')
+            shutil.copy(params['inputpdb'], 'temp/temp_pdb.pdb')
+            os.system(
+                'clashscore temp/temp_pdb.pdb > temp/molprobity_clashscore'
+                '.txt'.format(params['inputpdb'])
+            )
+            with open('temp/molprobity_clashscore.txt', 'r') as f:
+                file_lines = f.read().split('\n')
+                clash = np.nan
+                for line in file_lines:
+                    if line[0:13] == 'clashscore = ':
+                        clash = float(line.replace('clashscore = ', ''))
+                        break
+            shutil.rmtree('temp')
+            params['inputpdbclash'] = clash
+        else:
+            params['inputpdbclash'] = np.nan
 
         self.test = test
         self.params = params
