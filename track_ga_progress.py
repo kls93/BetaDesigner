@@ -13,7 +13,7 @@ from itertools import combinations
 
 def calc_pop_score_vs_generation(
     data_dir, output_dir, generations, num_sequences, unchanged_res,
-    save_interval=10
+    save_interval=10, bude=True, molprobity=True
 ):
     """
     """
@@ -21,12 +21,15 @@ def calc_pop_score_vs_generation(
     per_seq_prop_scores = [[] for n in range(len(generations))]
     per_seq_freq_scores = [[] for n in range(len(generations))]
     per_seq_bude_scores = [[] for n in range(len(generations))]
+    per_seq_clash_scores = [[] for n in range(len(generations))]
     pop_prop_scores = [np.nan]*len(generations)
     pop_freq_scores = [np.nan]*len(generations)
     pop_bude_scores = [np.nan]*len(generations)
+    pop_clash_scores = [np.nan]*len(generations)
     orig_struct_prop_score = np.nan
     orig_struct_freq_score = np.nan
     orig_struct_bude_score = np.nan
+    orig_struct_clash_score = np.nan
 
     max_cycle = math.ceil(max(generations) / save_interval)
     sub_dirs = ['Optimisation_cycle_{}'.format(int(n))
@@ -46,18 +49,23 @@ def calc_pop_score_vs_generation(
                     orig_struct_prop_score = float(line.split(',')[2])
                     orig_struct_freq_score = float(line.split(',')[3])
                     orig_struct_bude_score = float(line.split(',')[4])
+                    orig_struct_clash_score = float(line.split(',')[5])
                 else:
                     if (   np.testing.assert_almost_equal(orig_struct_prop_score, float(line.split(',')[2]), decimal=5) is False
                         or np.testing.assert_almost_equal(orig_struct_freq_score, float(line.split(',')[3]), decimal=5) is False
                         or np.testing.assert_almost_equal(orig_struct_bude_score, float(line.split(',')[4]), decimal=5) is False
+                        or np.testing.assert_almost_equal(orig_struct_clash_score, float(line.split(',')[5]), decimal=5) is False
                     ):
                         raise Exception(
                             'Disagreement between generations about initial sequence scores\n'
-                            'Orig score: {}\n{} score: {}\nOrig score: {}\n{} score: {}\n'
+                            'Orig score: {}\n{} score: {}\n'
+                            'Orig score: {}\n{} score: {}\n'
+                            'Orig score: {}\n{} score: {}\n'
                             'Orig score: {}\n{} score: {}\n'.format(
                                 orig_struct_prop_score, sub_dir, float(line.split(',')[2]),
                                 orig_struct_freq_score, sub_dir, float(line.split(',')[3]),
-                                orig_struct_bude_score, sub_dir, float(line.split(',')[4])
+                                orig_struct_bude_score, sub_dir, float(line.split(',')[4]),
+                                orig_struct_clash_score, sub_dir, float(line.split(',')[5])
                             )
                         )
             elif line.startswith('Generation'):
@@ -68,10 +76,34 @@ def calc_pop_score_vs_generation(
                     per_seq_prop_scores[gen_count-1].append(float(line.split(',')[2]))
                     per_seq_freq_scores[gen_count-1].append(float(line.split(',')[3]))
                     per_seq_bude_scores[gen_count-1].append(np.nan)
+                    per_seq_clash_scores[gen_count-1].append(np.nan)
                 elif gen_count % 2 == 0:
-                    per_seq_prop_scores[gen_count-1].append(np.nan)
-                    per_seq_freq_scores[gen_count-1].append(np.nan)
-                    per_seq_bude_scores[gen_count-1].append(float(line.split(',')[2]))
+                    if bude is True and molprobity is False:
+                        per_seq_prop_scores[gen_count-1].append(np.nan)
+                        per_seq_freq_scores[gen_count-1].append(np.nan)
+                        per_seq_bude_scores[gen_count-1].append(float(line.split(',')[2]))
+                        per_seq_clash_scores[gen_count-1].append(np.nan)
+                    elif bude is False and molprobity is True:
+                        per_seq_prop_scores[gen_count-1].append(np.nan)
+                        per_seq_freq_scores[gen_count-1].append(np.nan)
+                        per_seq_bude_scores[gen_count-1].append(np.nan)
+                        per_seq_clash_scores[gen_count-1].append(float(line.split(',')[2]))
+                    elif bude is True and molprobity is True:
+                        if gen_count % 4 == 2:
+                            per_seq_prop_scores[gen_count-1].append(np.nan)
+                            per_seq_freq_scores[gen_count-1].append(np.nan)
+                            per_seq_bude_scores[gen_count-1].append(float(line.split(',')[2]))
+                            per_seq_clash_scores[gen_count-1].append(np.nan)
+                        elif gen_count % 4 == 0:
+                            per_seq_prop_scores[gen_count-1].append(np.nan)
+                            per_seq_freq_scores[gen_count-1].append(np.nan)
+                            per_seq_bude_scores[gen_count-1].append(np.nan)
+                            per_seq_clash_scores[gen_count-1].append(float(line.split(',')[2]))
+                    elif bude is False and molprobity is False:
+                        per_seq_prop_scores[gen_count-1].append(float(line.split(',')[2]))
+                        per_seq_freq_scores[gen_count-1].append(float(line.split(',')[3]))
+                        per_seq_bude_scores[gen_count-1].append(np.nan)
+                        per_seq_clash_scores[gen_count-1].append(np.nan)
             # Extracts per-generation propensity, frequency and BUDE scores
             elif line.startswith('Total:') and not np.isnan(gen_count):
                 if (gen_count - 1) % save_interval == 0 and gen_count != 1:
@@ -80,7 +112,18 @@ def calc_pop_score_vs_generation(
                     pop_prop_scores[gen_count-1] = float(line.replace('Total:', '').split(',')[0])
                     pop_freq_scores[gen_count-1] = float(line.replace('Total:', '').split(',')[1])
                 elif gen_count % 2 == 0:
-                    pop_bude_scores[gen_count-1] = float(line.replace('Total:', '').split(',')[0])
+                    if bude is True and molprobity is False:
+                        pop_bude_scores[gen_count-1] = float(line.replace('Total:', '').split(',')[0])
+                    elif bude is False and molprobity is True:
+                        pop_clash_scores[gen_count-1] = float(line.replace('Total:', '').split(',')[0])
+                    elif bude is True and molprobity is True:
+                        if gen_count % 4 == 2:
+                            pop_bude_scores[gen_count-1] = float(line.replace('Total:', '').split(',')[0])
+                        elif gen_count % 4 == 0:
+                            pop_clash_scores[gen_count-1] = float(line.replace('Total:', '').split(',')[0])
+                    elif bude is False and molprobity is False:
+                        pop_prop_scores[gen_count-1] = float(line.replace('Total:', '').split(',')[0])
+                        pop_freq_scores[gen_count-1] = float(line.replace('Total:', '').split(',')[1])
             elif line.startswith('Output generation'):
                 break
 
@@ -109,12 +152,46 @@ def calc_pop_score_vs_generation(
                     )
                 )
         elif i % 2 == 1:
-            if len(per_seq_bude_scores[i]) != num_sequences:
-                raise Exception(
-                    '{} sequences in generation {} - BUDE score\n'.format(
-                        len(per_seq_bude_scores[i]), i+1
+            if bude is True and molprobity is False:
+                if len(per_seq_bude_scores[i]) != num_sequences:
+                    raise Exception(
+                        '{} sequences in generation {} - BUDE score\n'.format(
+                            len(per_seq_bude_scores[i]), i+1
+                        )
                     )
-                )
+            elif bude is False and molprobity is True:
+                if len(per_seq_clash_scores[i]) != num_sequences:
+                    raise Exception(
+                        '{} sequences in generation {} - clash score\n'.format(
+                            len(per_seq_clash_scores[i]), i+1
+                        )
+                    )
+            elif bude is True and molprobity is True:
+                if i % 4 == 1:
+                    if len(per_seq_bude_scores[i]) != num_sequences:
+                        raise Exception(
+                            '{} sequences in generation {} - BUDE score\n'.format(
+                                len(per_seq_bude_scores[i]), i+1
+                            )
+                        )
+                elif i % 4 == 3:
+                    if len(per_seq_clash_scores[i]) != num_sequences:
+                        raise Exception(
+                            '{} sequences in generation {} - clash score\n'.format(
+                                len(per_seq_clash_scores[i]), i+1
+                            )
+                        )
+            elif bude is False and molprobity is False:
+                if (   len(per_seq_prop_scores[i]) != num_sequences
+                    or len(per_seq_freq_scores[i]) != num_sequences
+                ):
+                    raise Exception(
+                        '{} sequences in generation {} - propensity\n{} '
+                        'sequences in generation {} - frequency'.format(
+                            len(per_seq_prop_scores[i]), i+1,
+                            len(per_seq_freq_scores[i]), i+1
+                        )
+                    )
 
     # Generates per-generation plots
     plt.clf()
@@ -123,9 +200,14 @@ def calc_pop_score_vs_generation(
     plt.clf()
     sns.scatterplot(x=generations, y=pop_freq_scores, s=15)
     plt.savefig('{}/Generations_vs_net_frequency.svg'.format(output_dir))
-    plt.clf()
-    sns.scatterplot(x=generations, y=pop_bude_scores, s=15)
-    plt.savefig('{}/Generations_vs_net_BUDE_score.svg'.format(output_dir))
+    if bude is True:
+        plt.clf()
+        sns.scatterplot(x=generations, y=pop_bude_scores, s=15)
+        plt.savefig('{}/Generations_vs_net_BUDE_score.svg'.format(output_dir))
+    if molprobity is True:
+        plt.clf()
+        sns.scatterplot(x=generations, y=pop_clash_scores, s=15)
+        plt.savefig('{}/Generations_vs_net_clash_score.svg'.format(output_dir))
 
     # Generates per-sequence plots
     expanded_generations = []
@@ -134,39 +216,91 @@ def calc_pop_score_vs_generation(
 
     per_seq_prop_scores_summary = []
     per_seq_prop_hues = []
-    for i in range(len(per_seq_prop_scores)):
+    per_seq_freq_scores_summary = []
+    per_seq_freq_hues = []
+    per_seq_bude_scores_summary = []
+    per_seq_bude_hues = []
+    per_seq_clash_scores_summary = []
+    per_seq_clash_hues = []
+    for i in range(len(generations)):
         if i % 2 == 0:
             per_seq_prop_scores_summary.append(np.percentile(per_seq_prop_scores[i], 0.025))
             per_seq_prop_scores_summary.append(np.percentile(per_seq_prop_scores[i], 0.5))
             per_seq_prop_scores_summary.append(np.percentile(per_seq_prop_scores[i], 0.975))
             per_seq_prop_hues += ['2.5', '50', '97.5']
-        else:
-            per_seq_prop_scores_summary += [np.nan, np.nan, np.nan]
-            per_seq_prop_hues += [np.nan, np.nan, np.nan]
 
-    per_seq_freq_scores_summary = []
-    per_seq_freq_hues = []
-    for i in range(len(per_seq_freq_scores)):
-        if i % 2 == 0:
             per_seq_freq_scores_summary.append(np.percentile(per_seq_freq_scores[i], 0.025))
             per_seq_freq_scores_summary.append(np.percentile(per_seq_freq_scores[i], 0.5))
             per_seq_freq_scores_summary.append(np.percentile(per_seq_freq_scores[i], 0.975))
             per_seq_freq_hues += ['2.5', '50', '97.5']
-        else:
-            per_seq_freq_scores_summary += [np.nan, np.nan, np.nan]
-            per_seq_freq_hues += [np.nan, np.nan, np.nan]
 
-    per_seq_bude_scores_summary = []
-    per_seq_bude_hues = []
-    for i in range(len(per_seq_bude_scores)):
-        if i % 2 == 1:
-            per_seq_bude_scores_summary.append(np.percentile(per_seq_bude_scores[i], 0.025))
-            per_seq_bude_scores_summary.append(np.percentile(per_seq_bude_scores[i], 0.5))
-            per_seq_bude_scores_summary.append(np.percentile(per_seq_bude_scores[i], 0.975))
-            per_seq_bude_hues += ['2.5', '50', '97.5']
-        else:
             per_seq_bude_scores_summary += [np.nan, np.nan, np.nan]
             per_seq_bude_hues += [np.nan, np.nan, np.nan]
+
+            per_seq_clash_scores_summary += [np.nan, np.nan, np.nan]
+            per_seq_clash_hues += [np.nan, np.nan, np.nan]
+
+        else:
+            if bude is True and molprobity is False:
+                per_seq_bude_scores_summary.append(np.percentile(per_seq_bude_scores[i], 0.025))
+                per_seq_bude_scores_summary.append(np.percentile(per_seq_bude_scores[i], 0.5))
+                per_seq_bude_scores_summary.append(np.percentile(per_seq_bude_scores[i], 0.975))
+                per_seq_bude_hues += ['2.5', '50', '97.5']
+
+                per_seq_clash_scores_summary += [np.nan, np.nan, np.nan]
+                per_seq_clash_hues += [np.nan, np.nan, np.nan]
+
+            elif bude is False and molprobity is True:
+                per_seq_clash_scores_summary.append(np.percentile(per_seq_clash_scores[i], 0.025))
+                per_seq_clash_scores_summary.append(np.percentile(per_seq_clash_scores[i], 0.5))
+                per_seq_clash_scores_summary.append(np.percentile(per_seq_clash_scores[i], 0.975))
+                per_seq_clash_hues += ['2.5', '50', '97.5']
+
+                per_seq_bude_scores_summary += [np.nan, np.nan, np.nan]
+                per_seq_bude_hues += [np.nan, np.nan, np.nan]
+
+            elif bude is True and molprobity is True:
+                if i % 4 == 1:
+                    per_seq_bude_scores_summary.append(np.percentile(per_seq_bude_scores[i], 0.025))
+                    per_seq_bude_scores_summary.append(np.percentile(per_seq_bude_scores[i], 0.5))
+                    per_seq_bude_scores_summary.append(np.percentile(per_seq_bude_scores[i], 0.975))
+                    per_seq_bude_hues += ['2.5', '50', '97.5']
+
+                    per_seq_clash_scores_summary += [np.nan, np.nan, np.nan]
+                    per_seq_clash_hues += [np.nan, np.nan, np.nan]
+
+                elif i % 4 == 3:
+                    per_seq_clash_scores_summary.append(np.percentile(per_seq_clash_scores[i], 0.025))
+                    per_seq_clash_scores_summary.append(np.percentile(per_seq_clash_scores[i], 0.5))
+                    per_seq_clash_scores_summary.append(np.percentile(per_seq_clash_scores[i], 0.975))
+                    per_seq_clash_hues += ['2.5', '50', '97.5']
+
+                    per_seq_bude_scores_summary += [np.nan, np.nan, np.nan]
+                    per_seq_bude_hues += [np.nan, np.nan, np.nan]
+
+            if bude is False and molprobity is False:
+                per_seq_prop_scores_summary.append(np.percentile(per_seq_prop_scores[i], 0.025))
+                per_seq_prop_scores_summary.append(np.percentile(per_seq_prop_scores[i], 0.5))
+                per_seq_prop_scores_summary.append(np.percentile(per_seq_prop_scores[i], 0.975))
+                per_seq_prop_hues += ['2.5', '50', '97.5']
+
+                per_seq_freq_scores_summary.append(np.percentile(per_seq_freq_scores[i], 0.025))
+                per_seq_freq_scores_summary.append(np.percentile(per_seq_freq_scores[i], 0.5))
+                per_seq_freq_scores_summary.append(np.percentile(per_seq_freq_scores[i], 0.975))
+                per_seq_freq_hues += ['2.5', '50', '97.5']
+
+                per_seq_bude_scores_summary += [np.nan, np.nan, np.nan]
+                per_seq_bude_hues += [np.nan, np.nan, np.nan]
+
+                per_seq_clash_scores_summary += [np.nan, np.nan, np.nan]
+                per_seq_clash_hues += [np.nan, np.nan, np.nan]
+
+            else:
+                per_seq_prop_scores_summary += [np.nan, np.nan, np.nan]
+                per_seq_prop_hues += [np.nan, np.nan, np.nan]
+
+                per_seq_freq_scores_summary += [np.nan, np.nan, np.nan]
+                per_seq_freq_hues += [np.nan, np.nan, np.nan]
 
     plt.clf()
     sns.scatterplot(
@@ -186,15 +320,26 @@ def calc_pop_score_vs_generation(
     plt.plot([min(expanded_generations), max(expanded_generations)],
              [orig_struct_freq_score, orig_struct_freq_score], 'k')
     plt.savefig('{}/Generations_vs_range_frequency.svg'.format(output_dir))
-    plt.clf()
-    sns.scatterplot(
-        x=expanded_generations, y=per_seq_bude_scores_summary,
-        hue=per_seq_bude_hues, s=15,
-        palette={'2.5': 'tab:green', '50': 'tab:blue', '97.5': 'tab:orange'}
-    )
-    plt.plot([min(expanded_generations), max(expanded_generations)],
-             [orig_struct_bude_score, orig_struct_bude_score], 'k')
-    plt.savefig('{}/Generations_vs_range_BUDE_score.svg'.format(output_dir))
+    if bude is True:
+        plt.clf()
+        sns.scatterplot(
+            x=expanded_generations, y=per_seq_bude_scores_summary,
+            hue=per_seq_bude_hues, s=15,
+            palette={'2.5': 'tab:green', '50': 'tab:blue', '97.5': 'tab:orange'}
+        )
+        plt.plot([min(expanded_generations), max(expanded_generations)],
+                 [orig_struct_bude_score, orig_struct_bude_score], 'k')
+        plt.savefig('{}/Generations_vs_range_BUDE_score.svg'.format(output_dir))
+    if molprobity is True:
+        plt.clf()
+        sns.scatterplot(
+            x=expanded_generations, y=per_seq_clash_scores_summary,
+            hue=per_seq_clash_hues, s=15,
+            palette={'2.5': 'tab:green', '50': 'tab:blue', '97.5': 'tab:orange'}
+        )
+        plt.plot([min(expanded_generations), max(expanded_generations)],
+                 [orig_struct_clash_score, orig_struct_clash_score], 'k')
+        plt.savefig('{}/Generations_vs_range_clash_score.svg'.format(output_dir))
 
 
 def track_sequence_diversity(generations, data_dir, output_dir, save_interval=10):
@@ -287,7 +432,7 @@ def plot_output_structure_per_struct_scores(data_dir, output_dir):
 
     struct_df = pd.read_pickle('{}/Per_struct_scores.pkl'.format(data_dir))
 
-    # Extracts scores for original structure
+    # Scores for original structure (2JMM)
     cbeta_orig = 0.0
     rotamer_outlier_orig = 0.041666666666666664
     ramachandran_favoured_orig = 0.7857142857142857
@@ -365,7 +510,7 @@ def plot_output_structure_per_struct_scores(data_dir, output_dir):
     plt.plot(struct_list, [clashscore_percentile_orig]*len(struct_list), 'k')
     plt.xticks(rotation=90)
     plt.savefig(
-        '{}/Output_structure_clashscore_perentile_vs_sequence.svg'.format(output_dir)
+        '{}/Output_structure_clashscore_percentile_vs_sequence.svg'.format(output_dir)
     )
 
     plt.clf()
@@ -456,7 +601,7 @@ def plot_output_structure_per_res_scores(data_dir, output_dir):
 
 
 # Runs loop of functions above to make plots for all parameter combinations tested
-prop_weights = [0.1, 0.3, 0.5, 0.7, 0.9]  # [0.1, 0.3, 0.5, 0.7, 0.9]
+prop_weights = [0.1, 0.3, 0.5, 0.7, 0.9]
 mut_probs = [0.025]  # [0.005, 0.01, 0.025, 0.04, 0.05]
 cross_probs = [0.3]  # [0.1, 0.2, 0.3, 0.4, 0.5]
 
@@ -467,13 +612,13 @@ for prop_weight in prop_weights:
     for mut_prob in mut_probs:
         for cross_prob in cross_probs:
             if prop_weight == 0.1:
-                generations = list(range(1, 431))
+                generations = list(range(1, 411))
             else:
                 generations = list(range(1, 1001))
             data_dir = (
                 '/home/ks17361/isambard2/Test_design_results/Barrel_designs/'
-                'BetaDesigner_results/2jmm_mutprob_{}_crossprob_{}_propweight_'
-                '{}'.format(mut_prob, cross_prob, prop_weight)
+                'BetaDesigner_results_bude/2jmm_mutprob_{}_crossprob'
+                '_{}_propweight_{}'.format(mut_prob, cross_prob, prop_weight)
             )
             output_dir = '{}/Output_plots'.format(data_dir)
             if os.path.isdir(output_dir):
@@ -482,7 +627,7 @@ for prop_weight in prop_weights:
 
             calc_pop_score_vs_generation(
                 data_dir, output_dir, generations, num_sequences, unchanged_res,
-                10
+                10, True, True
             )
             track_sequence_diversity(generations, data_dir, output_dir, 10)
             plot_output_structure_per_struct_scores(data_dir, output_dir)
