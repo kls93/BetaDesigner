@@ -99,7 +99,7 @@ if __name__ == '__main__':
     wd = vars(args)['output']
     wd_list = [copy.deepcopy(wd) for n in range(len(networks_dict))]
 
-    rotamers_list = [True]*len(networks_dict)
+    rigid_rotamers_list = [False]*len(networks_dict)
 
     # Loads backbone model into ISAMBARD. NOTE must have been pre-processed
     # to remove ligands etc. so that only backbone coordinates remain.
@@ -108,7 +108,7 @@ if __name__ == '__main__':
 
     network_clashes_list = futures.map(
         measure_fitness_clashscore, pdb_copies, list(networks_dict.keys()),
-        list(networks_dict.values()), wd_list, rotamers_list
+        list(networks_dict.values()), wd_list, rigid_rotamers_list
     )
     print(network_clashes_list)
     network_clashes = OrderedDict()

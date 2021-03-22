@@ -62,7 +62,7 @@ def measure_fitness_allatom(pdb, network_num, G):
 
     # Packs network side chains onto the model with SCWRL4 and measures
     # the total model energy within BUDE
-    new_pdb, energy = pack_side_chains(pdb, G, True)
+    new_pdb, energy = pack_side_chains(pdb, G, False)
 
     return [network_num, energy]
 
