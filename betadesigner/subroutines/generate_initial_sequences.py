@@ -232,7 +232,7 @@ class gen_ga_input_calcs(initialise_ga_object):
                 z_sandwich_coord = self.input_df['sandwich_z_coords'][num]
                 #z_strand_coord = self.input_df['strand_z_coords'][num]
                 #buried_surface_area = self.input_df['buried_surface_area'][num]
-                edge_or_central = self.input_df['edge_or_central'][num]
+                edge_or_central = self.input_df['edge_or_central'][num][0:3]
                 try:
                     phi_psi_class = self.input_df['phi_psi_class'][num]
                 except KeyError:
